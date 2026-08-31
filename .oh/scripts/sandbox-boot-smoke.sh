@@ -81,6 +81,78 @@ verify_bind_ownership() {
   echo "sandbox boot smoke: sandbox user, bind mount, and sandbox-created files all resolve to $host_uid:$host_gid"
 }
 
+# Under emulation `docker exec` can prefix output with a platform warning; take
+# the first line that actually carries content.
+first_real_line() {
+  grep -vE "^WARNING: The requested image's platform" | grep -m1 -E '[^[:space:]]' || true
+}
+
+# The default harnesses are no longer baked into the image (#904); the boot path
+# installs them into the home mount. That install therefore runs on EVERY fresh
+# boot, and nothing else in CI exercises it — this is its only oracle. Assert the
+# outcome, not the log line: each default harness must resolve to a real binary
+# under NPM_USER_PREFIX, owned by the sandbox user, that prints its own version.
+verify_default_harnesses() {
+  local cid="$1"
+  local prefix="${NPM_USER_PREFIX:-/home/sandbox/.local}"
+  local states ids binary sandbox_uid out line
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "sandbox boot smoke failed: jq is required on the runner to read the harness catalog JSON" >&2
+    return 1
+  fi
+
+  if ! states=$(docker exec -u sandbox "$cid" bash -lc 'oh harness list --defaults --json' 2>/tmp/sandbox-boot-smoke-harness.err); then
+    echo "sandbox boot smoke failed: 'oh harness list --defaults --json' did not run in the booted sandbox" >&2
+    cat /tmp/sandbox-boot-smoke-harness.err >&2 || true
+    return 1
+  fi
+
+  ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$states")
+  if [ -z "$ids" ]; then
+    echo "sandbox boot smoke failed: the harness catalog reported no kind:\"default\" harnesses, so this check would pass vacuously" >&2
+    return 1
+  fi
+
+  sandbox_uid=$(docker exec "$cid" id -u sandbox)
+
+  local failed=0
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    binary=$(jq -r --arg id "$id" '.[] | select(.id == $id) | .binary' <<<"$states")
+    if [ -z "$binary" ] || [ "$binary" = "null" ]; then
+      echo "sandbox boot smoke failed: default harness '$id' declares no binary to check" >&2
+      failed=1
+      continue
+    fi
+    if ! out=$(docker exec -u sandbox "$cid" bash -lc "
+        set -e
+        path=\$(type -P '$binary')
+        case \"\$path\" in
+          $prefix/*) ;;
+          *) echo \"is not on PATH under $prefix (type -P gave: '\$path')\" >&2; exit 1 ;;
+        esac
+        owner=\$(stat -Lc %u \"\$path\")
+        [ \"\$owner\" = '$sandbox_uid' ] || { echo \"binary is owned by uid \$owner, not sandbox ($sandbox_uid)\" >&2; exit 1; }
+        \"\$path\" --version
+      " 2>&1); then
+      echo "sandbox boot smoke failed: default harness '$id' was not provisioned into the home mount at boot" >&2
+      printf '  %s\n' "$out" >&2
+      failed=1
+      continue
+    fi
+    line=$(first_real_line <<<"$out")
+    if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+([^[:alnum:]]|$)' <<<"$line"; then
+      echo "sandbox boot smoke failed: '$binary --version' printed no numeric version: $line" >&2
+      failed=1
+      continue
+    fi
+    echo "sandbox boot smoke: $id provisioned at boot -> $line"
+  done <<<"$ids"
+
+  [ "$failed" = "0" ]
+}
+
 trap teardown EXIT
 
 # shellcheck disable=SC2086 # BOOT_SMOKE_UP_ARGS is an intentional argv fragment for CI tuning.
@@ -106,7 +178,11 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, and bind-ownership checks"
+      if ! verify_default_harnesses "$cid"; then
+        status_diagnostics "$cid"
+        exit 1
+      fi
+      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and boot-provisioned harness checks"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

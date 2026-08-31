@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verify a built sandbox image: base distribution, apt suites, the sandbox
 # UID/GID contract, the Node/pnpm pins, the Herdr checksum, and version output
-# from every required default tool. Usage: verify-sandbox-image.sh <image-ref>
+# from every required default tool, and that no kind:"default" harness is baked
+# into it. Usage: verify-sandbox-image.sh <image-ref>
 
 set -euo pipefail
 
@@ -136,6 +137,32 @@ for tool in "gh --version" "docker --version" "docker compose version" \
     fail "$tool produced no version output: $(first_real_line <<<"$out")"
   fi
 done
+
+# The image must NOT ship the default harnesses (#904). They are the in-sandbox
+# CLI's responsibility and are installed into the home mount at boot, so a
+# default harness found here means the bake came back and the home mount's copy
+# is shadowed by an unupgradable one under /usr/lib/node_modules. The catalog in
+# the image is the source of truth for which ids are default, so this cannot
+# drift from harnesses/catalog.ts.
+if defaults_json=$(run 'cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness list --defaults --json' 2>/tmp/verify-sandbox-defaults.err); then
+  if command -v jq >/dev/null 2>&1; then
+    default_ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$defaults_json")
+    if [ -z "$default_ids" ]; then
+      fail "the image's harness catalog reports no kind:\"default\" harnesses — the unbaked-image check would pass vacuously"
+    else
+      baked=$(jq -r '.[] | select(.kind == "default" and .installed == true) | "\(.id) (\(.binary))"' <<<"$defaults_json")
+      if [ -n "$baked" ]; then
+        fail "the image ships baked default harnesses: $(tr '\n' ' ' <<<"$baked")— these must be provisioned into /home/sandbox/.local at boot, not baked"
+      else
+        ok "no default harness is baked into the image ($(tr '\n' ' ' <<<"$default_ids"))"
+      fi
+    fi
+  else
+    fail "jq is required to read the image's harness catalog JSON"
+  fi
+else
+  fail "could not read the harness catalog from the image: $(cat /tmp/verify-sandbox-defaults.err 2>/dev/null | head -3)"
+fi
 
 if ((${#failures[@]})); then
   printf '\nverify-sandbox-image: %d check(s) failed\n' "${#failures[@]}" >&2

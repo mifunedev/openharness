@@ -2,9 +2,12 @@
 # tier: A
 # source: #902 — `oh harness install` must work from inside the sandbox, where
 #         sudo has no NOPASSWD, so default harnesses install into the home mount
+# source: #904 — the image must not bake a default harness, or the boot-time
+#         install path is dead code that CI and a normal boot both skip
 # desc: every kind:"default" harness installs as the sandbox user into
-#       NPM_USER_PREFIX, claude-code keeps its postinstall, and the boot path
-#       carries the OH_PROVISION_HARNESSES guard and its provisioner.
+#       NPM_USER_PREFIX, claude-code keeps its postinstall, no default harness
+#       package appears in the Dockerfile, and the boot path carries the
+#       OH_PROVISION_HARNESSES guard and its provisioner.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -63,43 +66,44 @@ grep -qF 'WARNING: harness provisioning did not complete' "$ENTRY" \
   || missing+=("entrypoint.sh: harness provisioning does not warn-and-continue — an offline sandbox must still come up as a usable shell")
 [[ -x $PROVISIONER ]] \
   || missing+=(".oh/scripts/provision-harnesses.sh: missing or not executable")
-run_block_with() {
-  awk -v needle="$1" '
-    function flush() {
-      if (index(buf, needle)) print buf
-      buf = ""
-    }
-    /^RUN / { buf = $0; cont = ($0 ~ /\\$/); if (!cont) flush(); next }
-    cont    { buf = buf "\n" $0; cont = ($0 ~ /\\$/); if (!cont) flush() }
-  ' "$DOCKERFILE"
+# #904: the image must not bake any kind:"default" harness. The install target is
+# the home mount, so a copy under /usr/lib/node_modules shadows it with one no
+# running sandbox can upgrade — and, worse, makes the boot-time install path
+# dead code that never runs and never gets tested. The package names come from
+# the catalog itself, so this cannot drift.
+strip_dockerfile_comments() {
+  grep -vE '^[[:space:]]*#' "$DOCKERFILE"
 }
 
-BAKE_GATE='if [ "${BAKE_HARNESSES}" = "true" ]'
+DOCKERFILE_CODE=$(strip_dockerfile_comments)
 
-stage_body() {
-  awk -v stage="$1" '
-    /^FROM / { inb = ($0 ~ ("AS " stage "$")); next }
-    inb
-  ' "$DOCKERFILE"
-}
+pkgs=0
+while IFS= read -r entry; do
+  [[ $entry == *'kind: "default"'* ]] || continue
+  id=$(sed -n 's/.*id: "\([^"]*\)".*/\1/p' <<<"$entry")
+  # The package specifier is the last element of installArgv. Read it from that
+  # array alone — `binary` and `verifyArgv` also hold bare names, and matching
+  # those would test the wrong string ("claude" appears in the Dockerfile's
+  # shell alias; "@anthropic-ai/claude-code" is what must not).
+  argv=$(sed -n 's/.*installArgv: \[\(.*\)\], *installUser.*/\1/p' <<<"$entry")
+  pkg=$(grep -oE '"[^"]+"' <<<"$argv" | tr -d '"' | tail -1)
+  if [[ -z $pkg || $pkg == -* ]]; then
+    missing+=("harnesses/catalog.ts: could not read an install package out of default harness \"$id\" — the no-bake check cannot be applied to it")
+    continue
+  fi
+  pkgs=$((pkgs + 1))
+  if grep -qF -- "$pkg" <<<"$DOCKERFILE_CODE"; then
+    missing+=("Dockerfile: names $pkg — default harness \"$id\" is baked into the image again; it belongs to .oh/scripts/provision-harnesses.sh, which installs it into $PREFIX at boot")
+  fi
+done <<<"$entries"
 
-for stage in base home; do
-  stage_body "$stage" | grep -qE '^ARG BAKE_HARNESSES' \
-    || missing+=("Dockerfile: the $stage stage does not declare ARG BAKE_HARNESSES — ARG is stage-scoped, so the build arg is empty there and every \${BAKE_HARNESSES} test in that stage reads as unset")
-done
-
-AGENTS_BLOCK=$(run_block_with 'read -ra agents')
-if [[ -z $AGENTS_BLOCK ]]; then
-  missing+=("Dockerfile: found no RUN that loops over \$AGENTS — the probe cannot tell whether BAKE_HARNESSES gates the bake")
-elif [[ $AGENTS_BLOCK != *"$BAKE_GATE"* ]]; then
-  missing+=("Dockerfile: the RUN that installs \$AGENTS does not test \${BAKE_HARNESSES} — ARG BAKE_HARNESSES is declared but dead, so BAKE_HARNESSES=false still bakes the agent CLIs")
+if ((pkgs == 0)); then
+  echo "SKIPPED: parsed no install package out of any kind:\"default\" catalog entry, so the no-bake check would pass vacuously" >&2
+  exit 2
 fi
 
-PI_BLOCK=$(run_block_with '--ignore-scripts @earendil-works/pi-coding-agent')
-if [[ -z $PI_BLOCK ]]; then
-  missing+=("Dockerfile: found no RUN that bakes pi into \$NPM_USER_PREFIX — the probe cannot tell whether BAKE_HARNESSES gates it")
-elif [[ $PI_BLOCK != *"$BAKE_GATE"* ]]; then
-  missing+=("Dockerfile: the RUN that bakes pi does not test \${BAKE_HARNESSES} — ARG is stage-scoped, so BAKE_HARNESSES=false unbakes claude and codex but leaves pi in the image")
+if grep -qE '^ARG (BAKE_HARNESSES|AGENTS)=' <<<"$DOCKERFILE_CODE"; then
+  missing+=("Dockerfile: ARG BAKE_HARNESSES/AGENTS is back — a build-arg that re-bakes the default harnesses is a dormant path that reintroduces the shadowed install and un-exercises the boot provisioner")
 fi
 
 if ((${#missing[@]})); then
@@ -107,4 +111,4 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS: all $defaults default harnesses install as the sandbox user into $PREFIX, and the boot path provisions them" >&2
+echo "PASS: all $defaults default harnesses install as the sandbox user into $PREFIX, none of the $pkgs packages is baked into the image, and the boot path provisions them" >&2

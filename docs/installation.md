@@ -280,7 +280,26 @@ Docker's apt repository tracks the `trixie` suite. Cloudflare's stays on `bookwo
 
 ### AI agent CLIs
 
-Default CLIs are always present. Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
+Default CLIs are not baked into the image. The entrypoint runs
+`.oh/scripts/provision-harnesses.sh` on every boot, which installs any missing
+default harness into `~/.local` — inside the home mount — as the `sandbox` user.
+That is what makes `oh harness install <id>` able to upgrade one in place: a copy
+under `/usr/lib/node_modules` would be root-owned and unwritable from a running
+sandbox. Consequences worth knowing:
+
+- A **first boot on a fresh home mount needs network**. Measured at 21s on a
+  GitHub Actions runner; budget 60–180s on a slower link. The compose
+  healthcheck's `start_period` is 600s to cover it.
+- If the registry is unreachable the sandbox still comes up as a usable shell,
+  with a warning and no agent CLIs. Re-run
+  `bash .oh/scripts/provision-harnesses.sh` once you have network.
+- An existing install is never replaced, so the provisioner is a no-op on every
+  boot after the first. Upgrade deliberately with `oh harness install <id>`.
+- npm's cache now lives in the home mount at `~/.npm` and grows across upgrades.
+  `npm cache clean --force` reclaims it.
+- Set `OH_PROVISION_HARNESSES=false` to skip the step entirely.
+
+Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
 
 | Tool | Command | Source | Status |
 |------|---------|--------|--------|
@@ -305,8 +324,8 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 ### DevOps & infrastructure
 
 `oh tool list` reports which of these are present, and `oh tool status <name>`
-adds a version where the tool has a verified version flag. They are baked into
-the image, so there is nothing to install.
+adds a version where the tool has a verified version flag. Unlike the agent
+CLIs above, these are baked into the image, so there is nothing to install.
 
 | Tool | Purpose |
 |------|---------|

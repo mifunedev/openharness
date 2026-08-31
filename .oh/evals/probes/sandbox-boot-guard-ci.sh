@@ -51,7 +51,34 @@ has '--tag "sandbox-${SANDBOX_NAME}"' "compose image tag for smoke boot"
 has 'bash .oh/scripts/sandbox-boot-smoke.sh' "boot smoke healthcheck invocation"
 has 'name: Validate sandbox compose and image build' "the named boot guard job"
 has 'bash .oh/scripts/verify-sandbox-image.sh' "reusable image verifier invocation"
-has 'BOOT_SMOKE_TIMEOUT_SECONDS: "900"' "bounded boot smoke timeout"
+# The smoke deadline must clear the compose healthcheck's own unhealthy deadline
+# (start_period + interval x retries), or the smoke times out before the boot it
+# is measuring has had its full allowance. Derive both sides — pinning a literal
+# lets a start_period bump silently invert the relationship.
+smoke_timeout=$(grep -Eo 'BOOT_SMOKE_TIMEOUT_SECONDS: *"?[0-9]+' <<<"$text" | grep -Eo '[0-9]+$' | head -1)
+if [[ -z $smoke_timeout ]]; then
+  missing+=("bounded boot smoke timeout (no BOOT_SMOKE_TIMEOUT_SECONDS)")
+else
+  COMPOSE_FILE="$ROOT/.devcontainer/docker-compose.yml"
+  hc=$(awk '/^ *healthcheck:/ {inb=1} inb && /^ *(interval|retries|start_period):/ {print} inb && /^ *restart:/ {inb=0}' "$COMPOSE_FILE")
+  interval=$(grep -Eo 'interval: *[0-9]+' <<<"$hc" | grep -Eo '[0-9]+' | head -1)
+  retries=$(grep -Eo 'retries: *[0-9]+' <<<"$hc" | grep -Eo '[0-9]+' | head -1)
+  start_period=$(grep -Eo 'start_period: *[0-9]+' <<<"$hc" | grep -Eo '[0-9]+' | head -1)
+  if [[ -z $interval || -z $retries || -z $start_period ]]; then
+    missing+=("could not read the sandbox healthcheck window out of .devcontainer/docker-compose.yml")
+  else
+    deadline=$((start_period + interval * retries))
+    if ((smoke_timeout <= deadline)); then
+      missing+=("BOOT_SMOKE_TIMEOUT_SECONDS=$smoke_timeout does not clear the healthcheck unhealthy deadline of ${deadline}s (start_period ${start_period}s + ${interval}s x ${retries}) — the smoke would time out before the boot it measures")
+    fi
+  fi
+fi
+
+# #904: boot-time harness provisioning is exercised nowhere else. Turning it off
+# here to save CI minutes would restore it to untested dead code.
+if grep -Eq 'OH_PROVISION_HARNESSES: *"?false' <<<"$text"; then
+  missing+=("the boot guard disables OH_PROVISION_HARNESSES — this job is the only place the boot-time harness install runs")
+fi
 has 'Sandbox boot guard only' "comment explaining non-release intent"
 
 if grep -Eq 'docker[[:space:]]+push|--push([[:space:]]|$)|docker/login-action|docker/login|ghcr\.io|[[:alnum:]._-]+\.[[:alnum:]._-]+/.+:.+|packages:[[:space:]]*write|secrets\.' <<<"$text"; then

@@ -92,7 +92,7 @@ jobs:
       # The devcontainer bind-mounts the checkout (..:/home/sandbox/harness) and
       # can run a synchronous `pnpm install` during boot when the root dependency
       # tree is missing or its manifest marker is stale — a cold install can
-      # overrun the healthcheck's ~390s unhealthy deadline and fail the boot with
+      # overrun the healthcheck's ~690s unhealthy deadline and fail the boot with
       # "missing required tmux session: cron-system". Seeding node_modules here
       # moves that slow/variable install OUT of the healthcheck-timed window; the
       # sandbox smoke step below also sets SKIP_PNPM_INSTALL=1 so the pre-seeded
@@ -132,14 +132,24 @@ jobs:
             sh -c 'ls -la /mnt/node_modules/croner/package.json'
           echo "OK: pre-seeded node_modules is visible to the daemon that boots the sandbox"
 
-      - name: Boot sandbox and verify healthcheck
+      # This step is the ONLY place the boot-time harness install runs end to end.
+      # It boots on a fresh home volume (the smoke tears down with `down -v`), so
+      # provision-harnesses.sh does real npm work every run and the smoke asserts
+      # the result. Do not set OH_PROVISION_HARNESSES=false here to speed it up —
+      # that would return the install path to being untested dead code.
+      - name: Boot sandbox and verify healthcheck (exercises boot-time harness provisioning)
         env:
           SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
-          BOOT_SMOKE_TIMEOUT_SECONDS: "900"
+          # Boot now installs the default harnesses into a fresh home volume
+          # (#904) before the control plane comes up, so the smoke deadline has
+          # to clear the compose healthcheck's 600s start_period plus the
+          # 3x30s retry window (~690s), not just the old 300s one.
+          BOOT_SMOKE_TIMEOUT_SECONDS: "1200"
           BOOT_SMOKE_INTERVAL_SECONDS: "10"
           # Deps are pre-seeded above and proven visible; SKIP_PNPM_INSTALL=1
           # keeps the in-container install out of the healthcheck-timed window.
-          # This is the Option C contract: install slowness can no longer trip
-          # the ~390s unhealthy deadline. Boot is now just the cron-system spawn.
+          # This is the Option C contract: pnpm slowness can no longer trip the
+          # ~690s unhealthy deadline. What remains inside that window is the
+          # cron-system spawn and the boot-time harness install.
           SKIP_PNPM_INSTALL: "1"
         run: bash .oh/scripts/sandbox-boot-smoke.sh

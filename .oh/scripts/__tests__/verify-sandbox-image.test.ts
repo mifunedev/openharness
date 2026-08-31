@@ -23,6 +23,9 @@ type Overrides = Partial<{
   missingTool: string;
   nonVersionTool: string;
   platformWarning: string;
+  bakedHarnesses: boolean;
+  noDefaultHarnesses: boolean;
+  harnessCatalogFails: boolean;
 }>;
 
 function fixture(o: Overrides = {}) {
@@ -44,6 +47,9 @@ function fixture(o: Overrides = {}) {
     missingTool: "",
     nonVersionTool: "",
     platformWarning: "",
+    bakedHarnesses: false,
+    noDefaultHarnesses: false,
+    harnessCatalogFails: false,
     ...o,
   };
 
@@ -62,6 +68,22 @@ case "$cmd" in
   "pnpm --version") printf '%s\\n' ${JSON.stringify(v.pnpm)} ;;
   "herdr --version") printf '%s\\n' ${JSON.stringify(v.herdr)} ;;
   *sha256sum*) printf '%s  /usr/local/bin/herdr\\n' ${JSON.stringify(v.herdrSha)} ;;
+  *"oh harness list --defaults --json"*)
+    if [ "${v.harnessCatalogFails ? "1" : "0"}" = "1" ]; then
+      echo 'not an OpenHarness-equipped repo' >&2
+      exit 1
+    fi
+    cat <<'JSON'
+${
+  v.noDefaultHarnesses
+    ? "[]"
+    : `[
+  { "id": "claude-code", "binary": "claude", "kind": "default", "installed": ${v.bakedHarnesses} },
+  { "id": "pi", "binary": "pi", "kind": "default", "installed": false }
+]`
+}
+JSON
+    ;;
   *)
     if [ -n ${JSON.stringify(v.missingTool)} ] && [ "$cmd" = ${JSON.stringify(v.missingTool)} ]; then
       echo 'command not found' >&2
@@ -174,5 +196,36 @@ describe("verify-sandbox-image", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("matches the arm64 (aarch64) Dockerfile checksum pin");
+  });
+
+  // #904: the default harnesses moved out of the image and into the boot path.
+  // A baked copy under /usr/lib/node_modules shadows the home-mount install and
+  // silently un-exercises the provisioner, so the image must not carry one.
+  it("passes an image that bakes no default harness", () => {
+    const result = run(fixture());
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no default harness is baked into the image");
+  });
+
+  it("rejects an image that bakes a default harness", () => {
+    const result = run(fixture({ bakedHarnesses: true }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("the image ships baked default harnesses: claude-code (claude)");
+  });
+
+  it("refuses to pass vacuously when the image catalog lists no default harness", () => {
+    const result = run(fixture({ noDefaultHarnesses: true }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("would pass vacuously");
+  });
+
+  it("fails loudly when the harness catalog cannot be read out of the image", () => {
+    const result = run(fixture({ harnessCatalogFails: true }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("could not read the harness catalog from the image");
   });
 });

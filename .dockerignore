@@ -15,3 +15,6 @@ projects/*
 !projects/CLAUDE.md
 .git/
 node_modules/
+.pnpm-store/
+.pi/bridge/
+.pi/npm/

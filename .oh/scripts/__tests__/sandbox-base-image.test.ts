@@ -8,9 +8,25 @@ const dockerfile = readFileSync(path.join(repoRoot, ".devcontainer/Dockerfile"),
 
 describe("sandbox base image", () => {
   it("builds from the official Node image on Debian Trixie", () => {
-    expect(dockerfile).toMatch(/^FROM node:22-trixie-slim$/m);
+    expect(dockerfile).toMatch(/^FROM node:22-trixie-slim( AS \S+)?$/m);
     expect(dockerfile).not.toContain("debian:bookworm-slim");
     expect(dockerfile).not.toContain("deb.nodesource.com");
+  });
+
+  it("derives every stage transitively from the pinned base", () => {
+    const froms = dockerfile
+      .split("\n")
+      .filter((line) => /^FROM\s/.test(line))
+      .map((line) => line.trim().split(/\s+/));
+    expect(froms.length).toBeGreaterThan(0);
+
+    const defined = new Set<string>();
+    const foreign: string[] = [];
+    for (const [, image, asKeyword, name] of froms) {
+      if (image !== "node:22-trixie-slim" && !defined.has(image)) foreign.push(image);
+      if (asKeyword?.toLowerCase() === "as" && name) defined.add(name);
+    }
+    expect(foreign).toEqual([]);
   });
 
   it("tracks Trixie for Docker's apt repository", () => {

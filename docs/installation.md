@@ -287,8 +287,9 @@ That is what makes `oh harness install <id>` able to upgrade one in place: a cop
 under `/usr/lib/node_modules` would be root-owned and unwritable from a running
 sandbox. Consequences worth knowing:
 
-- A **first boot on a fresh home mount needs network** and takes roughly 60–180s
-  longer. The compose healthcheck's `start_period` is 600s to cover it.
+- A **first boot on a fresh home mount needs network**. Measured at 21s on a
+  GitHub Actions runner; budget 60–180s on a slower link. The compose
+  healthcheck's `start_period` is 600s to cover it.
 - If the registry is unreachable the sandbox still comes up as a usable shell,
   with a warning and no agent CLIs. Re-run
   `bash .oh/scripts/provision-harnesses.sh` once you have network.

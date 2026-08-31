@@ -42,12 +42,6 @@ describe("harness catalog", () => {
     }
   });
 
-  it("pairs harnessKey and buildArg — never one without the other", () => {
-    for (const h of HARNESS_CATALOG) {
-      expect(Boolean(h.harnessKey)).toBe(Boolean(h.buildArg));
-    }
-  });
-
   it("gives every optional harness a flag, and no other kind one", () => {
     for (const h of HARNESS_CATALOG) {
       if (h.kind === "optional") expect(h.harnessKey).toBeDefined();
@@ -67,11 +61,13 @@ describe("harness catalog", () => {
     }
   });
 
-  describe("does not drift from the image build", () => {
-    const flagged = HARNESS_CATALOG.filter((h) => h.buildArg !== undefined);
+  // #908: the INSTALL_* build args are gone. The catalog no longer mirrors the
+  // Dockerfile — it replaces it, and `oh harness install` is the only path.
+  describe("owns the install, and the image no longer does", () => {
+    const optional = HARNESS_CATALOG.filter((h) => h.kind === "optional");
 
     it("covers all four optional harnesses", () => {
-      expect(flagged.map((h) => h.id).sort()).toEqual([
+      expect(optional.map((h) => h.id).sort()).toEqual([
         "deepagents",
         "grok-build",
         "hermes",
@@ -79,48 +75,55 @@ describe("harness catalog", () => {
       ]);
     });
 
-    it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: build arg is in the Dockerfile",
+    it("declares no buildArg anywhere — the field itself is gone", () => {
+      expect(read(".oh/cli/src/lib/harnesses/catalog.ts")).not.toContain("buildArg");
+    });
+
+    it.each(optional.map((h) => [h.id, h] as const))(
+      "%s: its INSTALL_* build arg is absent from the Dockerfile",
       (_id, h) => {
-        expect(DOCKERFILE).toContain(h.buildArg as string);
+        const arg = `INSTALL_${(h.harnessKey as string).toUpperCase()}`;
+        expect(DOCKERFILE).not.toMatch(new RegExp(`^ARG ${arg}`, "m"));
+        expect(COMPOSE_YML).not.toContain(`${arg}: \${${arg}:-false}`);
       },
     );
 
-    it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: the INSTALL_* key derived from harnessKey IS the build arg, and compose forwards it",
+    it.each(optional.map((h) => [h.id, h] as const))(
+      "%s: installs as the sandbox user into the home mount",
       (_id, h) => {
-        expect(`INSTALL_${(h.harnessKey as string).toUpperCase()}`).toBe(h.buildArg);
-        expect(COMPOSE_YML).toContain(`${h.buildArg}: \${${h.buildArg}:-false}`);
+        expect(h.installUser).toBe("sandbox");
+        expect(h.installArgv.join("\n")).toMatch(/\/home\/sandbox\/\.local|\$HOME\/\.local|uv/);
       },
     );
 
-    it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: key ships documented in docs/configuration.md, the oh.json field reference",
+    it.each(optional.map((h) => [h.id, h] as const))(
+      "%s: its oh.json key stays documented in docs/configuration.md",
       (_id, h) => {
+        const arg = `INSTALL_${(h.harnessKey as string).toUpperCase()}`;
         expect(CONFIG_DOC).toMatch(
-          new RegExp(`^\\| \`install\\.[A-Za-z]+\` \\|.*\`${h.buildArg}\``, "m"),
+          new RegExp(`^\\| \`install\\.[A-Za-z]+\` \\|.*\`${arg}\``, "m"),
         );
       },
     );
 
-    it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: every pinned version appears verbatim in the Dockerfile",
-      (_id, h) => {
-        for (const pin of versionPins(h.installArgv)) {
-          expect(DOCKERFILE).toContain(pin);
-        }
-      },
-    );
-
-    it("grok-build keeps the Dockerfile's exact pin", () => {
+    it("keeps the grok-build pin in the catalog, now that the Dockerfile has none", () => {
       const grok = findHarness("grok-build");
       expect(versionPins(grok!.installArgv)).toEqual(["0.2.39"]);
-      expect(DOCKERFILE).toContain("bash -s 0.2.39");
+      expect(DOCKERFILE).not.toContain("bash -s 0.2.39");
     });
 
-    it("installs deepagents and pi as the sandbox user, not root", () => {
-      expect(findHarness("deepagents")!.installUser).toBe("sandbox");
-      expect(findHarness("pi")!.installUser).toBe("sandbox");
+    // INSTALL_HERMES survives as a RUNTIME flag: link-providers.sh vendors the
+    // Hermes skill pack from it and entrypoint.sh wires auth.json. Only its
+    // build-arg role is gone.
+    it("keeps INSTALL_HERMES as a container environment variable", () => {
+      expect(COMPOSE_YML).toContain("- INSTALL_HERMES=${INSTALL_HERMES:-false}");
+      expect(DOCKERFILE).not.toContain("INSTALL_HERMES");
+    });
+
+    it("installs every harness as the sandbox user, never root", () => {
+      for (const h of HARNESS_CATALOG) {
+        expect(h.installUser, h.id).toBe("sandbox");
+      }
       expect(DOCKERFILE).toContain("UV_TOOL_DIR=/home/sandbox");
     });
   });

@@ -50,8 +50,8 @@ jobs:
             node:22-bookworm-slim \
             node:22-trixie-slim
 
-  optional-installers-image:
-    name: Build one amd64 image with every optional installer
+  optional-harness-install:
+    name: Install every optional harness through the CLI
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
@@ -64,31 +64,64 @@ jobs:
       - name: Ensure Mifune submodule
         run: bash .oh/scripts/link-providers.sh --init
 
-      - name: Build with all INSTALL_* paths enabled
+      # #908 removed the INSTALL_* build args, so there is no longer an image to
+      # build with every optional installer enabled. The path that replaced it —
+      # `oh harness install <id>` into the home mount, as the sandbox user — is
+      # what this job must exercise instead. Building and then INSTALLING is
+      # strictly closer to what an operator does than the old build-arg matrix.
+      - name: Build the sandbox image
         run: |
           docker build \
             --file .devcontainer/Dockerfile \
-            --build-arg INSTALL_HERMES=true \
-            --build-arg INSTALL_DEEPAGENTS=true \
-            --build-arg INSTALL_OPENCODE=true \
-            --build-arg INSTALL_GROK_BUILD=true \
             --tag openharness-sandbox-optional:${{ github.sha }} \
             .
 
-      - name: Verify the optional image still satisfies the default contract
+      - name: Verify the image satisfies the default contract
         run: bash .oh/scripts/verify-sandbox-image.sh openharness-sandbox-optional:${{ github.sha }}
 
-      - name: Verify a version from every optional CLI
+      - name: Install each optional harness through the CLI and verify its version
         run: |
           set -euo pipefail
-          for tool in hermes deepagents opencode grok; do
-            echo "--- $tool --version"
-            output="$(docker run --rm --entrypoint /bin/bash \
-              openharness-sandbox-optional:${{ github.sha }} \
-              -lc "$tool --version" 2>&1)"
+          cid=$(docker run -d --rm \
+            -e SANDBOX_NAME=openharness-optional-${{ github.run_id }} \
+            -e OH_PROVISION_DEFAULTS=false \
+            --entrypoint sleep \
+            openharness-sandbox-optional:${{ github.sha }} infinity)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+
+          # The image ships an empty /home/sandbox; seed it the way the
+          # entrypoint would so ~/.local exists and is sandbox-owned.
+          docker exec "$cid" bash -lc 'cp -a -n /opt/home-seed/. /home/sandbox/ 2>/dev/null || true; chown -R sandbox:sandbox /home/sandbox'
+
+          ids=$(docker exec -u sandbox "$cid" bash -lc \
+            'cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness list --json' \
+            | jq -r '.[] | select(.kind == "optional") | .id')
+          if [ -z "$ids" ]; then
+            echo "ERROR: the harness catalog declares no optional harnesses — this job would pass vacuously" >&2
+            exit 1
+          fi
+
+          for id in $ids; do
+            echo "--- oh harness install $id"
+            docker exec -u sandbox "$cid" bash -lc \
+              "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness install '$id' --no-persist"
+          done
+
+          for id in $ids; do
+            binary=$(docker exec -u sandbox "$cid" bash -lc \
+              'cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness list --json' \
+              | jq -r --arg id "$id" '.[] | select(.id == $id) | .binary')
+            echo "--- $binary --version"
+            output=$(docker exec -u sandbox "$cid" bash -lc "
+              path=\$(type -P '$binary')
+              case \"\$path\" in
+                /home/sandbox/.local/*) ;;
+                *) echo \"$id resolved to '\$path', not under /home/sandbox/.local\" >&2; exit 1 ;;
+              esac
+              \"\$path\" --version" 2>&1)
             printf '%s\n' "$output"
             if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+([^[:alnum:]]|$)' <<<"$output"; then
-              echo "ERROR: $tool --version did not output a numeric dotted version" >&2
+              echo "ERROR: $binary --version did not output a numeric dotted version" >&2
               exit 1
             fi
           done

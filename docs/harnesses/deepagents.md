@@ -44,14 +44,14 @@ install:
 
 Or set `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env` (legacy).
 
-Then rebuild/restart the sandbox:
+Either way the boot provisioner installs it on the next start — no rebuild:
 
 ```bash
 oh stop && oh sandbox
 ```
 
-Open Harness installs the upstream CLI during image build via `uv tool
-install` into image-level paths:
+Open Harness installs the upstream CLI with `uv tool install` as the `sandbox`
+user, which lands it in `~/.local/bin` inside the home mount:
 
 ```bash
 uv tool install deepagents-cli
@@ -66,8 +66,9 @@ Verify the install inside the sandbox:
 deepagents -v
 ```
 
-If the command is not found, confirm `INSTALL_DEEPAGENTS=true` is set in
-`.devcontainer/.env`, then rebuild with `oh stop && oh sandbox`.
+If the command is not found, run `oh harness install deepagents` — it installs
+into `~/.local/bin` in the running sandbox and sets `install.deepagents` so a
+fresh home mount reinstalls it at boot. No rebuild is involved.
 
 ## Authentication and provider keys
 

@@ -81,7 +81,7 @@ if [ -s "${HOME}/.pi/agent/auth.json" ]; then
 fi
 
 opencode_status="$status_x"
-opencode_detail="not installed — set INSTALL_OPENCODE=true and rebuild"
+opencode_detail="not installed — run: oh harness install opencode"
 if command -v opencode >/dev/null 2>&1; then
   if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
     opencode_status="$status_ok"
@@ -93,7 +93,7 @@ if command -v opencode >/dev/null 2>&1; then
 fi
 
 grok_status="$status_x"
-grok_detail="not installed — enable via install.grok_build / INSTALL_GROK_BUILD"
+grok_detail="not installed — run: oh harness install grok-build"
 if command -v grok >/dev/null 2>&1; then
   if [ -s "${HOME}/.grok/auth.json" ]; then
     grok_status="$status_ok"
@@ -108,7 +108,7 @@ if command -v grok >/dev/null 2>&1; then
 fi
 
 deepagents_status="$status_x"
-deepagents_detail="not installed — set INSTALL_DEEPAGENTS=true and rebuild"
+deepagents_detail="not installed — run: oh harness install deepagents"
 if command -v deepagents >/dev/null 2>&1; then
   if [ -s "${HOME}/.deepagents/.env" ] || [ -s "${HOME}/.deepagents/config.toml" ]; then
     deepagents_status="$status_ok"
@@ -120,7 +120,7 @@ if command -v deepagents >/dev/null 2>&1; then
 fi
 
 hermes_status="$status_x"
-hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
+hermes_detail="not installed — run: oh harness install hermes"
 if command -v hermes >/dev/null 2>&1; then
   if [ -s "${HERMES_HOME:-${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes}/auth.json" ]; then
     hermes_status="$status_ok"

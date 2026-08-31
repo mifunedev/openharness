@@ -10,7 +10,7 @@ skills from experience, scheduled task automation, sub-agent delegation,
 container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
-Hermes is an **optional image-level runtime** in Open Harness. When enabled (set `INSTALL_HERMES=true` in `.devcontainer/.env`), it sits alongside `claude`, `codex`,
+Hermes is an **optional harness** in Open Harness. Install it with `oh harness install hermes` (or set `install.hermes` / `INSTALL_HERMES=true`, which the boot provisioner honours); it then sits alongside `claude`, `codex`,
 `pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. See the
 upstream documentation below for canonical facts about Hermes.
 
@@ -54,19 +54,20 @@ Then rebuild/restart the sandbox:
 oh stop && oh sandbox
 ```
 
-The executable is installed during image build, not at container boot, so
-an enabled sandbox has `hermes` on PATH immediately:
+The executable is installed by `oh harness install hermes`, or at boot on a
+fresh home mount when `install.hermes` is true. Once installed it persists in
+the home mount, so later boots find it on PATH immediately:
 
 ```bash
 hermes --version
 ```
 
-At image build time, Open Harness runs the official installer with setup
-and browser installation disabled:
+Open Harness runs the official installer as the `sandbox` user with setup and
+browser installation disabled, directing it into the home mount:
 
 ```bash
 curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-  | bash -s -- --skip-setup --skip-browser
+  | HERMES_INSTALL_DIR="$HOME/.local/lib/hermes-agent" bash -s -- --skip-setup --skip-browser
 ```
 
 Review-first equivalent for manual inspection:
@@ -122,10 +123,11 @@ secrets from this directory.
 the bind-mounted `.hermes/` directory from the checkout. Remove that
 directory manually if you want a full Hermes project-state reset.
 
-The Hermes binary itself is installed in the image when
-`INSTALL_HERMES=true` is set in `.devcontainer/.env`, under the installer's root Linux FHS layout
-(`/usr/local/lib/hermes-agent` with a `/usr/local/bin/hermes` launcher).
-Disabling the flag on a future rebuild omits the executable; project-local
+The Hermes binary is installed into the home mount by `oh harness install hermes`
+— at `~/.local/lib/hermes-agent` with a `~/.local/bin/hermes` launcher — and the
+boot provisioner reinstalls it on a fresh home mount whenever `install.hermes` is
+true. Nothing about it lives in the image. Disabling the flag stops the
+reinstall but leaves an existing install in place; project-local
 state remains in `.hermes/` until removed.
 
 ## Common usage
@@ -276,7 +278,7 @@ vars — see upstream Hermes documentation for the full list.
 
 The sandbox onboarding banner reports Hermes as:
 
-- `❌ not installed` — set `INSTALL_HERMES=true` in `.devcontainer/.env` and rebuild — when the binary is absent from PATH.
+- `❌ not installed` — run `oh harness install hermes` — when the binary is absent from PATH.
 - `✅ installed — run: hermes setup` — when the binary is on PATH but
   `~/.hermes/auth.json` is absent or empty.
 - `✅ authenticated` — when `~/.hermes/auth.json` exists and is

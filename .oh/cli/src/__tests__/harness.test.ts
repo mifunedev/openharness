@@ -272,8 +272,17 @@ describe("runHarnessInstall against the container", () => {
     const install = execCalls(calls).find((c) => c.args.includes("opencode-ai"));
     expect(install).toBeDefined();
     expect(install!.args).toContain("-u");
-    expect(install!.args).toContain("root");
-    expect(install!.args.slice(-4)).toEqual(["npm", "install", "-g", "opencode-ai"]);
+    // #908: every harness installs as the sandbox user into the home mount.
+    expect(install!.args).toContain("sandbox");
+    expect(install!.args).not.toContain("root");
+    expect(install!.args.slice(-6)).toEqual([
+      "npm",
+      "--prefix",
+      "/home/sandbox/.local",
+      "install",
+      "-g",
+      "opencode-ai",
+    ]);
     expect(text(out)).toContain("installed");
     expect(text(out)).toContain(
       "https://github.com/mifunedev/openharness/blob/main/docs/harnesses/opencode.md",
@@ -508,7 +517,11 @@ describe("oh harness — inside the sandbox", () => {
     const { io, out } = makeIo();
     expect(await runHarnessInstall("opencode", { cwd: root, run, env: INSIDE }, io)).toBe(0);
     expect(text(out)).not.toContain("skipping the live install");
-    expect(calls.some((c) => c.cmd === "sudo" && c.args.includes("opencode-ai"))).toBe(true);
+    // #908: this previously asserted `cmd === "sudo"`, codifying the very defect
+    // that made `oh harness install opencode` hang inside the sandbox —
+    // stdio:"inherit" selects plain `sudo --`, and sandbox has no NOPASSWD.
+    expect(calls.some((c) => c.cmd === "sudo")).toBe(false);
+    expect(calls.some((c) => c.args.includes("opencode-ai"))).toBe(true);
     expect(installFlag(root, "opencode")).toBe(true);
   });
 

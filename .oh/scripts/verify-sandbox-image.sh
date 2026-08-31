@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verify a built sandbox image: base distribution, apt suites, the sandbox
 # UID/GID contract, the Node/pnpm pins, and version output from every baked-in
-# tool, and that no kind:"default" harness or tool is baked into it.
+# tool; that no harness and no kind:"default" tool is baked into it; and that
+# every kind:"baked-in" tool actually is.
 # Usage: verify-sandbox-image.sh <image-ref>
 
 set -euo pipefail
@@ -99,39 +100,59 @@ for tool in "gh --version" "docker --version" "docker compose version" \
   fi
 done
 
-# The image must NOT ship any kind:"default" harness (#904) or tool (#906).
-# Both are installed into /home/sandbox/.local at boot: a copy baked into a
+# The image must ship NO harness at all (#904, #908) and no kind:"default" tool
+# (#906). Every one of them is installed into /home/sandbox/.local at boot or on
+# demand through `oh harness install` / `oh tool install`: a copy baked into a
 # system path shadows the home-mount install with one no running sandbox can
-# upgrade, and makes the boot install dead code that never runs and never gets
-# tested. The catalogs inside the image are the source of truth for which ids
-# are default, so this cannot drift from the TypeScript.
-check_no_baked_defaults() {
-  local noun="$1" cmd="$2" json ids baked
+# upgrade, and makes the install path dead code that never runs and never gets
+# tested. The catalogs inside the image are the source of truth, so this cannot
+# drift from the TypeScript. Tools that are kind:"baked-in" — the Docker CLI,
+# gh — are genuinely image-level and are exempt.
+check_nothing_baked() {
+  local noun="$1" cmd="$2" filter="$3" json ids baked
 
-  if ! json=$(run "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh $cmd list --defaults --json" 2>/tmp/verify-sandbox-defaults.err); then
+  if ! json=$(run "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh $cmd list --json" 2>/tmp/verify-sandbox-defaults.err); then
     fail "could not read the $noun catalog from the image: $(head -3 /tmp/verify-sandbox-defaults.err 2>/dev/null)"
     return
   fi
 
-  ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$json")
+  ids=$(jq -r "$filter | .id" <<<"$json")
   if [ -z "$ids" ]; then
-    fail "the image's $noun catalog reports no kind:\"default\" entries — the unbaked-image check would pass vacuously"
+    fail "the image's $noun catalog matched no entry for '$filter' — the unbaked-image check would pass vacuously"
     return
   fi
 
-  baked=$(jq -r '.[] | select(.kind == "default" and .installed == true) | "\(.id) (\(.binary))"' <<<"$json")
+  baked=$(jq -r "$filter | select(.installed == true) | \"\(.id) (\(.binary))\"" <<<"$json")
   if [ -n "$baked" ]; then
-    fail "the image ships baked default ${noun}s: $(tr '\n' ' ' <<<"$baked")— these must be provisioned into /home/sandbox/.local at boot, not baked"
+    fail "the image ships baked ${noun}s: $(tr '\n' ' ' <<<"$baked")— these must be installed into /home/sandbox/.local by the CLI, not baked"
   else
-    ok "no default $noun is baked into the image ($(tr '\n' ' ' <<<"$ids"))"
+    ok "no $noun is baked into the image ($(tr '\n' ' ' <<<"$ids"))"
   fi
 }
 
 if command -v jq >/dev/null 2>&1; then
-  check_no_baked_defaults harness harness
-  check_no_baked_defaults tool tool
+  # Every harness, whatever its kind — none belongs in the image.
+  check_nothing_baked harness harness '.[]'
+  # Tools split: kind:"default" is provisioned, kind:"baked-in" is image-level.
+  check_nothing_baked "default tool" tool '.[] | select(.kind == "default")'
 else
   fail "jq is required to read the image's harness and tool catalogs"
+fi
+
+# The inverse for tools: a kind:"baked-in" tool must actually be present, or the
+# check above is passing because the image is simply missing everything.
+if command -v jq >/dev/null 2>&1; then
+  if baked_json=$(run "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh tool list --json" 2>/dev/null); then
+    absent=$(jq -r '.[] | select(.kind == "baked-in" and .installed != true) | .id' <<<"$baked_json")
+    present=$(jq -r '.[] | select(.kind == "baked-in") | .id' <<<"$baked_json")
+    if [ -z "$present" ]; then
+      fail "the image's tool catalog declares no kind:\"baked-in\" tool — nothing anchors the image-level half"
+    elif [ -n "$absent" ]; then
+      fail "baked-in tools are missing from the image: $(tr '\n' ' ' <<<"$absent")"
+    else
+      ok "every baked-in tool is present ($(tr '\n' ' ' <<<"$present"))"
+    fi
+  fi
 fi
 
 if ((${#failures[@]})); then

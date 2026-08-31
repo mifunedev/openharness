@@ -124,19 +124,27 @@ else
   if grep -Eq 'arm64-default-image|linux/arm64|docker/setup-qemu-action|CI_RUNNER_ARM64' <<<"$compat"; then
     missing+=("compatibility workflow: retains the removed permanent arm64 build")
   fi
+  # #908 deleted the INSTALL_* build args, so a build-arg matrix can no longer
+  # exercise the optional harnesses. The job must install them the way an
+  # operator does instead, and must not reintroduce the args.
   for arg in INSTALL_HERMES INSTALL_DEEPAGENTS INSTALL_OPENCODE INSTALL_GROK_BUILD; do
-    chas "--build-arg $arg=true" "does not build with $arg=true"
+    if grep -Fq -- "--build-arg $arg" <<<"$compat"; then
+      missing+=("compatibility workflow: still builds with $arg — that build arg no longer exists; install through \`oh harness install\`")
+    fi
   done
   optional=$(awk '
-    /^  optional-installers-image:$/ { found=1 }
-    found && /^  [[:alnum:]_-]+:$/ && !/^  optional-installers-image:$/ { exit }
+    /^  optional-harness-install:$/ { found=1 }
+    found && /^  [[:alnum:]_-]+:$/ && !/^  optional-harness-install:$/ { exit }
     found { print }
   ' <<<"$compat")
   if [[ -z "$optional" ]]; then
-    missing+=("compatibility workflow: no optional installer job")
+    missing+=("compatibility workflow: no optional-harness-install job")
   else
-    ohas() { grep -Fq -- "$1" <<<"$optional" || missing+=("compatibility optional installer job: $2"); }
-    ohas 'for tool in hermes deepagents opencode grok; do' "does not check every optional tool in one guarded loop"
+    ohas() { grep -Fq -- "$1" <<<"$optional" || missing+=("compatibility optional harness job: $2"); }
+    ohas 'oh harness install' "does not install through the CLI — the path #908 made the only one"
+    ohas 'select(.kind == "optional") | .id' "does not read the optional set from the catalog, so it can drift"
+    ohas 'would pass vacuously' "does not fail closed when the catalog yields no optional harness"
+    ohas '/home/sandbox/.local/*)' "does not assert the install landed in the home mount"
     ohas "if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+" "does not require numeric dotted versions"
     ohas 'did not output a numeric dotted version' "does not fail false-positive output"
   fi

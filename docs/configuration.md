@@ -61,10 +61,10 @@ to `oh harness` names: `opencode`, `grok-build`, `deepagents`, `hermes`.
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `install.opencode` | boolean | `false` | `INSTALL_OPENCODE` | Build the OpenCode CLI into the image. |
-| `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Build the Grok Build CLI into the image. |
-| `install.deepagents` | boolean | `false` | `INSTALL_DEEPAGENTS` | Build the DeepAgents CLI into the image. |
-| `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Build the Hermes CLI into the image and enable its runtime wiring. |
+| `install.opencode` | boolean | `false` | `INSTALL_OPENCODE` | Install the OpenCode CLI into `~/.local` at boot. `oh harness install opencode` sets it and installs now. |
+| `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
+| `install.deepagents` | boolean | `false` | `INSTALL_DEEPAGENTS` | Install the DeepAgents CLI into `~/.local` at boot. `oh harness install deepagents` sets it and installs now. |
+| `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Install the Hermes CLI into `~/.local` at boot and enable its runtime wiring (skill vendoring, `auth.json`). |
 | `install.agentBrowser` | boolean | `false` | `INSTALL_AGENT_BROWSER` | Install agent-browser and Chromium (about 1 GB). |
 
 ### Access

@@ -61,9 +61,15 @@ records() {
   # One output line per record: "<id>\t<sha1 of the record body>". Body newlines are
   # folded to \036 inside awk so a multi-line body cannot split the read loop below.
   awk '
-    /^## SI-[0-9]+(-V)?[[:space:]]/ { if (id != "") { printf "%s\t%s\n", id, body }; id=$2; body=""; next }
+    function emit() {
+      # Trailing blank lines belong to the gap between records, not to the record.
+      # Without this, appending a record would look like a mutation of the previous one.
+      sub(/[ \t\036]+$/, "", body)
+      printf "%s\t%s\n", id, body
+    }
+    /^## SI-[0-9]+(-V)?[[:space:]]/ { if (id != "") emit(); id=$2; body=""; next }
     id != "" { body = body $0 "\036" }
-    END { if (id != "") printf "%s\t%s\n", id, body }
+    END { if (id != "") emit() }
   ' | while IFS=$'\t' read -r id body; do
       [[ -n "$id" ]] || continue
       printf '%s\t%s\n' "$id" "$(printf '%s' "$body" | shasum | awk '{print $1}')"

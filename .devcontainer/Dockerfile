@@ -28,28 +28,7 @@ RUN install -m 0755 -d /etc/apt/keyrings \
  && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
  && rm -rf /var/lib/apt/lists/*
 
-# Cloudflare publishes no trixie suite (pkg.cloudflare.com/cloudflared/dists/trixie returns HTTP 404);
-# the bookworm package is compatible with trixie, so this suite stays pinned to bookworm.
-RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-      -o /usr/share/keyrings/cloudflare-main.gpg \
- && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared bookworm main" \
-      > /etc/apt/sources.list.d/cloudflared.list \
- && apt-get update && apt-get install -y --no-install-recommends cloudflared \
- && rm -rf /var/lib/apt/lists/*
-
 RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
-
-ARG HERDR_VERSION=0.7.4
-RUN case "$(dpkg --print-architecture)" in \
-      amd64) herdr_arch=x86_64; herdr_sha=bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059 ;; \
-      arm64) herdr_arch=aarch64; herdr_sha=544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2 ;; \
-      *) echo "Unsupported Herdr architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
-    esac \
- && curl -fsSL "https://github.com/ogulcancelik/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${herdr_arch}" \
-      -o /usr/local/bin/herdr \
- && echo "${herdr_sha}  /usr/local/bin/herdr" | sha256sum -c - \
- && chmod 0755 /usr/local/bin/herdr \
- && test "$(herdr --version)" = "herdr ${HERDR_VERSION}"
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh \
  && cp /root/.local/bin/uv /usr/local/bin/uv \

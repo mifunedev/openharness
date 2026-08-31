@@ -158,8 +158,8 @@ describe("harness catalog", () => {
     });
 
     it("provisions the default harnesses at boot rather than baking them", () => {
-      expect(ENTRYPOINT).toContain("OH_PROVISION_HARNESSES");
-      expect(ENTRYPOINT).toContain(".oh/scripts/provision-harnesses.sh");
+      expect(ENTRYPOINT).toContain("OH_PROVISION_DEFAULTS");
+      expect(ENTRYPOINT).toContain(".oh/scripts/provision-defaults.sh");
     });
 
     it.each(defaults.map((h) => [h.id, h] as const))(
@@ -169,7 +169,7 @@ describe("harness catalog", () => {
         expect(pkg, `${id} declares no install package`).toMatch(/^(@[^/]+\/)?[^-].*/);
         expect(
           DOCKERFILE_CODE,
-          `${id} is baked into the image; it belongs to provision-harnesses.sh`,
+          `${id} is baked into the image; it belongs to provision-defaults.sh`,
         ).not.toContain(pkg);
       },
     );
@@ -180,9 +180,9 @@ describe("harness catalog", () => {
 
     it("bounds the boot-path provisioner so an unreachable registry cannot stall the entrypoint", () => {
       expect(ENTRYPOINT).toMatch(
-        /timeout "\$\{OH_PROVISION_HARNESSES_TIMEOUT:-\d+\}" bash "\$HARNESS\/\.oh\/scripts\/provision-harnesses\.sh"/,
+        /timeout "\$\{OH_PROVISION_DEFAULTS_TIMEOUT:-\d+\}" bash "\$HARNESS\/\.oh\/scripts\/provision-defaults\.sh"/,
       );
-      expect(ENTRYPOINT).toContain("WARNING: harness provisioning did not complete");
+      expect(ENTRYPOINT).toContain("WARNING: default provisioning did not complete");
     });
   });
 

@@ -13,6 +13,7 @@ import {
   setInstallFlag,
 } from "../lib/env-file.js";
 import {
+  defaultTools,
   findTool,
   installableToolIds,
   toolIds,
@@ -32,6 +33,7 @@ export interface ToolOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
+  defaultsOnly?: boolean;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -44,6 +46,7 @@ export interface ToolInstallOptions extends ToolOptions {
 interface ToolRow {
   id: string;
   title: string;
+  binary: string;
   kind: string;
   enabled: boolean | null;
   installed: boolean | null;
@@ -107,9 +110,9 @@ async function collectRows(
   root: string,
   run: LifecycleRunner,
   env?: NodeJS.ProcessEnv,
-  only?: ToolEntry,
+  only?: readonly ToolEntry[],
 ): Promise<ToolRow[]> {
-  const entries = only ? [only] : [...TOOL_CATALOG];
+  const entries = only ? [...only] : [...TOOL_CATALOG];
   const target = targetFor(root, run, env);
 
   let reachable = false;
@@ -125,6 +128,7 @@ async function collectRows(
     rows.push({
       id: entry.id,
       title: entry.title,
+      binary: entry.binary,
       kind: entry.kind,
       enabled:
         entry.toolKey === undefined ? null : isInstallFlagEnabled(root, entry.toolKey),
@@ -175,7 +179,12 @@ function renderDetail(rows: ToolRow[], io: ToolIO): void {
 export async function runToolList(opts: ToolOptions, io: ToolIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const rows = await collectRows(root, run, opts.env);
+  const rows = await collectRows(
+    root,
+    run,
+    opts.env,
+    opts.defaultsOnly === true ? defaultTools() : undefined,
+  );
   if (opts.json) {
     io.stdout(`${JSON.stringify(rows, null, 2)}\n`);
   } else {
@@ -204,7 +213,7 @@ export async function runToolStatus(
     if (!only) return unknownTool(name, io);
   }
 
-  const rows = await collectRows(root, run, opts.env, only);
+  const rows = await collectRows(root, run, opts.env, only ? [only] : undefined);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? rows[0] : rows, null, 2)}\n`);
   } else {

@@ -34,29 +34,19 @@ describe("sandbox base image", () => {
     expect(dockerfile).not.toContain("https://download.docker.com/linux/debian bookworm stable");
   });
 
-  it("keeps Cloudflare's apt repository on Bookworm", () => {
-    expect(dockerfile).toContain("https://pkg.cloudflare.com/cloudflared bookworm main");
-    expect(dockerfile).not.toContain("https://pkg.cloudflare.com/cloudflared trixie main");
+  // #906: cloudflared moved out of the image into the tool catalog, which
+  // installs a pinned, checksum-verified binary. That deleted the last reason
+  // this Dockerfile referenced a non-Trixie apt suite.
+  it("no longer carries Cloudflare's apt repository", () => {
+    expect(dockerfile).not.toContain("pkg.cloudflare.com");
   });
 
-  it("explains the Cloudflare Bookworm exception next to that repository", () => {
-    const lines = dockerfile.split("\n");
-    const suiteLine = lines.findIndex((line) => line.includes("pkg.cloudflare.com/cloudflared bookworm main"));
-    expect(suiteLine).toBeGreaterThan(-1);
-
-    const preamble = lines.slice(Math.max(0, suiteLine - 8), suiteLine).join("\n");
-    expect(preamble).toMatch(/^#.*trixie/mi);
-    expect(preamble).toContain("404");
-  });
-
-  it("leaves every other suite reference off Bookworm", () => {
+  it("leaves no suite reference on Bookworm at all", () => {
     const bookwormLines = dockerfile
       .split("\n")
       .filter((line) => /bookworm/i.test(line))
       .filter((line) => !line.trimStart().startsWith("#"));
 
-    expect(bookwormLines).toEqual([
-      expect.stringContaining("https://pkg.cloudflare.com/cloudflared bookworm main"),
-    ]);
+    expect(bookwormLines).toEqual([]);
   });
 });

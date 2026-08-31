@@ -1,23 +1,17 @@
 #!/usr/bin/env bash
 # Verify a built sandbox image: base distribution, apt suites, the sandbox
-# UID/GID contract, the Node/pnpm pins, the Herdr checksum, and version output
-# from every required default tool, and that no kind:"default" harness is baked
-# into it. Usage: verify-sandbox-image.sh <image-ref>
+# UID/GID contract, the Node/pnpm pins, and version output from every baked-in
+# tool, and that no kind:"default" harness or tool is baked into it.
+# Usage: verify-sandbox-image.sh <image-ref>
 
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
-DOCKERFILE=${VERIFY_IMAGE_DOCKERFILE:-$REPO_ROOT/.devcontainer/Dockerfile}
-
 EXPECTED_CODENAME=trixie
 EXPECTED_DOCKER_SUITE=trixie
-EXPECTED_CLOUDFLARE_SUITE=bookworm
 EXPECTED_UID=1000
 EXPECTED_GID=1000
 EXPECTED_NODE_MAJOR=22
 EXPECTED_PNPM=10.33.0
-EXPECTED_HERDR=0.7.4
 
 usage() {
   echo "usage: ${0##*/} <image-ref>" >&2
@@ -39,19 +33,9 @@ arch=$(docker image inspect -f '{{.Architecture}}' "$IMAGE")
 echo "verifying $IMAGE (architecture: $arch)"
 
 case "$arch" in
-  amd64) herdr_arch=x86_64 ;;
-  arm64) herdr_arch=aarch64 ;;
+  amd64|arm64) ;;
   *) echo "FAIL: unsupported image architecture: $arch" >&2; exit 1 ;;
 esac
-
-expected_sha=$(
-  awk -v a="$arch" '$0 ~ a"\\)" && /herdr_sha=/ {
-    for (i = 1; i <= NF; i++) if ($i ~ /^herdr_sha=/) { sub(/^herdr_sha=/, "", $i); print $i; exit }
-  }' "$DOCKERFILE"
-)
-if [ -z "$expected_sha" ]; then
-  fail "no herdr_sha pinned for $arch in ${DOCKERFILE#"$REPO_ROOT"/}"
-fi
 
 codename=$(run '. /etc/os-release && printf "%s" "${VERSION_CODENAME:-}"')
 if [ "$codename" = "$EXPECTED_CODENAME" ]; then
@@ -65,13 +49,6 @@ if grep -qF "linux/debian $EXPECTED_DOCKER_SUITE stable" <<<"$docker_suite"; the
   ok "Docker apt suite is $EXPECTED_DOCKER_SUITE"
 else
   fail "Docker apt suite is not $EXPECTED_DOCKER_SUITE: $docker_suite"
-fi
-
-cf_suite=$(run 'cat /etc/apt/sources.list.d/cloudflared.list')
-if grep -qF "cloudflared $EXPECTED_CLOUDFLARE_SUITE main" <<<"$cf_suite"; then
-  ok "Cloudflare apt suite is $EXPECTED_CLOUDFLARE_SUITE (no Trixie suite is published)"
-else
-  fail "Cloudflare apt suite is not $EXPECTED_CLOUDFLARE_SUITE: $cf_suite"
 fi
 
 ids=$(run 'id -u sandbox; id -g sandbox')
@@ -97,22 +74,6 @@ else
   fail "pnpm is $pnpm_version, expected exactly $EXPECTED_PNPM"
 fi
 
-herdr_version=$(run 'herdr --version')
-if [ "$herdr_version" = "herdr $EXPECTED_HERDR" ]; then
-  ok "herdr is $EXPECTED_HERDR"
-else
-  fail "herdr is '$herdr_version', expected 'herdr $EXPECTED_HERDR'"
-fi
-
-if [ -n "$expected_sha" ]; then
-  actual_sha=$(run 'sha256sum /usr/local/bin/herdr' | awk '{print $1}')
-  if [ "$actual_sha" = "$expected_sha" ]; then
-    ok "installed herdr matches the $arch ($herdr_arch) Dockerfile checksum pin"
-  else
-    fail "installed herdr checksum $actual_sha does not match the $arch pin $expected_sha"
-  fi
-fi
-
 # Under emulation `docker run` prefixes its output with a platform-mismatch
 # warning on stderr. Drop it so the reported line is the tool's own version,
 # not the runner's complaint about the architecture.
@@ -125,7 +86,7 @@ has_numeric_dotted_version() {
 }
 
 for tool in "gh --version" "docker --version" "docker compose version" \
-            "cloudflared --version" "bun --version" "uv --version"; do
+            "bun --version" "uv --version"; do
   if out=$(run "$tool" 2>&1); then
     line=$(first_real_line <<<"$out")
     if has_numeric_dotted_version <<<"$line"; then
@@ -138,30 +99,39 @@ for tool in "gh --version" "docker --version" "docker compose version" \
   fi
 done
 
-# The image must NOT ship the default harnesses (#904). They are the in-sandbox
-# CLI's responsibility and are installed into the home mount at boot, so a
-# default harness found here means the bake came back and the home mount's copy
-# is shadowed by an unupgradable one under /usr/lib/node_modules. The catalog in
-# the image is the source of truth for which ids are default, so this cannot
-# drift from harnesses/catalog.ts.
-if defaults_json=$(run 'cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness list --defaults --json' 2>/tmp/verify-sandbox-defaults.err); then
-  if command -v jq >/dev/null 2>&1; then
-    default_ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$defaults_json")
-    if [ -z "$default_ids" ]; then
-      fail "the image's harness catalog reports no kind:\"default\" harnesses — the unbaked-image check would pass vacuously"
-    else
-      baked=$(jq -r '.[] | select(.kind == "default" and .installed == true) | "\(.id) (\(.binary))"' <<<"$defaults_json")
-      if [ -n "$baked" ]; then
-        fail "the image ships baked default harnesses: $(tr '\n' ' ' <<<"$baked")— these must be provisioned into /home/sandbox/.local at boot, not baked"
-      else
-        ok "no default harness is baked into the image ($(tr '\n' ' ' <<<"$default_ids"))"
-      fi
-    fi
-  else
-    fail "jq is required to read the image's harness catalog JSON"
+# The image must NOT ship any kind:"default" harness (#904) or tool (#906).
+# Both are installed into /home/sandbox/.local at boot: a copy baked into a
+# system path shadows the home-mount install with one no running sandbox can
+# upgrade, and makes the boot install dead code that never runs and never gets
+# tested. The catalogs inside the image are the source of truth for which ids
+# are default, so this cannot drift from the TypeScript.
+check_no_baked_defaults() {
+  local noun="$1" cmd="$2" json ids baked
+
+  if ! json=$(run "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh $cmd list --defaults --json" 2>/tmp/verify-sandbox-defaults.err); then
+    fail "could not read the $noun catalog from the image: $(head -3 /tmp/verify-sandbox-defaults.err 2>/dev/null)"
+    return
   fi
+
+  ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$json")
+  if [ -z "$ids" ]; then
+    fail "the image's $noun catalog reports no kind:\"default\" entries — the unbaked-image check would pass vacuously"
+    return
+  fi
+
+  baked=$(jq -r '.[] | select(.kind == "default" and .installed == true) | "\(.id) (\(.binary))"' <<<"$json")
+  if [ -n "$baked" ]; then
+    fail "the image ships baked default ${noun}s: $(tr '\n' ' ' <<<"$baked")— these must be provisioned into /home/sandbox/.local at boot, not baked"
+  else
+    ok "no default $noun is baked into the image ($(tr '\n' ' ' <<<"$ids"))"
+  fi
+}
+
+if command -v jq >/dev/null 2>&1; then
+  check_no_baked_defaults harness harness
+  check_no_baked_defaults tool tool
 else
-  fail "could not read the harness catalog from the image: $(cat /tmp/verify-sandbox-defaults.err 2>/dev/null | head -3)"
+  fail "jq is required to read the image's harness and tool catalogs"
 fi
 
 if ((${#failures[@]})); then

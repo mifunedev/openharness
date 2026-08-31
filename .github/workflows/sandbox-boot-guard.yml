@@ -134,8 +134,8 @@ jobs:
 
       # This step is the ONLY place the boot-time harness install runs end to end.
       # It boots on a fresh home volume (the smoke tears down with `down -v`), so
-      # provision-harnesses.sh does real npm work every run and the smoke asserts
-      # the result. Do not set OH_PROVISION_HARNESSES=false here to speed it up —
+      # provision-defaults.sh does real npm work every run and the smoke asserts
+      # the result. Do not set OH_PROVISION_DEFAULTS=false here to speed it up —
       # that would return the install path to being untested dead code.
       - name: Boot sandbox and verify healthcheck (exercises boot-time harness provisioning)
         env:

@@ -12,12 +12,12 @@ case "${1:-}" in
   *) echo "usage: $(basename "$0") [--verify]" >&2; exit 2 ;;
 esac
 
-log() { echo "[provision-harnesses] $*"; }
+log() { echo "[provision-defaults] $*"; }
 
 die() {
-  echo "[provision-harnesses] ERROR: $1" >&2
+  echo "[provision-defaults] ERROR: $1" >&2
   shift
-  for line in "$@"; do echo "[provision-harnesses]   $line" >&2; done
+  for line in "$@"; do echo "[provision-defaults]   $line" >&2; done
   exit 1
 }
 
@@ -33,7 +33,7 @@ inside_sandbox || die \
   "this provisions /home/$SANDBOX_USER/.local inside the sandbox and must not run on the host" \
   "open a sandbox shell first:" \
   "  oh shell" \
-  "  bash .oh/scripts/provision-harnesses.sh"
+  "  bash .oh/scripts/provision-defaults.sh"
 
 export OH_EXECUTION_TARGET=local
 
@@ -103,56 +103,76 @@ command -v jq >/dev/null 2>&1 || die \
   "the image installs it with apt; rebuild the sandbox image:" \
   "  oh sandbox"
 
-STATES=""
-if ! STATES="$("$OH_BIN" harness list --defaults --json 2>/dev/null)" || [ -z "$STATES" ]; then
-  die "'$OH_BIN harness list --defaults --json' produced no catalog" \
-      "the CLI at $(command -v "$OH_BIN") predates \`oh harness\`; the harness catalog" \
-      "is the only source of truth for what to install, so there is nothing to provision." \
-      "rebuild the sandbox image from this control plane:" \
-      "  oh sandbox"
-fi
-
-DEFAULTS="$(jq -r '.[] | select(.kind == "default") | "\(.id)\t\(.installed)"' <<<"$STATES")"
-[ -n "$DEFAULTS" ] || die \
-  "the harness catalog declares no default harnesses" \
-  "check .oh/cli/src/lib/harnesses/catalog.ts"
-
+# Both catalogs answer the same question — "what does a working sandbox need that
+# is not in the image?" — and get the same policy: install what is missing, never
+# replace what is already there. The catalogs are the only source of truth for
+# the list, so this script never names a package.
 missing=()
 failed=()
+provisioned=0
 
-while IFS=$'\t' read -r id installed; do
-  [ -n "$id" ] || continue
-  if [ "$installed" = "true" ]; then
-    log "OK  $id present (unpinned — an existing install is never replaced)"
-    continue
+provision_catalog() {
+  local noun="$1" cmd="$2" catalog="$3"
+  local states defaults id installed
+
+  if ! states="$("$OH_BIN" "$cmd" list --defaults --json 2>/dev/null)" || [ -z "$states" ]; then
+    die "'$OH_BIN $cmd list --defaults --json' produced no catalog" \
+        "the CLI at $(command -v "$OH_BIN") predates \`oh $cmd --defaults\`; the catalog" \
+        "is the only source of truth for what to install, so there is nothing to provision." \
+        "rebuild the sandbox image from this control plane:" \
+        "  oh sandbox"
   fi
-  if [ "$MODE" = "verify" ]; then
-    missing+=("$id")
-    continue
-  fi
-  log "installing $id into $NPM_USER_PREFIX"
-  if "$OH_BIN" harness install "$id" --no-persist </dev/null; then
-    log "OK  $id installed"
-  else
-    failed+=("$id")
-  fi
-done <<<"$DEFAULTS"
+
+  defaults="$(jq -r '.[] | select(.kind == "default") | "\(.id)\t\(.installed)"' <<<"$states")"
+  [ -n "$defaults" ] || die \
+    "the $noun catalog declares no defaults" \
+    "check $catalog"
+
+  while IFS=$'\t' read -r id installed; do
+    [ -n "$id" ] || continue
+    provisioned=$((provisioned + 1))
+    if [ "$installed" = "true" ]; then
+      log "OK  $id present (unpinned — an existing install is never replaced)"
+      continue
+    fi
+    if [ "$MODE" = "verify" ]; then
+      missing+=("$id")
+      continue
+    fi
+    log "installing $id into $NPM_USER_PREFIX"
+    if "$OH_BIN" "$cmd" install "$id" --no-persist </dev/null; then
+      log "OK  $id installed"
+    else
+      failed+=("$id")
+    fi
+  done <<<"$defaults"
+}
+
+provision_catalog harness harness .oh/cli/src/lib/harnesses/catalog.ts
+provision_catalog tool    tool    .oh/cli/src/lib/tools/catalog.ts
+
+if ((provisioned == 0)); then
+  die "neither catalog declared a default to provision" \
+      "this would report success without installing anything; check" \
+      "  .oh/cli/src/lib/harnesses/catalog.ts" \
+      "  .oh/cli/src/lib/tools/catalog.ts"
+fi
 
 if [ "$MODE" = "verify" ] && ((${#missing[@]})); then
-  die "default harnesses are not installed: ${missing[*]}" \
+  die "defaults are not installed: ${missing[*]}" \
       "run inside the sandbox (\`oh shell\` from the host):" \
-      "  bash .oh/scripts/provision-harnesses.sh"
+      "  bash .oh/scripts/provision-defaults.sh"
 fi
 
 if ((${#failed[@]})); then
   die "failed to install: ${failed[*]}" \
       "each install runs as '$SANDBOX_USER' into $NPM_USER_PREFIX; a network outage is the usual cause." \
       "re-run inside the sandbox once it has network:" \
-      "  bash .oh/scripts/provision-harnesses.sh"
+      "  bash .oh/scripts/provision-defaults.sh"
 fi
 
 if [ "$MODE" = "verify" ]; then
-  log "OK  default harnesses present under $NPM_USER_PREFIX"
+  log "OK  all $provisioned default harnesses and tools present under $NPM_USER_PREFIX"
 else
-  log "OK  default harnesses provisioned under $NPM_USER_PREFIX"
+  log "OK  all $provisioned default harnesses and tools provisioned under $NPM_USER_PREFIX"
 fi

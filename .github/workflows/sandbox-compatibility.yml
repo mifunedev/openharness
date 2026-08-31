@@ -101,10 +101,27 @@ jobs:
             exit 1
           fi
 
+          # These four installs reach four third-party endpoints. A transient
+          # upstream failure must not block this repo's merges: Hermes' own
+          # installer hard-fails the whole install when its `npm install` step
+          # blips, which took this job down once on a commit that was correct
+          # (the rerun passed unchanged). One retry absorbs that. It does NOT
+          # weaken the contract below — a genuine break (wrong user, wrong
+          # path, a sudo prompt) fails both attempts and still fails the job.
           for id in $ids; do
-            echo "--- oh harness install $id"
-            docker exec -u sandbox "$cid" bash -lc \
-              "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness install '$id' --no-persist"
+            for attempt in 1 2; do
+              echo "--- oh harness install $id (attempt $attempt)"
+              if docker exec -u sandbox "$cid" bash -lc \
+                "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness install '$id' --no-persist"; then
+                break
+              fi
+              if [ "$attempt" = 2 ]; then
+                echo "ERROR: $id failed to install twice — this is not a transient upstream blip" >&2
+                exit 1
+              fi
+              echo "$id install failed; retrying once after 15s in case the upstream endpoint blipped" >&2
+              sleep 15
+            done
           done
 
           for id in $ids; do

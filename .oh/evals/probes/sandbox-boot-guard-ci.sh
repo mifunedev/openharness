@@ -145,6 +145,8 @@ else
     ohas 'select(.kind == "optional") | .id' "does not read the optional set from the catalog, so it can drift"
     ohas 'would pass vacuously' "does not fail closed when the catalog yields no optional harness"
     ohas '/home/sandbox/.local/*)' "does not assert the install landed in the home mount"
+    ohas 'for attempt in 1 2; do' "does not retry a transient upstream failure — four third-party endpoints can each block a merge"
+    ohas 'this is not a transient upstream blip' "retries without ever failing hard, so a real break would pass"
     ohas "if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+" "does not require numeric dotted versions"
     ohas 'did not output a numeric dotted version' "does not fail false-positive output"
   fi

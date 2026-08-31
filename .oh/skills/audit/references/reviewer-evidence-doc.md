@@ -71,8 +71,9 @@ Every doc answers these, in this order, before the per-gate proof:
    plan: a criterion satisfied differently, a deliberate deviation, a mid-build scope
    call. Explicitly `None` when there was none.
 4. **What remains unverified** — skipped gates, criteria argued rather than observed,
-   pre-existing reds carried forward, anything a reviewer must check by hand.
-   Explicitly `Nothing` when there is none.
+   pre-existing reds carried forward, a `SIMPLICITY-RESIDUAL` list the simplify loop
+   ended on, anything a reviewer must check by hand. Explicitly `Nothing` when there is
+   none.
 
 **Why question 0 is first and separate.** Questions 1–4 prove the change is *correct*.
 None of them establishes it was *worth making*. A doc can pass every gate, diverge nowhere,
@@ -121,6 +122,7 @@ forward, anything needing a hand check — or "Nothing".>
 | Regression floor | `/eval` runner exit + delta | `rc=0`, no new green→red | PASS |
 | Promotable / CI | focused classifier JSON | `promotable=true`, `evidenceComplete=true` | PASS |
 | UI | browser criteria | n/a — no story declares browser verification | N/A |
+| Slop | net lines + changed-function CCN | `+<netAdded>/-<netRemoved>`, `<n>` over CCN <max> | PASS |
 
 ## Observed output
 

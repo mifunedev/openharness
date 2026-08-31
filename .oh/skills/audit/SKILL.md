@@ -4,7 +4,7 @@ description: >-
   Explicit nine-target audit dispatcher for implementation promotability, one PR,
   the open PR queue, harness health, context budget, skill integrity, eval quality,
   drift, and correlated full campaigns. TRIGGER when: audit this task; verify this
-  implementation; audit PR N; classify this pull request; audit open PRs; triage
+  implementation; is this the simplest approach; audit PR N; classify this pull request; audit open PRs; triage
   the PR queue; audit the harness; find harness improvements; audit context budget;
   audit skills; find stale or broken skills; lint evals;
   find Goodharted probes; check framework drift; cron staleness; run a full audit

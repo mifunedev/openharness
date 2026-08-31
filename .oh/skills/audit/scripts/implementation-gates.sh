@@ -2,6 +2,8 @@
 set -euo pipefail
 : "${AUDIT_ROOT:?AUDIT_ROOT is required}"
 AUDIT_ROOT=$(cd "$AUDIT_ROOT" && pwd -P)
+CCN_MAX=${CCN_MAX:-10}
+ROUND_CAP=${ROUND_CAP:-3}
 mode=${1:-}; shift || true
 case $mode in
   gate1)
@@ -78,5 +80,58 @@ case $mode in
     cmp -s "$before" "$after" || { echo 'FAIL gate4: browser preflight mutated AUDIT_ROOT content or index' >&2; exit 1; }
     rm -f "$before" "$after"
     ;;
-  *) echo 'usage: implementation-gates.sh <gate1|classify-pr|browser-required|browser-preflight> ...' >&2; exit 64;;
+  slop-metrics)
+    base=${1:-development}
+    [[ $base =~ ^[A-Za-z0-9._/-]+$ ]] || { echo 'usage: implementation-gates.sh slop-metrics <base-ref>' >&2; exit 64; }
+    git -C "$AUDIT_ROOT" rev-parse --verify --quiet "$base^{commit}" >/dev/null \
+      || { echo "FAIL gate5: unknown base ref: $base" >&2; exit 64; }
+    counted(){ case $1 in *pnpm-lock.yaml|*package-lock.json|*.oh/evals/RESULTS.md) return 1;; esac; [[ ! -L $AUDIT_ROOT/$1 ]]; }
+    added=0; removed=0
+    while read -r a r path; do
+      [[ $a == '-' ]] && continue
+      counted "$path" || continue
+      added=$((added + a)); removed=$((removed + r))
+    done < <(git -C "$AUDIT_ROOT" diff --numstat "$base...HEAD")
+    sh_delta=$(git -C "$AUDIT_ROOT" diff -U0 "$base...HEAD" -- '*.sh' | awk '
+      /^\+\+\+/ || /^---/ { next }
+      /^[+-]/ {
+        sign = (substr($0,1,1)=="+") ? 1 : -1; line = " " substr($0,2) " "
+        n = gsub(/&&|\|\|/, "", line)
+        n += gsub(/[^[:alnum:]_](if|elif|while|until|for|case)[^[:alnum:]_]/, " ", line)
+        total += sign * n
+      }
+      END { print total+0 }')
+    mapfile -t ts < <(git -C "$AUDIT_ROOT" diff --name-only --diff-filter=d "$base...HEAD" -- '*.ts' '*.mjs' '*.js')
+    tool=unavailable; over='[]'
+    if ((${#ts[@]})); then
+      if ver=$(uvx lizard --version 2>/dev/null); then
+        tool="lizard $ver"
+        warnings=$(cd "$AUDIT_ROOT" && uvx lizard -w --CCN "$CCN_MAX" "${ts[@]}" 2>/dev/null || true)
+        over=$(sed -nE 's/^(.+): warning: (\S+) has [0-9]+ NLOC, ([0-9]+) CCN.*/\1 \2 CCN \3/p' <<<"$warnings" | jq -R . | jq -s .)
+      fi
+    else
+      tool='lizard n/a (no analysable files changed)'
+    fi
+    jq -n --argjson netAdded "$added" --argjson netRemoved "$removed" \
+      --argjson shBranchPoints "$sh_delta" \
+      --argjson tsOverCcn "$over" --arg tool "$tool" --argjson ccnMax "$CCN_MAX" \
+      '{netAdded:$netAdded,netRemoved:$netRemoved,shBranchPoints:$shBranchPoints,ccnMax:$ccnMax,tsOverCcn:$tsOverCcn,tool:$tool}'
+    ;;
+  simplicity-round)
+    slug=${1:-}; [[ $slug =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo 'FAIL gate5: invalid slug' >&2; exit 64; }
+    task_dir="$AUDIT_ROOT/.oh/tasks/$slug"; counter="$task_dir/simplify-rounds.json"
+    resolved_task=$(realpath -e -- "$task_dir" 2>/dev/null) \
+      || { echo "FAIL gate5: missing task directory: $task_dir" >&2; exit 1; }
+    [[ $resolved_task == "$task_dir" && ! -L $task_dir ]] \
+      || { echo "FAIL gate5: task directory is symlinked: $task_dir" >&2; exit 1; }
+    rounds=0; prev=none
+    if [[ -f $counter && ! -L $counter ]]; then
+      jq -e '(.rounds|type)=="number"' "$counter" >/dev/null \
+        || { echo "FAIL gate5: malformed counter: $counter" >&2; exit 1; }
+      rounds=$(jq -r '.rounds' "$counter"); prev=$(jq -r '.netAdded // "none"' "$counter")
+    fi
+    escalate=false; (( rounds >= ROUND_CAP )) && escalate=true
+    printf 'rounds=%s cap=%s escalate=%s prevNetAdded=%s\n' "$rounds" "$ROUND_CAP" "$escalate" "$prev"
+    ;;
+  *) echo 'usage: implementation-gates.sh <gate1|classify-pr|browser-required|browser-preflight|slop-metrics|simplicity-round> ...' >&2; exit 64;;
 esac

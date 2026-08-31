@@ -23,6 +23,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
 
 ### Added
+- Add gate 5 to `/audit implementation`: fail a promotable change while its diff can still be smaller. Measures net lines and per-function CCN on changed TypeScript via `uvx lizard`. ([#912](https://github.com/mifunedev/openharness/issues/912))
+- Add `audit-slop-gate.sh`, a tier-A probe holding gate 5's termination contract: a finding needs a concrete smaller alternative, and the loop ends on the cap or a non-reducing round. ([#912](https://github.com/mifunedev/openharness/issues/912))
 - Provision the default harnesses into `/home/sandbox/.local` at boot, gated by `OH_PROVISION_HARNESSES`, so `oh harness install` also works from inside the sandbox ([#902](https://github.com/mifunedev/openharness/issues/902)).
 - Add `oh-home-mount.sh`, a tier-A probe holding the single-`$HOME`-mount contract: one mount per compose file, the baked `/opt/home-seed`, and the checkout prune that replaces `-xdev` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Assert boot-provisioned harnesses in the boot smoke and reject a baked default harness in `verify-sandbox-image.sh`, so CI exercises the install path ([#904](https://github.com/mifunedev/openharness/issues/904)).

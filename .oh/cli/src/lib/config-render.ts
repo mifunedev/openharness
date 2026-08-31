@@ -1,7 +1,7 @@
 import type { OhConfig } from "./oh-config.js";
 import { isSecretKey } from "./secrets.js";
 
-const RETIRED_KEYS = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR"] as const;
+const RETIRED_KEYS = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR", "OH_PROJECT_ROOT"] as const;
 
 export interface RenderedVar {
   key: string;
@@ -17,7 +17,7 @@ export function renderComposeVars(config: OhConfig): RenderedVar[] {
 
   put("SANDBOX_NAME", config.name);
   put("TZ", config.timezone);
-  put("OH_PROJECT_ROOT", config.projectRoot);
+  put("OH_HOME_MOUNT", config.storage?.homePath);
 
   put("GIT_USER_NAME", config.git?.userName);
   put("GIT_USER_EMAIL", config.git?.userEmail);

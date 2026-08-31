@@ -641,9 +641,6 @@ const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
   TZ: (c, v) => {
     c.timezone = v;
   },
-  OH_PROJECT_ROOT: (c, v) => {
-    c.projectRoot = v;
-  },
   GIT_USER_NAME: (c, v) => {
     section(c, "git").userName = v;
   },
@@ -762,6 +759,20 @@ async function runWizard(
 
   const gitEmail = await askFn("Git user email:");
   if (gitEmail) section(config, "git").userEmail = gitEmail;
+
+  prompt.info("");
+  prompt.info("The sandbox home holds every agent login, the gh token, and the SSH keys.");
+  prompt.info("Give an absolute HOST path to keep it somewhere you can back up.");
+  prompt.info("Use a dedicated empty directory — the sandbox takes ownership of it.");
+  prompt.info(`Leave blank and Docker manages it as \`${config.name ?? "<name>"}_workspace\`.`);
+  const homePath = (await askFn("Persistent home host path [blank = Docker-managed volume]:")).trim();
+  if (homePath !== "") {
+    if (homePath.startsWith("/")) {
+      section(config, "storage").homePath = homePath;
+    } else {
+      prompt.warn(`Ignoring "${homePath}" — it must be an absolute host path starting with /.`);
+    }
+  }
 
   prompt.step(2, 5, "Optional installs");
   const installs: { key: string; field: string; desc: string }[] = [

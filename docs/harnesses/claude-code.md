@@ -38,7 +38,7 @@ claude auth status     # confirm you're authenticated
 the same OAuth flow, but `claude auth login` is the explicit, scriptable path.
 
 Credentials are stored in `~/.claude/.credentials.json` inside the sandbox (persisted via the
-`claude-auth` volume). The sandbox banner at login indicates whether credentials are present.
+`/home/sandbox` mount). The sandbox banner at login indicates whether credentials are present.
 
 ## Optional Langfuse observability
 

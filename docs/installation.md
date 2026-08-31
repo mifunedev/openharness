@@ -341,24 +341,77 @@ claude  → claude --dangerously-skip-permissions
 codex   → codex --dangerously-bypass-approvals-and-sandbox
 ```
 
-### Persistent volumes
+### Persistent storage
 
-Auth credentials and Herdr workspace state survive container rebuilds via named Docker volumes:
+Everything under the sandbox user's home directory — every agent login, the
+GitHub CLI token, the SSH keys, shell history, and any state a tool writes
+anywhere in `~` — persists through a **single mount at `/home/sandbox`**.
 
-- `claude-auth` → `~/.claude` (Claude Code OAuth)
-- `codex-auth` → `~/.codex` (Codex OAuth)
-- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`)
-- `pi-auth` → `~/.pi` (Pi Agent OAuth)
-- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions; used when DeepAgents is enabled (`install.deepagents: true` in `oh.json`)). Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
-- `hermes-auth` → `~/.hermes` (Hermes auth only; non-auth runtime state defaults to project-local `~/harness/.hermes` when Hermes is enabled (`install.hermes: true` in `oh.json`))
-- `grok-auth` → `~/.grok` (all Grok Build user state: auth, config, sessions, memory, skills/plugins, logs; mounted alongside the other agent auth volumes and used by Grok Build when `install.grokBuild: true` in `oh.json`). Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`; if an API key seems ignored, run `grok logout` or reset the volume.
-- `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
-- `ssh-config` → `~/.ssh` (user SSH keys / known_hosts; entrypoint enforces `chmod 700`)
-- `config-dir` → `~/.config` (all XDG tool config, including the GitHub CLI tokens under `~/.config/gh` and Herdr settings)
-- `herdr-data` → `~/.herdr` (Herdr-created worktrees and related data; session metadata is under `~/.config/herdr`)
+By default Docker manages it as the named volume `<sandbox-name>_workspace`.
+Set `storage.homePath` in `oh.json` to an absolute **host** path and the same
+mount becomes a bind, so you can back the sandbox home up, inspect it, or move
+it between machines:
 
-Hermes is split: when Hermes is enabled (`install.hermes: true` in `oh.json`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint links `.hermes/skills/openharness` to the tracked shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as Claude, Codex, and Pi without copying them into runtime state. Project-local runtime contents are gitignored except `.hermes/README.md`; `oh destroy` removes the auth volume but not the bind-mounted project runtime directory.
+```bash
+oh config set storage.homePath /srv/openharness-home
+```
 
-`oh destroy` and `docker compose down -v` remove named volumes, including Herdr state and provider credentials; use `oh stop` when you want them to survive.
+`oh init` asks for this path during the Project step; leave it blank to keep the
+Docker-managed volume. Use a **dedicated, empty** directory — the sandbox takes
+ownership of everything in it, so never point it at your own host `$HOME`.
+
+The repository checkout is bind-mounted at `/home/sandbox/harness`, nested
+inside that mount. Its location is fixed, not configurable.
+
+The image ships its baked home at `/opt/home-seed`. On every boot the entrypoint
+copies in each **top-level** entry the mount does not already have, and never
+touches one it does — not even its permissions. A fresh mount comes up complete;
+an image upgrade adds whatever new top-level entries it introduced (a new agent
+CLI's `~/.newtool`, say) and leaves everything you already have alone. It does
+not merge new files into a directory the mount already has, which is what the
+per-tool volumes did before.
+
+Hermes is split: when Hermes is enabled (`install.hermes: true` in `oh.json`),
+`HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/`
+directory. The entrypoint links `.hermes/skills/openharness` to the tracked
+shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as
+Claude, Codex, and Pi without copying them into runtime state. Project-local
+runtime contents are gitignored except `.hermes/README.md`.
+
+`oh destroy` and `docker compose down -v` delete the named volume and everything
+in it — provider credentials included; use `oh stop` when you want them to
+survive. When `storage.homePath` points at a host bind, `down -v` cannot remove
+it, and `oh destroy` says so.
+
+#### Migrating from the per-tool volumes
+
+Releases before this change kept eleven separate volumes (`claude-auth`,
+`config-dir`, `ssh-config`, and so on). They are not migrated automatically.
+**Before** upgrading, copy the old home out of the still-running container:
+
+```bash
+mkdir -p /srv/openharness-home
+docker cp <sandbox-name>:/home/sandbox/. /srv/openharness-home
+rm -rf /srv/openharness-home/harness
+oh config set storage.homePath /srv/openharness-home
+```
+
+The trailing `/.` matters: without it `docker cp` places the copy at
+`/srv/openharness-home/sandbox/` instead of unpacking its contents, and the
+sandbox comes up freshly seeded as though nothing was migrated. The `rm -rf`
+drops the copy of the repository checkout — `docker cp` reads through the bind
+mount, so the archive includes `harness/` with its `.git` and `node_modules`,
+which can be several GB and is shadowed by the checkout bind at runtime anyway.
+
+Then rebuild. To stay on a Docker-managed volume instead, copy that directory
+into the new volume once:
+
+```bash
+docker run --rm -v <sandbox-name>_workspace:/to -v /srv/openharness-home:/from \
+  alpine cp -a /from/. /to/
+```
+
+Skipping this loses every agent login and the SSH keys; nothing else breaks, and
+you simply sign in again.
 
 Downstream harness packs and Pi extensions can introduce additional volumes or bind-mount overlays by adding paths to `composeOverrides[]` in the tracked `oh.json`. That list is the one place overlay paths live, and only `oh` applies it: VS Code "Reopen in Container" reads `.devcontainer/docker-compose.yml` alone and applies [no overlays at all](lifecycle-commands.md#vs-code-reopen-in-container-applies-no-overlays).

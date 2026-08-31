@@ -73,7 +73,7 @@ If the command is not found, confirm `INSTALL_DEEPAGENTS=true` is set in
 
 DeepAgents reads provider API keys from `~/.deepagents/.env` and CLI
 defaults from `~/.deepagents/config.toml`. The directory is persisted by
-the `deepagents-auth` named volume by default, so credentials survive
+the single `/home/sandbox` mount by default, so credentials survive
 container rebuilds.
 
 Create the env file on first use:
@@ -99,7 +99,7 @@ durability and review semantics:
 
 | Path | Scope | Persistence | Notes |
 |---|---|---|---|
-| `~/.deepagents/` | Per-sandbox user state | Survives rebuilds via the `deepagents-auth` volume | Provider keys, model defaults, memory, skills, sessions live here. **Only place secrets here.** |
+| `~/.deepagents/` | Per-sandbox user state | Survives rebuilds via the `/home/sandbox` mount | Provider keys, model defaults, memory, skills, sessions live here. **Only place secrets here.** |
 | `<repo>/.deepagents/` | Per-project | Whatever git decides | Project memory and skills the agent may load from the workspace root. **Treat as project data — follows normal `.gitignore` and code-review rules.** |
 
 A repo-local `.deepagents/` directory may be read by the agent and may be

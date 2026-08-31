@@ -5,6 +5,26 @@ import { assertInRoot } from "./env-file.js";
 const OH_CONFIG_FILE = "oh.json";
 const OH_CONFIG_MODE = 0o644;
 
+const RESERVED_HOME_PATHS: readonly string[] = [
+  "/",
+  "/bin",
+  "/boot",
+  "/dev",
+  "/etc",
+  "/home",
+  "/lib",
+  "/opt",
+  "/proc",
+  "/root",
+  "/run",
+  "/sbin",
+  "/srv",
+  "/sys",
+  "/tmp",
+  "/usr",
+  "/var",
+];
+
 export type ImageMode = "build" | "image";
 export type PullPolicy = "missing" | "always" | "never";
 
@@ -48,6 +68,10 @@ export interface ImageSettings {
   pullPolicy?: PullPolicy;
 }
 
+export interface StorageSettings {
+  homePath?: string;
+}
+
 export interface CloudSettings {
   apiUrl?: string;
 }
@@ -74,8 +98,8 @@ export interface OhConfig {
   version: 1;
   name?: string;
   timezone?: string;
-  projectRoot?: string;
   git?: GitIdentity;
+  storage?: StorageSettings;
   install?: InstallFlags;
   access?: AccessSettings;
   hermesDashboard?: HermesDashboardSettings;
@@ -97,8 +121,8 @@ export function defaultOhConfig(name: string): OhConfig {
     version: 1,
     name,
     timezone: "America/Los_Angeles",
-    projectRoot: "/home/sandbox/harness",
     git: {},
+    storage: {},
     install: {
       opencode: false,
       grokBuild: false,
@@ -171,7 +195,24 @@ export function validateOhConfig(value: unknown): OhConfig {
 
   expectString(record, "name");
   expectString(record, "timezone");
-  expectString(record, "projectRoot");
+
+  const storage = expectSection(record, "storage");
+  if (storage) {
+    expectString(storage, "homePath", "storage.");
+    const homePath = storage.homePath;
+    if (typeof homePath === "string" && homePath !== "") {
+      if (!homePath.startsWith("/")) {
+        throw fieldError("storage.homePath", "must be an absolute host path");
+      }
+      const normalized = homePath.replace(/\/+$/, "") || "/";
+      if (RESERVED_HOME_PATHS.includes(normalized)) {
+        throw fieldError(
+          "storage.homePath",
+          "must be a dedicated directory — the sandbox takes ownership of everything under it",
+        );
+      }
+    }
+  }
 
   const git = expectSection(record, "git");
   if (git) {
@@ -304,7 +345,6 @@ export interface OhConfigField {
 export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
   { path: "name", type: "string" },
   { path: "timezone", type: "string" },
-  { path: "projectRoot", type: "string" },
   { path: "git.userName", type: "string" },
   { path: "git.userEmail", type: "string" },
   { path: "install.opencode", type: "boolean" },
@@ -324,6 +364,7 @@ export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
   { path: "image.ref", type: "string" },
   { path: "image.mode", type: "enum", values: ["build", "image"] },
   { path: "image.pullPolicy", type: "enum", values: ["missing", "always", "never"] },
+  { path: "storage.homePath", type: "string" },
   { path: "cloud.apiUrl", type: "string" },
   { path: "langfuse.baseUrl", type: "string" },
   { path: "langfuse.privacyPreset", type: "enum", values: LANGFUSE_PRIVACY_PRESETS },

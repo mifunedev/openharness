@@ -160,3 +160,9 @@ For an explicit downstream exception:
 **Portability**: Claude-specific by explicit request
 **Validation**: <checks and results>
 ```
+
+Use `Created` for a new artifact and `Updated` for a focused revision of an
+existing one; the update path is the common case once an artifact exists. Add a
+**Motivated by** line naming the `[[pattern-...]]` slugs read in shared protocol
+step 1, or `none (direct request)`, and a **Ledger** line naming the `SI-nnnn` id
+appended in step 4.

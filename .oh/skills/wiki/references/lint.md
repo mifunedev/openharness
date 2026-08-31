@@ -80,10 +80,19 @@ ENTRIES_COUNT=${#WIKI_ENTRIES[@]}
 This enumerates `.oh/skills/wiki/corpus/*.md` directly — NOT via `.oh/skills/wiki/corpus/README.md` (the README is
 the output of this skill, not its input). Sub-article files at
 `.oh/skills/wiki/corpus/<parent>/<child>.md` are not matched by this glob; they are scoped for
-a future iteration.
+a future iteration. `kind: pattern` entries are flat `corpus/<slug>.md` files by the
+`.oh/skills/wiki/references/schema.md` § 2 placement rule, precisely because this glob does
+not descend.
+
+**Two entry sets, deliberately.** The health checks (§§ 4-7a) run over this
+**working-tree** set, so a local scratch entry is still lintable. The README
+regeneration (§ 9) runs over the **git-tracked** set instead — see § 9a. Building
+the index from the working tree makes an untracked scratch entry a CI regression,
+because `.oh/evals/probes/wiki-readme-index.sh` reconstructs the expected table
+from git-tracked files only.
 
 If `$ENTRIES_COUNT = 0`, skip all check steps and proceed directly to
-§ 7 (README regeneration with empty corpus) and § 8 (Memory Protocol).
+§ 9 (README regeneration with an empty corpus).
 
 ### 3. Extract frontmatter for each entry
 
@@ -304,6 +313,41 @@ If `${#BROKEN_LINKS[@]} = 0`, print `  (none)`.
 See `.oh/skills/wiki/references/schema.md` § 4 for the cross-link convention and grep
 patterns that govern outbound link syntax (`\[\[[a-z0-9-]+\]\]`).
 
+### 7a. Broken related-slug check
+
+A broken related-slug is an entry whose `related:` frontmatter list names a slug
+with no matching entry. This is distinct from § 7: a `[[slug]]` body link is a
+navigational claim, a `related:` slug is a frontmatter adjacency claim. They fail
+for different reasons and are remediated differently, so they are counted
+separately.
+
+```bash
+RELATED_BROKEN=()
+
+for slug in "${!ENTRY_SLUGS[@]}"; do
+  frontmatter=$(awk '/^---$/{f=!f; next} f{print}' "${ENTRY_PATH[$slug]}")
+  rel=$(echo "$frontmatter" | grep '^related:' | sed 's/^related: *//; s/[][]//g; s/,/ /g')
+  for r in $rel; do
+    [ -z "$r" ] && continue
+    if [ -z "${ENTRY_SLUGS[$r]+_}" ]; then
+      RELATED_BROKEN+=("$slug → related: $r (no such entry)")
+    fi
+  done
+done
+```
+
+Print findings:
+
+```
+=== Broken related-slug findings (${#RELATED_BROKEN[@]}) ===
+```
+
+For each finding, print one line: `  - <source-slug> → related: <missing-slug> (no such entry)`.
+If `${#RELATED_BROKEN[@]} = 0`, print `  (none)`.
+
+Report-only. This check never edits frontmatter and never removes a slug — the
+orchestrator decides whether to repoint the slug or author the missing entry.
+
 ### 8. Contradiction detection (stub)
 
 Contradiction detection is explicitly **descoped** for v1. The function prints
@@ -322,12 +366,35 @@ the stub text above is the complete implementation for v1.
 Build the `.oh/skills/wiki/corpus/README.md` entries table. Sort all entries by `updated:`
 descending (most recently updated first).
 
-#### 9a. Sort entries by updated date descending
+#### 9a. Select the git-tracked entry set, then sort by updated date descending
+
+The index domain is the **git-tracked** entry set, not the working tree. The
+pathspec below is byte-identical to the one in
+`.oh/evals/probes/wiki-readme-index.sh`; the two must never diverge, or a local
+scratch entry becomes a CI regression. The `corpus/*/*` exclusion keeps a future
+subdirectory from silently splitting the two sets — git's pathspec `*` is not
+path-aware and descends, while § 2's shell glob does not.
+
+```bash
+TRACKED_SLUGS=()
+while IFS= read -r rel; do
+  [ "$(basename "$rel")" = "README.md" ] && continue
+  [ "$(basename "$rel")" = "skill-impact.md" ] && continue
+  abs="$HARNESS/$rel"
+  [ -f "$abs" ] || continue
+  slug=$(awk '/^---$/{f=!f; next} f{print}' "$abs" | grep '^slug:' | awk '{print $2}' | head -1)
+  [ -z "$slug" ] && continue
+  TRACKED_SLUGS+=("$slug")
+done < <(git -C "$HARNESS" ls-files -- \
+           '.oh/skills/wiki/corpus/*.md' \
+           ':!:.oh/skills/wiki/corpus/raw/*' \
+           ':!:.oh/skills/wiki/corpus/*/*')
+```
 
 ```bash
 SORTED_SLUGS=()
 RANK_LINES=()
-for slug in "${!ENTRY_UPDATED[@]}"; do
+for slug in "${TRACKED_SLUGS[@]}"; do
   updated="${ENTRY_UPDATED[$slug]:-0000-00-00}"
   RANK_LINES+=("$updated $slug")
 done
@@ -426,7 +493,7 @@ extraction to prevent silent divergence (a match that works in one skill must
 work in the other). Any future change to this extraction method requires
 updating both skills atomically.
 
-## Five Check Types — Summary
+## Six Check Types — Summary
 
 | # | Type | Finding trigger | Recommendation | Autonomously sets flag? |
 |---|------|-----------------|---------------|------------------------|
@@ -434,9 +501,10 @@ updating both skills atomically.
 | 2 | Deprecated | `confidence: deprecated` | consider archive or delete | No — report only |
 | 3 | Orphan | zero inbound `[[slug]]` references | (informational; true positive even for single-entry corpus) | No |
 | 4 | Broken outbound | `[[slug]]` in body where `slug` has no matching entry | (informational; fix by adding the entry or correcting the link) | No |
+| 4a | Broken related-slug | `related:` frontmatter slug with no matching entry | repoint the slug or author the missing entry | No |
 | 5 | Contradiction | descoped | n/a — stub only | n/a |
 
-These five types are always reported separately. Types 1 and 2 (both related to
+These six types are always reported separately. Types 1 and 2 (both related to
 "staleness" in a loose sense) MUST NOT be conflated — they have distinct triggers
 and distinct recommendations.
 
@@ -455,14 +523,21 @@ and distinct recommendations.
 - **Conflating orphans with broken outbound links** — orphans have no INBOUND links
   (other entries don't reference them); broken outbound links reference slugs that
   DO NOT EXIST. They are separate checks with different remediation paths.
+- **Conflating broken `related:` slugs with broken `[[slug]]` body links** — the
+  first is a frontmatter adjacency claim, the second is a navigational link. They are
+  distinct checks with distinct remediation, reported under separate headings.
+- **Regenerating the index from the working tree** — § 9a builds the Index from the
+  git-tracked entry set, matching `.oh/evals/probes/wiki-readme-index.sh` byte for
+  byte. Using the § 2 working-tree glob makes an untracked local scratch entry a CI
+  regression.
 - **Non-atomic README write** — writing directly to `.oh/skills/wiki/corpus/README.md` without the
   tmp → validate → rename protocol risks corruption. Always use the three-step
   atomic write in § 9c.
 - **Grepping `.oh/skills/wiki/corpus/README.md` for entries** — the README is the output of this
   skill, not its input. Always enumerate `.oh/skills/wiki/corpus/*.md` directly.
-- **Skipping a direct log** — every direct invocation (OP, DRY-RUN, FAIL) appends
-  a log entry. Audit-child mode is the sole exception and returns its observation
-  to the outer dispatcher instead.
+- **Writing a run log** — there is no log tier. Report OP / DRY-RUN / FAIL and the
+  findings to the terminal. Audit-child mode returns its observation to the outer
+  dispatcher instead.
 - **Hardcoding today's date** — always compute UTC date at runtime with
   `date -u +%Y-%m-%d`.
 

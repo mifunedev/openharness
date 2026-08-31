@@ -12,7 +12,7 @@ The sharp test: *Is this a fact or synthesis about a topic, intended to be read 
 
 | Surface | Holds | Written by | When wiki wins instead |
 | --- | --- | --- | --- |
-| `.oh/skills/*/SKILL.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, skills hold **how to behave** |
+| `.oh/skills/*/SKILL.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, skills hold **how to behave**. A `kind: pattern` entry sits closest to this line: it records that a workaround *worked*, which is evidence; the skill records that the workaround *must be applied*, which is a norm. When a pattern's workaround becomes a rule, it is promoted into a skill and the pattern stays as the evidence for it |
 | `docs/` | Human-facing prose | Orchestrator / contributors | Wiki is LLM-readable; docs are human-readable |
 | `.claude/skills/*/SKILL.md` | Executable procedures | Orchestrator | Skills are *how to do*; wiki is *what is true* |
 | `.oh/skills/wiki/corpus/raw/` | Immutable source captures (snapshots of fetched pages, papers) | Skills writing snapshots only | Same surface; raw is upstream, wiki entries are synthesis |
@@ -29,6 +29,7 @@ Every wiki entry is a single markdown file at `.oh/skills/wiki/corpus/<slug>.md`
 ---
 title: "GitHub Token Workflow Scope"
 slug: gh-token-workflow-scope
+kind: source          # source | pattern; absent means source
 tags: [git, github, auth, ci]
 created: 2026-05-23
 updated: 2026-05-23
@@ -45,12 +46,46 @@ Field definitions:
 | --- | --- | --- | --- |
 | `title` | string | yes | Human-readable entry title |
 | `slug` | string | yes | Matches filename without `.md`; charset `[a-z0-9-]+` |
+| `kind` | enum | no | `source` \| `pattern`. **An absent `kind:` field means `kind: source`.** Set to `pattern` only by `/wiki compile` |
 | `tags` | list of strings | yes | Used by `/wiki query` for frontmatter-only grep |
 | `created` | date (YYYY-MM-DD) | yes | UTC date of initial creation; never updated |
 | `updated` | date (YYYY-MM-DD) | yes | UTC date of most recent ingest/edit; always updated on write |
 | `sources` | list of paths | yes | At least one `raw/<yyyy-mm-dd>-<slug>.md` snapshot path |
 | `related` | list of slugs | no | Slugs of conceptually adjacent entries |
 | `confidence` | enum | yes | `provisional` \| `confirmed` \| `deprecated` |
+
+### Entry kinds
+
+The corpus holds two kinds of entry, distinguished by `kind:`.
+
+| `kind` | Holds | Written by | Read by |
+| --- | --- | --- | --- |
+| `source` | Facts and synthesis about an external topic, backed by a `raw/` snapshot | `/wiki ingest` | any session, via `/wiki query <topic>` |
+| `pattern` | A failure mode or successful strategy observed in this harness's own runs, with an actionable workaround | `/wiki compile` | the proposer role, via `/wiki query <topic> --patterns` |
+
+**Back-compatibility.** `kind` is the only optional-with-default field in this
+schema. Every entry authored before the field existed is a `source` entry, and none
+require editing. `/wiki ingest` MAY emit `kind: source` explicitly on new source
+pages but is not required to. **Consumers that filter on `kind` MUST apply the
+default: read the field, and treat empty as `source`.**
+
+**Pattern placement.** `kind: pattern` entries are flat files at
+`.oh/skills/wiki/corpus/pattern-<subsystem>-<short-name>.md` — never in a
+subdirectory. The `corpus/*.md` glob used by `/wiki query` and `/wiki lint` does not
+descend, so a pattern in a subdirectory would be invisible to both while still
+visible to `.oh/evals/probes/wiki-readme-index.sh`'s git pathspec, which does. The
+`pattern-` filename prefix is a redundant, greppable encoding of the `kind:` field:
+`ls corpus/pattern-*.md` answers "what has this harness learned" without parsing
+YAML, and the two must always agree. When a pattern page overflows the word cap,
+split it into a second flat pattern page and cross-link; do not create a
+sub-article.
+
+**Why the proposer, and not every session, reads patterns.** The source this rule
+comes from measured it: giving the skill proposer access to accumulated knowledge was
+worth +15.0 points, while additionally giving the inference agent that same access
+*cost* 2.8 (`[[wikiskill-experience-compilation]]`). `--patterns` is a default, not a
+boundary — any session can read a pattern file directly. Say "default", never
+"isolation".
 
 ### Body layout
 
@@ -85,6 +120,61 @@ New or substantially revised architecture pages follow one shape: source files f
 - **Relationships are visible**: when the page explains a pipeline, runtime, or architecture, include a compact Mermaid diagram or table that shows ownership, ordering, and handoff boundaries.
 - **Synthesis stays separate from evidence**: use prose to explain what the cited files imply, but do not let unsupported interpretation look like a source fact.
 - **Navigation closes the loop**: `## See Also` points to adjacent wiki entries using `[[slug]]` links, so a reader can walk between related pages.
+
+### Pattern body layout (`kind: pattern`)
+
+A pattern page uses the **same sections in the same order** as a source page. The
+paper's Symptom / Root cause / Workaround / Evidence all fit inside them as bold
+leads, so patterns need no structural exception and no special case in `/wiki lint`.
+The only rule change is that `## Relevant Source Files` — where the evidence lands —
+is **required** for `kind: pattern`, where it is optional for `kind: source`.
+
+```markdown
+# <Pattern title — the failure mode, not the incident>
+
+## Relevant Source Files
+- `<harness path>` — the artifact the pattern is about
+- `<evidence path>@<short-sha>` — the run that produced the observation
+
+## Summary
+<2-3 sentences: what goes wrong (or what reliably works), and in which subsystem.>
+
+## Detail
+**Symptom.** <What an agent or operator observes. Observable, not inferred.>
+
+**Root cause.** <Why it happens, cited to `path:line`.>
+
+**Workaround.** <The actionable change. Append-only across compiles; a superseded
+workaround is annotated `(superseded YYYY-MM-DD, SI-nnnn)`, never deleted.>
+
+## See Also
+- [[<motivating source page>]]
+```
+
+Title a pattern for the failure mode, not the incident that revealed it:
+`pattern-eval-probe-provenance-decay`, not `pattern-2026-08-31-retro-findings`. One
+page per failure mode, never one per run — a dated per-run page is a session journal,
+which this corpus is not.
+
+**`sources:` for a pattern.** A pattern entry MUST carry at least one `sources:`
+entry. Each is either a `raw/<yyyy-mm-dd>-<slug>.md` snapshot path (when the pattern
+is grounded in an ingested source) **or** a pinned repository-evidence path of the
+form `<repo-relative-path>@<short-sha>` — for example
+`.oh/tasks/<slug>/progress.txt@a1b2c3d`, `.oh/evals/RESULTS.md@a1b2c3d`. The
+`@<short-sha>` suffix is required: it buys for a mutable tracked file the same
+reproducibility that immutability buys for a `raw/` snapshot.
+
+**`/wiki compile` MUST NOT write a `raw/` snapshot of a `/retro` report.** `raw/`
+holds snapshots of external sources. A `/retro` report is this harness's own
+ephemeral output, and `/retro` is report-only by contract; persisting its reports
+under `raw/` would recreate the per-session journal tier the harness deliberately
+removed, wearing a new name.
+
+**Authoring constraint.** Pattern prose discusses harness subsystems, so it is the
+most likely place for retired vocabulary to reappear. `.oh/evals/probes/audit-stale-references.sh`
+greps every tracked file, this corpus included, for retired route and skill names.
+Read that probe's pattern before writing about an audit subsystem, and use the
+current route names.
 
 ### Word cap and sub-articles
 
@@ -158,6 +248,11 @@ Lifecycle flow:
     [entry removed or moved to .oh/skills/wiki/corpus/archive/<slug>.md]
 ```
 
+**Patterns.** A `kind: pattern` entry is created `provisional` by `/wiki compile`.
+The orchestrator promotes it to `confirmed` when a skill proposal it motivated is
+recorded `ACCEPTED` in `.oh/skills/wiki/corpus/skill-impact.md`. **A `REJECTED`
+proposal never demotes or deprecates its motivating pattern** — see § 8.
+
 The archive vs. delete decision for `deprecated` entries is not yet defined — defer to `.oh/skills/wiki/references/schema.md` update after the first deprecation in practice.
 
 ---
@@ -223,3 +318,59 @@ When `/wiki ingest` is invoked with a source whose derived slug matches an exist
 7. **Do NOT concatenate bodies**: the prior `## Summary` and `## Detail` content is replaced, not concatenated. The entry stays ≤ 600 words.
 
 **Rationale**: bodies grow unbounded if concatenated across multiple ingests, eventually exceeding the 600-word cap and diluting the entry's utility. The replace-in-place strategy keeps entries fresh and bounded while the `sources:` list preserves the full provenance trail.
+
+---
+
+## 7a. Pattern amendment to the body-merge strategy
+
+Applies only when the target entry has `kind: pattern`. All of § 7 holds except
+steps 1, 2, and 7, which are amended as follows.
+
+**1'. `## Summary` is replaced** — unchanged from § 7 step 1. The summary is a
+rolling 2-3 sentence statement of the current understanding.
+
+**2'. `## Detail` is merged, not replaced.**
+
+- `**Symptom.**` and `**Root cause.**` are rewritten in place ONLY when the new
+  evidence contradicts them. New corroborating evidence adds a citation, not a
+  rewrite.
+- `**Workaround.**` is **append-only**. A new workaround is appended. A workaround
+  shown not to work is annotated `(superseded YYYY-MM-DD, SI-nnnn)` and left in
+  place. It is never deleted.
+
+**7'. The word cap is met by compressing older evidence into one clause, never by
+dropping a distinct root cause.** When a pattern page holds two or more distinct root
+causes and exceeds the cap, split it into two flat pattern pages (§ 2, pattern
+placement) and cross-link them.
+
+**Rationale**: § 7's replace-in-place strategy keeps a source page fresh against a
+moving upstream. A pattern page has no upstream — it is this harness's own
+accumulated experience, and replacing it discards exactly the knowledge the page
+exists to hold.
+
+---
+
+## 8. Pattern persistence invariant
+
+**A `kind: pattern` entry is never rolled back.**
+
+When a skill proposal is rejected and the skill edit is reverted, the revert covers
+the skill artifact **only**. The pattern page that motivated the proposal stays, its
+`confidence` is unchanged, its `sources:` list is unchanged, and its accumulated
+`**Workaround.**` text is unchanged. `/wiki compile` records the rejection as
+evidence — annotating the workaround that failed with `(superseded YYYY-MM-DD,
+SI-nnnn)` — rather than deleting it. The `skill-impact.md` record of the rejected
+proposal is likewise never removed.
+
+**Reverting a `corpus/` path as collateral of a skill revert is forbidden.**
+
+Rationale: the knowledge that an approach was tried and did not work is the most
+valuable output of a rejected cycle, and it is the only thing preventing the same
+proposal being made again. Rolling it back with the code destroys exactly the
+persistence this layer exists to provide.
+
+Prose is not enforcement. The oracles are
+`.oh/evals/probes/wiki-pattern-persistence.sh` (pattern pages present at the
+merge-base are present at HEAD, and no pattern's `sources:` list has shrunk) and
+`.oh/evals/probes/wiki-skill-impact-append-only.sh` (ledger records are added, never
+removed or edited in place).

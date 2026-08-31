@@ -40,16 +40,28 @@ entries=$(awk '
   inb        { buf = buf $0 " " }
 ' "$CATALOG")
 
+# #908: every harness, not just kind:"default". commands/harness.ts installs
+# with stdio:"inherit", so local-target.ts picks plain `sudo --` for a root
+# install and /etc/sudoers.d/sandbox has no NOPASSWD — an agent would hang on a
+# password prompt. No harness of any kind belongs in the image either.
 defaults=0
 while IFS= read -r entry; do
-  [[ $entry == *'kind: "default"'* ]] || continue
-  defaults=$((defaults + 1))
   id=$(sed -n 's/.*id: "\([^"]*\)".*/\1/p' <<<"$entry")
+  [[ -n $id ]] || continue
+  defaults=$((defaults + 1))
   if [[ $entry == *'installUser: "root"'* ]]; then
-    missing+=("harnesses/catalog.ts: default harness \"$id\" installs as root — inside the sandbox that becomes \`sudo -n\`, and /etc/sudoers.d/sandbox has no NOPASSWD")
+    missing+=("harnesses/catalog.ts: harness \"$id\" installs as root — commands/harness.ts uses stdio:\"inherit\", so that becomes an interactive \`sudo\`, and /etc/sudoers.d/sandbox has no NOPASSWD")
   fi
-  if [[ $entry != *"$PREFIX"* ]]; then
-    missing+=("harnesses/catalog.ts: default harness \"$id\" does not install into $PREFIX — a baked install under /usr/lib/node_modules cannot be upgraded by a running sandbox")
+  if [[ $entry == *'buildArg:'* ]]; then
+    missing+=("harnesses/catalog.ts: harness \"$id\" declares buildArg — that field carries a Dockerfile invariant this catalog cannot satisfy; the tool catalog already bans it")
+  fi
+  # on-demand entries (t3code) are fetched per invocation via npx and install
+  # nowhere, so the prefix rule does not apply to them.
+  if [[ $entry != *'kind: "on-demand"'* \
+        && $entry != *"$PREFIX"* \
+        && $entry != *'$HOME/.local'* \
+        && $entry != *'uv", "tool", "install'* ]]; then
+    missing+=("harnesses/catalog.ts: harness \"$id\" does not install into $PREFIX — a system-path install cannot be upgraded by a running sandbox and does not persist in the home mount")
   fi
   if [[ $id == "claude-code" && $entry == *"--ignore-scripts"* ]]; then
     missing+=("harnesses/catalog.ts: claude-code uses --ignore-scripts — its postinstall copies the native binary over the placeholder, so \`claude --version\` fails with 'claude native binary not installed'")
@@ -57,7 +69,7 @@ while IFS= read -r entry; do
 done <<<"$entries"
 
 if ((defaults == 0)); then
-  echo "SKIPPED: no kind:\"default\" harness parsed out of $CATALOG" >&2
+  echo "SKIPPED: no harness parsed out of $CATALOG" >&2
   exit 2
 fi
 
@@ -82,7 +94,9 @@ DOCKERFILE_CODE=$(strip_dockerfile_comments)
 
 pkgs=0
 while IFS= read -r entry; do
-  [[ $entry == *'kind: "default"'* ]] || continue
+  # on-demand entries (t3code, prime-agent) are fetched per invocation and were
+  # never baked; skip them rather than assert against an npx incantation.
+  [[ $entry == *'kind: "default"'* || $entry == *'kind: "optional"'* ]] || continue
   id=$(sed -n 's/.*id: "\([^"]*\)".*/\1/p' <<<"$entry")
   # The package specifier is the last element of installArgv. Read it from that
   # array alone — `binary` and `verifyArgv` also hold bare names, and matching
@@ -96,7 +110,7 @@ while IFS= read -r entry; do
   fi
   pkgs=$((pkgs + 1))
   if grep -qF -- "$pkg" <<<"$DOCKERFILE_CODE"; then
-    missing+=("Dockerfile: names $pkg — default harness \"$id\" is baked into the image again; it belongs to .oh/scripts/provision-defaults.sh, which installs it into $PREFIX at boot")
+    missing+=("Dockerfile: names $pkg — harness \"$id\" is baked into the image again; it belongs to \`oh harness install\`, which installs it into $PREFIX")
   fi
 done <<<"$entries"
 
@@ -108,6 +122,14 @@ fi
 if grep -qE '^ARG (BAKE_HARNESSES|AGENTS|HERDR_VERSION)=' <<<"$DOCKERFILE_CODE"; then
   missing+=("Dockerfile: ARG BAKE_HARNESSES/AGENTS/HERDR_VERSION is back — a build arg that re-bakes a default is a dormant path that reintroduces the shadowed install and un-exercises the boot provisioner")
 fi
+
+# #908: no harness may have a Dockerfile build arg at all. INSTALL_HERMES keeps
+# its RUNTIME life (link-providers.sh vendors the Hermes skill pack from it,
+# entrypoint.sh wires auth.json), so only an `ARG` declaration is a regression.
+while IFS= read -r arg; do
+  [[ -n $arg ]] || continue
+  missing+=("Dockerfile: $arg is back — optional harnesses install through \`oh harness install\`, and a build arg makes the image the install path again")
+done < <(grep -oE '^ARG INSTALL_(HERMES|OPENCODE|GROK_BUILD|DEEPAGENTS)' <<<"$DOCKERFILE_CODE" | sort -u)
 
 # #906: the same rule for kind:"default" tools. These install as root nowhere:
 # commands/tool.ts passes stdio:"inherit", so local-target.ts selects plain
@@ -153,4 +175,4 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS: $defaults default harnesses and $tools default tools install as the sandbox user into $PREFIX, none of the $pkgs packages is baked into the image, and the boot path provisions them" >&2
+echo "PASS: all $defaults harnesses and $tools default tools install as the sandbox user into $PREFIX, none of the $pkgs packages is baked into the image, and the boot path provisions them" >&2

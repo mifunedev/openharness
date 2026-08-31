@@ -4,16 +4,16 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by the `INSTALL_*` keys in `.devcontainer/.env`. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773, and **Prime Agent** installs on demand with `oh harness install prime-agent` — neither has an `INSTALL_*` key, because neither is ever baked into the image. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
+Open Harness provisions three agent CLIs into `~/.local` on first boot: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional — install one with `oh harness install <id>`, which also sets its `install.*` key so a fresh home mount reinstalls it at boot. No harness is baked into the image. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773, and **Prime Agent** installs on demand with `oh harness install prime-agent` — neither has an `INSTALL_*` key, because neither is ever baked into the image. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
 ## Installing a harness
 
-`oh harness` is the shortest path. It does both halves in one command: it sets
-the `.devcontainer/.env` `INSTALL_*` flag so the choice survives the next image build,
-**and** installs the CLI into the already-running container so it is usable now.
-It never rebuilds or restarts the sandbox.
+`oh harness` is the only path, and it does both halves in one command: it sets
+the `install.*` key in `oh.json` so a fresh home mount reinstalls the harness at
+boot, **and** installs the CLI into the already-running container so it is usable
+now. It never rebuilds or restarts the sandbox.
 
 ```bash
 oh harness list                 # what exists, what is enabled, what is installed
@@ -64,7 +64,7 @@ claude --version
 codex --version
 pi --version
 
-# Optional image-level CLIs, present only when enabled in .devcontainer/.env:
+# Optional CLIs, present only after `oh harness install <id>` (or its install.* key):
 opencode --version      # install.opencode: true
 deepagents -v           # install.deepagents: true
 hermes --version        # install.hermes: true

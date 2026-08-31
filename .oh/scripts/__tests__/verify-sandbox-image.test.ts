@@ -20,8 +20,10 @@ type Overrides = Partial<{
   platformWarning: string;
   bakedHarnesses: boolean;
   bakedTools: boolean;
-  noDefaultHarnesses: boolean;
+  noHarnesses: boolean;
   noDefaultTools: boolean;
+  noBakedInTools: boolean;
+  missingBakedInTool: boolean;
   harnessCatalogFails: boolean;
 }>;
 
@@ -43,8 +45,10 @@ function fixture(o: Overrides = {}) {
     platformWarning: "",
     bakedHarnesses: false,
     bakedTools: false,
-    noDefaultHarnesses: false,
+    noHarnesses: false,
     noDefaultTools: false,
+    noBakedInTools: false,
+    missingBakedInTool: false,
     harnessCatalogFails: false,
     ...o,
   };
@@ -61,32 +65,35 @@ case "$cmd" in
   *"id -u sandbox"*) printf '%s\\n%s\\n' ${JSON.stringify(v.uid)} ${JSON.stringify(v.gid)} ;;
   "node --version") printf '%s\\n' ${JSON.stringify(v.node)} ;;
   "pnpm --version") printf '%s\\n' ${JSON.stringify(v.pnpm)} ;;
-  *"oh harness list --defaults --json"*)
+  *"oh harness list --json"*)
     if [ "${v.harnessCatalogFails ? "1" : "0"}" = "1" ]; then
       echo 'not an OpenHarness-equipped repo' >&2
       exit 1
     fi
     cat <<'JSON'
 ${
-  v.noDefaultHarnesses
+  v.noHarnesses
     ? "[]"
     : `[
   { "id": "claude-code", "binary": "claude", "kind": "default", "installed": ${v.bakedHarnesses} },
-  { "id": "pi", "binary": "pi", "kind": "default", "installed": false }
+  { "id": "hermes", "binary": "hermes", "kind": "optional", "installed": false }
 ]`
 }
 JSON
     ;;
-  *"oh tool list --defaults --json"*)
+  *"oh tool list --json"*)
     cat <<'JSON'
-${
-  v.noDefaultTools
-    ? "[]"
-    : `[
-  { "id": "herdr", "binary": "herdr", "kind": "default", "installed": ${v.bakedTools} },
-  { "id": "cloudflared", "binary": "cloudflared", "kind": "default", "installed": false }
-]`
-}
+${(() => {
+  const rows: string[] = [];
+  if (!v.noDefaultTools) {
+    rows.push(`  { "id": "herdr", "binary": "herdr", "kind": "default", "installed": ${v.bakedTools} }`);
+    rows.push('  { "id": "cloudflared", "binary": "cloudflared", "kind": "default", "installed": false }');
+  }
+  if (!v.noBakedInTools) {
+    rows.push(`  { "id": "gh", "binary": "gh", "kind": "baked-in", "installed": ${!v.missingBakedInTool} }`);
+  }
+  return `[\n${rows.join(",\n")}\n]`;
+})()}
 JSON
     ;;
   *)
@@ -130,7 +137,7 @@ describe("verify-sandbox-image", () => {
     expect(result.stdout).toContain("built-in sandbox user is 1000:1000");
     expect(result.stdout).toContain("node is major 22");
     expect(result.stdout).toContain("pnpm is exactly 10.33.0");
-    expect(result.stdout).toContain("no default harness is baked into the image");
+    expect(result.stdout).toContain("no harness is baked into the image");
     expect(result.stdout).toContain("no default tool is baked into the image");
     expect(result.stdout).toContain("all checks passed");
   });
@@ -192,23 +199,23 @@ describe("verify-sandbox-image", () => {
     expect(result.status).toBe(0);
   });
 
-  // #904/#906: the default harnesses AND the default tools moved out of the
-  // image and into the boot path. A baked copy in a system path shadows the
-  // home-mount install and silently un-exercises the provisioner, so the image
-  // must not carry either.
-  it("passes an image that bakes no default harness or tool", () => {
+  // #904/#906/#908: no harness of any kind, and no kind:"default" tool, may be
+  // baked into the image. kind:"baked-in" tools are the image-level half and
+  // must be present, or the checks above pass on an image missing everything.
+  it("passes an image that bakes no harness and no default tool", () => {
     const result = run(fixture());
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("no default harness is baked into the image");
+    expect(result.stdout).toContain("no harness is baked into the image");
     expect(result.stdout).toContain("no default tool is baked into the image");
+    expect(result.stdout).toContain("every baked-in tool is present");
   });
 
   it("rejects an image that bakes a default harness", () => {
     const result = run(fixture({ bakedHarnesses: true }));
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("the image ships baked default harnesss: claude-code (claude)");
+    expect(result.stderr).toContain("the image ships baked harnesss: claude-code (claude)");
   });
 
   it("rejects an image that bakes a default tool", () => {
@@ -218,14 +225,28 @@ describe("verify-sandbox-image", () => {
     expect(result.stderr).toContain("the image ships baked default tools: herdr (herdr)");
   });
 
+  it("rejects an image whose baked-in tool is missing", () => {
+    const result = run(fixture({ missingBakedInTool: true }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("baked-in tools are missing from the image: gh");
+  });
+
   it.each<[string, Overrides]>([
-    ["harness", { noDefaultHarnesses: true }],
-    ["tool", { noDefaultTools: true }],
-  ])("refuses to pass vacuously when the image lists no default %s", (_noun, overrides) => {
+    ["harness", { noHarnesses: true }],
+    ["default tool", { noDefaultTools: true }],
+  ])("refuses to pass vacuously when the image lists no %s", (_noun, overrides) => {
     const result = run(fixture(overrides));
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("would pass vacuously");
+  });
+
+  it("refuses to pass vacuously when the image declares no baked-in tool", () => {
+    const result = run(fixture({ noBakedInTools: true }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('declares no kind:"baked-in" tool');
   });
 
   it("fails loudly when the harness catalog cannot be read out of the image", () => {

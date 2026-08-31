@@ -9,7 +9,6 @@ export interface HarnessEntry {
   readonly title: string;
   readonly binary: string;
   readonly harnessKey?: string;
-  readonly buildArg?: string;
   readonly installArgv: readonly string[];
   readonly installUser: "root" | "sandbox";
   readonly verifyArgv: readonly string[];
@@ -75,9 +74,15 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     title: "OpenCode",
     binary: "opencode",
     harnessKey: "opencode",
-    buildArg: "INSTALL_OPENCODE",
-    installArgv: ["npm", "install", "-g", "opencode-ai"],
-    installUser: "root",
+    installArgv: [
+      "npm",
+      "--prefix",
+      "/home/sandbox/.local",
+      "install",
+      "-g",
+      "opencode-ai",
+    ],
+    installUser: "sandbox",
     verifyArgv: ["opencode", "--version"],
     docsPath: "docs/harnesses/opencode.md",
     kind: "optional",
@@ -87,13 +92,12 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     title: "Grok Build",
     binary: "grok",
     harnessKey: "grok_build",
-    buildArg: "INSTALL_GROK_BUILD",
     installArgv: [
       "bash",
       "-lc",
-      "curl -fsSL https://x.ai/cli/install.sh | HOME=/opt/grok-build GROK_BIN_DIR=/opt/grok-build/bin bash -s 0.2.39 && ln -sf /opt/grok-build/bin/grok /usr/local/bin/grok && rm -f /usr/local/bin/agent",
+      "curl -fsSL https://x.ai/cli/install.sh | GROK_BIN_DIR=\"$HOME/.local/bin\" bash -s 0.2.39 && rm -f \"$HOME/.local/bin/agent\"",
     ],
-    installUser: "root",
+    installUser: "sandbox",
     verifyArgv: ["grok", "--version"],
     docsPath: "docs/harnesses/grok-build.md",
     kind: "optional",
@@ -103,7 +107,6 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     title: "DeepAgents",
     binary: "deepagents",
     harnessKey: "deepagents",
-    buildArg: "INSTALL_DEEPAGENTS",
     installArgv: ["uv", "tool", "install", "deepagents-cli"],
     installUser: "sandbox",
     verifyArgv: ["deepagents", "--version"],
@@ -115,13 +118,12 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     title: "Hermes",
     binary: "hermes",
     harnessKey: "hermes",
-    buildArg: "INSTALL_HERMES",
     installArgv: [
       "bash",
       "-lc",
-      "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-setup --skip-browser && uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,teams,web,pty]'",
+      "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | HERMES_INSTALL_DIR=\"$HOME/.local/lib/hermes-agent\" bash -s -- --skip-setup --skip-browser && uv pip install --python \"$HOME/.local/lib/hermes-agent/venv/bin/python\" 'hermes-agent[slack,teams,web,pty]'",
     ],
-    installUser: "root",
+    installUser: "sandbox",
     verifyArgv: ["hermes", "--version"],
     docsPath: "docs/harnesses/hermes.md",
     kind: "optional",
@@ -151,6 +153,10 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     kind: "on-demand",
   },
 ];
+
+export function optionalHarnesses(): readonly HarnessEntry[] {
+  return HARNESS_CATALOG.filter((h) => h.kind === "optional");
+}
 
 export function defaultHarnesses(): readonly HarnessEntry[] {
   return HARNESS_CATALOG.filter((h) => h.kind === "default");

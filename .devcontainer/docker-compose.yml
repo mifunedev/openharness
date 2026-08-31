@@ -39,11 +39,6 @@ services:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
-      args:
-        INSTALL_OPENCODE: ${INSTALL_OPENCODE:-false}
-        INSTALL_GROK_BUILD: ${INSTALL_GROK_BUILD:-false}
-        INSTALL_DEEPAGENTS: ${INSTALL_DEEPAGENTS:-false}
-        INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
       - ${OH_HOME_MOUNT:-workspace}:/home/sandbox
       - ..:/home/sandbox/harness

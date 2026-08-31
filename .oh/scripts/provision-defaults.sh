@@ -113,11 +113,14 @@ provisioned=0
 
 provision_catalog() {
   local noun="$1" cmd="$2" catalog="$3"
-  local states defaults id installed
+  local states defaults wanted id installed
 
-  if ! states="$("$OH_BIN" "$cmd" list --defaults --json 2>/dev/null)" || [ -z "$states" ]; then
-    die "'$OH_BIN $cmd list --defaults --json' produced no catalog" \
-        "the CLI at $(command -v "$OH_BIN") predates \`oh $cmd --defaults\`; the catalog" \
+  # The full listing, not --defaults: an operator who set install.<key> in
+  # oh.json declared intent that a fresh home mount must honour too, and
+  # `enabled` is computed from oh.json rather than the environment.
+  if ! states="$("$OH_BIN" "$cmd" list --json 2>/dev/null)" || [ -z "$states" ]; then
+    die "'$OH_BIN $cmd list --json' produced no catalog" \
+        "the CLI at $(command -v "$OH_BIN") predates \`oh $cmd\`; the catalog" \
         "is the only source of truth for what to install, so there is nothing to provision." \
         "rebuild the sandbox image from this control plane:" \
         "  oh sandbox"
@@ -127,6 +130,10 @@ provision_catalog() {
   [ -n "$defaults" ] || die \
     "the $noun catalog declares no defaults" \
     "check $catalog"
+
+  # Opted-in extras ride along; absent any, this is empty and nothing changes.
+  wanted="$(jq -r '.[] | select(.kind != "default" and .enabled == true) | "\(.id)\t\(.installed)"' <<<"$states")"
+  [ -n "$wanted" ] && defaults="$defaults"$'\n'"$wanted"
 
   while IFS=$'\t' read -r id installed; do
     [ -n "$id" ] || continue

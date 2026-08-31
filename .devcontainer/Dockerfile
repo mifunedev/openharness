@@ -34,25 +34,6 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
-ARG INSTALL_HERMES=false
-RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
-      curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-        | bash -s -- --skip-setup --skip-browser; \
-      rm -rf /root/.hermes; \
-      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,teams,web,pty]'; \
-    else \
-      echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
-    fi
-
-ARG INSTALL_DEEPAGENTS=false
-RUN export UV_TOOL_DIR=/opt/uv/tools UV_TOOL_BIN_DIR=/usr/local/bin \
- && mkdir -p "$UV_TOOL_DIR" \
- && if [ "${INSTALL_DEEPAGENTS}" = "true" ]; then \
-      uv tool install deepagents-cli; \
-    else \
-      echo "Skipping DeepAgents CLI install (INSTALL_DEEPAGENTS=false)"; \
-    fi
-
 ENV PNPM_HOME="/usr/local/share/pnpm"
 ENV NPM_USER_PREFIX="/home/sandbox/.local"
 ENV PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"
@@ -61,18 +42,6 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate \
  && pnpm setup --force 2>/dev/null || true
 
 SHELL ["/bin/bash", "-c"]
-
-ARG INSTALL_OPENCODE=false
-ARG INSTALL_GROK_BUILD=false
-
-RUN set -e; \
-    if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
-    else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi; \
-    if [ "${INSTALL_GROK_BUILD}" = "true" ]; then \
-        curl -fsSL https://x.ai/cli/install.sh | HOME=/opt/grok-build GROK_BIN_DIR=/opt/grok-build/bin bash -s 0.2.39; \
-        ln -sf /opt/grok-build/bin/grok /usr/local/bin/grok; \
-        rm -f /usr/local/bin/agent; \
-    else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
 
 RUN npm install -g cc-safety-net@1.0.6
 
@@ -146,9 +115,6 @@ RUN if [ "${INSTALL_PYTHON_KERNEL}" = "true" ]; then \
  && rm -rf /home/sandbox/.cache/uv
 
 FROM base AS final
-RUN chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
- && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
-
 RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
 
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'

@@ -152,7 +152,7 @@ fi
 
 if [ "${OH_PROVISION_HARNESSES:-true}" = "true" ] \
    && [ -x "$HARNESS/.oh/scripts/provision-harnesses.sh" ]; then
-  if ! bash "$HARNESS/.oh/scripts/provision-harnesses.sh"; then
+  if ! OH_EXECUTION_TARGET=local timeout "${OH_PROVISION_HARNESSES_TIMEOUT:-180}" bash "$HARNESS/.oh/scripts/provision-harnesses.sh"; then
     echo "[entrypoint] WARNING: harness provisioning did not complete; run: bash .oh/scripts/provision-harnesses.sh" >&2
   fi
 fi

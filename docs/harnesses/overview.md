@@ -17,6 +17,7 @@ It never rebuilds or restarts the sandbox.
 
 ```bash
 oh harness list                 # what exists, what is enabled, what is installed
+oh harness list --defaults      # only the kind:"default" harnesses, and only their probes
 oh harness install opencode     # persist the flag + install into the running sandbox
 oh harness status hermes        # one harness
 ```
@@ -30,12 +31,13 @@ environment you are already in, and `list`/`status` report the CLIs actually
 present rather than `?`. See
 [Lifecycle commands → Where you are standing when you type `oh`](../lifecycle-commands.md#where-you-are-standing-when-you-type-oh).
 
-Two escape hatches:
+Flags:
 
 | Flag | Effect |
 |---|---|
 | `--persist-only` | Only set the `.devcontainer/.env` flag; do no container work |
 | `--no-persist` | Live-install only; leave `.devcontainer/.env` unchanged (ephemeral — a container recreate loses it) |
+| `--defaults` | `list` only: restrict the listing, and the verify probes it runs, to `kind:"default"` harnesses |
 
 The manual path still works: uncomment the key in `.devcontainer/.env` (or export the
 `INSTALL_*` build flag in `.devcontainer/.env`) and run

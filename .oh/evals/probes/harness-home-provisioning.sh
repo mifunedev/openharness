@@ -63,8 +63,44 @@ grep -qF 'WARNING: harness provisioning did not complete' "$ENTRY" \
   || missing+=("entrypoint.sh: harness provisioning does not warn-and-continue — an offline sandbox must still come up as a usable shell")
 [[ -x $PROVISIONER ]] \
   || missing+=(".oh/scripts/provision-harnesses.sh: missing or not executable")
-grep -qE '^ARG BAKE_HARNESSES=' "$DOCKERFILE" \
-  || missing+=("Dockerfile: no ARG BAKE_HARNESSES — the image bake cannot be turned off once provisioning owns the install")
+run_block_with() {
+  awk -v needle="$1" '
+    function flush() {
+      if (index(buf, needle)) print buf
+      buf = ""
+    }
+    /^RUN / { buf = $0; cont = ($0 ~ /\\$/); if (!cont) flush(); next }
+    cont    { buf = buf "\n" $0; cont = ($0 ~ /\\$/); if (!cont) flush() }
+  ' "$DOCKERFILE"
+}
+
+BAKE_GATE='if [ "${BAKE_HARNESSES}" = "true" ]'
+
+stage_body() {
+  awk -v stage="$1" '
+    /^FROM / { inb = ($0 ~ ("AS " stage "$")); next }
+    inb
+  ' "$DOCKERFILE"
+}
+
+for stage in base home; do
+  stage_body "$stage" | grep -qE '^ARG BAKE_HARNESSES' \
+    || missing+=("Dockerfile: the $stage stage does not declare ARG BAKE_HARNESSES — ARG is stage-scoped, so the build arg is empty there and every \${BAKE_HARNESSES} test in that stage reads as unset")
+done
+
+AGENTS_BLOCK=$(run_block_with 'read -ra agents')
+if [[ -z $AGENTS_BLOCK ]]; then
+  missing+=("Dockerfile: found no RUN that loops over \$AGENTS — the probe cannot tell whether BAKE_HARNESSES gates the bake")
+elif [[ $AGENTS_BLOCK != *"$BAKE_GATE"* ]]; then
+  missing+=("Dockerfile: the RUN that installs \$AGENTS does not test \${BAKE_HARNESSES} — ARG BAKE_HARNESSES is declared but dead, so BAKE_HARNESSES=false still bakes the agent CLIs")
+fi
+
+PI_BLOCK=$(run_block_with '--ignore-scripts @earendil-works/pi-coding-agent')
+if [[ -z $PI_BLOCK ]]; then
+  missing+=("Dockerfile: found no RUN that bakes pi into \$NPM_USER_PREFIX — the probe cannot tell whether BAKE_HARNESSES gates it")
+elif [[ $PI_BLOCK != *"$BAKE_GATE"* ]]; then
+  missing+=("Dockerfile: the RUN that bakes pi does not test \${BAKE_HARNESSES} — ARG is stage-scoped, so BAKE_HARNESSES=false unbakes claude and codex but leaves pi in the image")
+fi
 
 if ((${#missing[@]})); then
   printf 'REGRESSION: %s\n' "${missing[@]}" >&2

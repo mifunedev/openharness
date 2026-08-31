@@ -103,7 +103,7 @@ RUN set -e; \
             if [ -n "$pkg" ]; then npm install -g "$pkg"; \
             else echo "Unknown agent: $a"; exit 1; fi; \
         done; \
-    else echo "Skipping baked agent CLI installs (BAKE_HARNESSES=${BAKE_HARNESSES}); .oh/scripts/provision-harnesses.sh installs them into /home/sandbox/.local at boot"; fi; \
+    else echo "Skipping baked Claude Code and Codex installs (BAKE_HARNESSES=${BAKE_HARNESSES}); .oh/scripts/provision-harnesses.sh installs every kind:\"default\" harness into /home/sandbox/.local at boot"; fi; \
     if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
     else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi; \
     if [ "${INSTALL_GROK_BUILD}" = "true" ]; then \
@@ -132,6 +132,7 @@ ENV UV_CACHE_DIR=/home/sandbox/.cache/uv
 
 FROM base AS home
 ARG AGENTS="claude-code,codex,pi-coding-agent"
+ARG BAKE_HARNESSES=true
 RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
  && install -d -o sandbox -g sandbox \
       /home/sandbox/.local \
@@ -144,9 +145,11 @@ RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
 
 RUN set -e; \
     install -d -o sandbox -g sandbox "$NPM_USER_PREFIX"; \
-    if [[ ",${AGENTS}," == *",pi-coding-agent,"* ]]; then \
-        su - sandbox -c 'npm --prefix "$HOME/.local" install -g --ignore-scripts @earendil-works/pi-coding-agent'; \
-    fi; \
+    if [ "${BAKE_HARNESSES}" = "true" ]; then \
+        if [[ ",${AGENTS}," == *",pi-coding-agent,"* ]]; then \
+            su - sandbox -c 'npm --prefix "$HOME/.local" install -g --ignore-scripts @earendil-works/pi-coding-agent'; \
+        fi; \
+    else echo "Skipping baked Pi install (BAKE_HARNESSES=${BAKE_HARNESSES}); .oh/scripts/provision-harnesses.sh installs it into /home/sandbox/.local at boot"; fi; \
     rm -rf /home/sandbox/.npm
 
 RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" --unattended" \

@@ -12,6 +12,7 @@ import {
   setInstallFlag,
 } from "../lib/env-file.js";
 import {
+  defaultHarnesses,
   findHarness,
   harnessIds,
   HARNESS_CATALOG,
@@ -30,6 +31,7 @@ export interface HarnessOptions {
   run?: LifecycleRunner;
   json?: boolean;
   env?: NodeJS.ProcessEnv;
+  defaultsOnly?: boolean;
 }
 
 export interface HarnessInstallOptions extends HarnessOptions {
@@ -45,6 +47,8 @@ interface HarnessState {
   installed: boolean | null;
   docs: string;
 }
+
+export const PROBE_TIMEOUT_MS = 15_000;
 
 function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
@@ -73,6 +77,7 @@ async function probeInstalled(
       argv: [...entry.verifyArgv],
       user: "sandbox",
       stdio: "capture",
+      timeoutMs: PROBE_TIMEOUT_MS,
     });
     return r.exitCode === 0;
   } catch (err) {
@@ -85,9 +90,9 @@ async function collectStates(
   root: string,
   run: LifecycleRunner,
   env?: NodeJS.ProcessEnv,
-  only?: HarnessEntry,
+  only?: readonly HarnessEntry[],
 ): Promise<HarnessState[]> {
-  const entries = only ? [only] : [...HARNESS_CATALOG];
+  const entries = only ? [...only] : [...HARNESS_CATALOG];
   const target = targetFor(root, run, env);
 
   let reachable = false;
@@ -140,7 +145,12 @@ function renderTable(states: HarnessState[], io: HarnessIO): void {
 export async function runHarnessList(opts: HarnessOptions, io: HarnessIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const states = await collectStates(root, run, opts.env);
+  const states = await collectStates(
+    root,
+    run,
+    opts.env,
+    opts.defaultsOnly === true ? defaultHarnesses() : undefined,
+  );
   if (opts.json) {
     io.stdout(`${JSON.stringify(states, null, 2)}\n`);
   } else {
@@ -169,7 +179,7 @@ export async function runHarnessStatus(
     if (!only) return unknownHarness(name, io);
   }
 
-  const states = await collectStates(root, run, opts.env, only);
+  const states = await collectStates(root, run, opts.env, only ? [only] : undefined);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? states[0] : states, null, 2)}\n`);
   } else {

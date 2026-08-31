@@ -19,6 +19,30 @@ const CONFIG_DOC = read("docs/configuration.md");
 const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
 const NPM_USER_PREFIX = "/home/sandbox/.local";
 
+const BAKE_GATE = 'if [ "${BAKE_HARNESSES}" = "true" ]';
+
+function dockerfileStage(stage: string): string {
+  const lines = DOCKERFILE.split("\n");
+  const start = lines.findIndex((l) => new RegExp(`^FROM .* AS ${stage}$`).test(l));
+  if (start === -1) return "";
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((l) => l.startsWith("FROM "));
+  return (end === -1 ? rest : rest.slice(0, end)).join("\n");
+}
+
+function dockerfileRunWith(needle: string): string {
+  const blocks: string[] = [];
+  let buf: string | null = null;
+  for (const line of DOCKERFILE.split("\n")) {
+    if (buf === null && !line.startsWith("RUN ")) continue;
+    buf = buf === null ? line : `${buf}\n${line}`;
+    if (line.endsWith("\\")) continue;
+    blocks.push(buf);
+    buf = null;
+  }
+  return blocks.find((b) => b.includes(needle)) ?? "";
+}
+
 function versionPins(argv: readonly string[]): string[] {
   const pins = new Set<string>();
   for (const part of argv) {
@@ -156,6 +180,27 @@ describe("harness catalog", () => {
       expect(DOCKERFILE).toMatch(/^ARG BAKE_HARNESSES=true$/m);
       expect(ENTRYPOINT).toContain("OH_PROVISION_HARNESSES");
       expect(ENTRYPOINT).toContain(".oh/scripts/provision-harnesses.sh");
+    });
+
+    it.each(["base", "home"])(
+      "%s declares BAKE_HARNESSES, which ARG scopes to that stage alone",
+      (stage) => {
+        expect(dockerfileStage(stage)).toMatch(/^ARG BAKE_HARNESSES/m);
+      },
+    );
+
+    it("gates every baked default install on BAKE_HARNESSES, pi included", () => {
+      expect(dockerfileRunWith("read -ra agents")).toContain(BAKE_GATE);
+      expect(dockerfileRunWith("--ignore-scripts @earendil-works/pi-coding-agent")).toContain(
+        BAKE_GATE,
+      );
+    });
+
+    it("bounds the boot-path provisioner so an unreachable registry cannot stall the entrypoint", () => {
+      expect(ENTRYPOINT).toMatch(
+        /timeout "\$\{OH_PROVISION_HARNESSES_TIMEOUT:-\d+\}" bash "\$HARNESS\/\.oh\/scripts\/provision-harnesses\.sh"/,
+      );
+      expect(ENTRYPOINT).toContain("WARNING: harness provisioning did not complete");
     });
   });
 

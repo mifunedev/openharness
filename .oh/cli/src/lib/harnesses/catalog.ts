@@ -152,6 +152,10 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
   },
 ];
 
+export function defaultHarnesses(): readonly HarnessEntry[] {
+  return HARNESS_CATALOG.filter((h) => h.kind === "default");
+}
+
 export function findHarness(id: string): HarnessEntry | undefined {
   return HARNESS_CATALOG.find((h) => h.id === id);
 }

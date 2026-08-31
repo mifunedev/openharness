@@ -9,6 +9,7 @@ vi.mock("node:os", async (importOriginal) => {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  PROBE_TIMEOUT_MS,
   runHarnessInstall,
   runHarnessList,
   runHarnessStatus,
@@ -49,14 +50,19 @@ function makeRepo(): string {
 interface RecordedCall {
   cmd: string;
   args: string[];
+  timeoutMs?: number;
 }
 
 function makeRunner(
   reply: (cmd: string, args: string[]) => RunResult | undefined = () => undefined,
 ): { calls: RecordedCall[]; run: LifecycleRunner } {
   const calls: RecordedCall[] = [];
-  const run: LifecycleRunner = (cmd, args) => {
-    calls.push({ cmd, args: [...args] });
+  const run: LifecycleRunner = (cmd, args, opts) => {
+    calls.push({
+      cmd,
+      args: [...args],
+      ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+    });
     return reply(cmd, args) ?? { status: 0, stdout: "", stderr: "" };
   };
   return { calls, run };
@@ -411,6 +417,50 @@ describe("runHarnessList", () => {
     const parsed = JSON.parse(text(out));
     expect(parsed.find((h: { id: string }) => h.id === "claude-code").installed).toBe(true);
     expect(parsed.find((h: { id: string }) => h.id === "hermes").installed).toBe(false);
+  });
+});
+
+describe("runHarnessList — a hung verify probe cannot stall the boot path", () => {
+  const INSIDE_SANDBOX: NodeJS.ProcessEnv = { OH_EXECUTION_TARGET: "local" };
+
+  it("bounds every probe spawn with a timeout", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    await runHarnessList({ cwd: root, run, env: INSIDE_SANDBOX, json: true }, makeIo().io);
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) expect(call.timeoutMs).toBe(PROBE_TIMEOUT_MS);
+  });
+
+  it("reports a timed-out probe as unknown rather than throwing", async () => {
+    const root = makeRepo();
+    const { run } = makeRunner((cmd) =>
+      cmd === "npx"
+        ? { status: null, error: { code: "ETIMEDOUT", message: "spawnSync npx ETIMEDOUT" } }
+        : undefined,
+    );
+    const { out, io } = makeIo();
+    expect(await runHarnessList({ cwd: root, run, env: INSIDE_SANDBOX, json: true }, io)).toBe(0);
+    const parsed = JSON.parse(text(out));
+    expect(parsed.find((h: { id: string }) => h.id === "t3code").installed).toBeNull();
+    expect(parsed.find((h: { id: string }) => h.id === "claude-code").installed).toBe(true);
+  });
+
+  it("--defaults probes only the default harnesses, never the registry-touching ones", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    const { out, io } = makeIo();
+    expect(
+      await runHarnessList(
+        { cwd: root, run, env: INSIDE_SANDBOX, json: true, defaultsOnly: true },
+        io,
+      ),
+    ).toBe(0);
+    expect(JSON.parse(text(out)).map((h: { id: string }) => h.id)).toEqual([
+      "claude-code",
+      "codex",
+      "pi",
+    ]);
+    expect(calls.map((c) => c.cmd).sort()).toEqual(["claude", "codex", "pi"]);
   });
 });
 

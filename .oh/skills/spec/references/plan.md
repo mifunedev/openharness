@@ -128,6 +128,10 @@ done
 Within the workflow owned by `.oh/skills/spec/SKILL.md`, `plan` is the first node.
 The operator approves `prd.md`, then runs `/spec execute <slug>`.
 
+Running `plan` by name is the deliberate stop-after-scaffolding path. The default entry
+point, `ship`, runs this node and then continues into `execute` when the operator handed
+in an approved plan file (`references/ship.md`).
+
 The terminal artifact is the folder itself: `.oh/tasks/<slug>/` carrying the four-file
 contract, with `prd.md` awaiting the operator's approval. Report the folder path and the
 story count. There is no `STATUS: SPEC-PLANNED` token — it had no executable consumer, so

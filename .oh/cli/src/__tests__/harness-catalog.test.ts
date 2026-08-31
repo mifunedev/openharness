@@ -16,6 +16,8 @@ const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8")
 const DOCKERFILE = read(".devcontainer/Dockerfile");
 const COMPOSE_YML = read(".devcontainer/docker-compose.yml");
 const CONFIG_DOC = read("docs/configuration.md");
+const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
+const NPM_USER_PREFIX = "/home/sandbox/.local";
 
 function versionPins(argv: readonly string[]): string[] {
   const pins = new Set<string>();
@@ -125,6 +127,36 @@ describe("harness catalog", () => {
       expect(h.installArgv[2]).not.toContain("${");
       expect(h.installArgv).toHaveLength(3);
     }
+  });
+
+  describe("default harnesses install into the home mount, not the image", () => {
+    const defaults = HARNESS_CATALOG.filter((h) => h.kind === "default");
+
+    it("covers claude-code, codex and pi", () => {
+      expect(defaults.map((h) => h.id).sort()).toEqual(["claude-code", "codex", "pi"]);
+    });
+
+    it("declares NPM_USER_PREFIX as the prefix the catalog installs into", () => {
+      expect(DOCKERFILE).toContain(`ENV NPM_USER_PREFIX="${NPM_USER_PREFIX}"`);
+    });
+
+    it.each(defaults.map((h) => [h.id, h] as const))(
+      "%s: installs as the sandbox user into NPM_USER_PREFIX",
+      (_id, h) => {
+        expect(h.installUser).toBe("sandbox");
+        expect(h.installArgv).toContain(NPM_USER_PREFIX);
+      },
+    );
+
+    it("keeps claude-code's postinstall, which copies the native binary over the placeholder", () => {
+      expect(findHarness("claude-code")!.installArgv).not.toContain("--ignore-scripts");
+    });
+
+    it("lets the image bake be turned off, and provisions the same harnesses at boot", () => {
+      expect(DOCKERFILE).toMatch(/^ARG BAKE_HARNESSES=true$/m);
+      expect(ENTRYPOINT).toContain("OH_PROVISION_HARNESSES");
+      expect(ENTRYPOINT).toContain(".oh/scripts/provision-harnesses.sh");
+    });
   });
 
   it("findHarness resolves known ids and rejects unknown ones", () => {

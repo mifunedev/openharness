@@ -86,6 +86,7 @@ SHELL ["/bin/bash", "-c"]
 ARG AGENTS="claude-code,codex,pi-coding-agent"
 ARG INSTALL_OPENCODE=false
 ARG INSTALL_GROK_BUILD=false
+ARG BAKE_HARNESSES=true
 
 RUN set -e; \
     declare -A PKG=( \
@@ -94,13 +95,15 @@ RUN set -e; \
         [pi-coding-agent]=@earendil-works/pi-coding-agent \
         [opencode]=opencode-ai \
     ); \
-    IFS=',' read -ra agents <<< "$AGENTS"; \
-    for a in "${agents[@]}"; do \
-        if [ "$a" = "pi-coding-agent" ]; then continue; fi; \
-        pkg="${PKG[$a]:-}"; \
-        if [ -n "$pkg" ]; then npm install -g "$pkg"; \
-        else echo "Unknown agent: $a"; exit 1; fi; \
-    done; \
+    if [ "${BAKE_HARNESSES}" = "true" ]; then \
+        IFS=',' read -ra agents <<< "$AGENTS"; \
+        for a in "${agents[@]}"; do \
+            if [ "$a" = "pi-coding-agent" ]; then continue; fi; \
+            pkg="${PKG[$a]:-}"; \
+            if [ -n "$pkg" ]; then npm install -g "$pkg"; \
+            else echo "Unknown agent: $a"; exit 1; fi; \
+        done; \
+    else echo "Skipping baked agent CLI installs (BAKE_HARNESSES=${BAKE_HARNESSES}); .oh/scripts/provision-harnesses.sh installs them into /home/sandbox/.local at boot"; fi; \
     if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
     else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi; \
     if [ "${INSTALL_GROK_BUILD}" = "true" ]; then \

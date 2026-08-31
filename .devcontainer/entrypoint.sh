@@ -150,6 +150,13 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   fi
 fi
 
+if [ "${OH_PROVISION_HARNESSES:-true}" = "true" ] \
+   && [ -x "$HARNESS/.oh/scripts/provision-harnesses.sh" ]; then
+  if ! bash "$HARNESS/.oh/scripts/provision-harnesses.sh"; then
+    echo "[entrypoint] WARNING: harness provisioning did not complete; run: bash .oh/scripts/provision-harnesses.sh" >&2
+  fi
+fi
+
 if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
    && [ -x "$HARNESS/.oh/scripts/provision-python.sh" ]; then
   if ! bash "$HARNESS/.oh/scripts/provision-python.sh"; then

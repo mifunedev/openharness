@@ -218,7 +218,7 @@ nested implementation session.
 **Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set,
 substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
 
-> `/goal` As the **single expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Read `.oh/tasks/<slug>/prompt.md`, implement the dependency-ready stories directly, and use `/delegate` only for bounded disjoint work. Reconcile worker results, validate every acceptance criterion, update `prd.json` and `progress.txt`, and append `STATUS: COMPLETE` only after every story passes. (3) Continue in this same Advisor session with the implementation-side audit loop, `/eval` once, required wiki revision, `/compact`, `evidence.md`, `/spec retro`, improve steps, and a fresh `/audit pr`; run `gh pr ready <PR> --repo "$SPEC_REPO"` only if that audit is promotable (CI green + mergeable + clean). Otherwise comment the blocking gate and leave the PR draft. Never `gh pr merge`. Leave this single session alive for attach.
+> `/goal` As the **single expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Read `.oh/tasks/<slug>/prompt.md`, implement the dependency-ready stories directly, and use `/delegate` only for bounded disjoint work. Reconcile worker results, validate every acceptance criterion, update `prd.json` and `progress.txt`, and append `STATUS: COMPLETE` only after every story passes. (3) Continue in this same Advisor session with the implementation-side audit loop — including the gate-5 simplify sub-loop, where you delete the code each finding names and drive `netAdded` down until the round cap or a non-reducing round ends it — `/eval` once, required wiki revision, `/compact`, `evidence.md`, `/spec retro`, improve steps, and a fresh `/audit pr`; run `gh pr ready <PR> --repo "$SPEC_REPO"` only if that audit is promotable (CI green + mergeable + clean). Otherwise comment the blocking gate and leave the PR draft. Never `gh pr merge`. Leave this single session alive for attach.
 
 The Advisor owns implementation and all post-build gates inside the same session. This node's
 turn ends after launching it and reporting the session name; the ready-for-review PR is
@@ -240,15 +240,38 @@ When implementation is complete, run the per-unit verdict gate:
 ```
 
 `/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression
-floor + `/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one
-verdict:
+floor + `/audit pr` promotable classification (+ `/agent-browser` for UI stories, + the
+gate-5 slop check) into one verdict:
 
 - `AUDIT-FAIL` → loop back to implementation in the same Advisor session to finish the
   unmet stories, then re-audit. This is the implementation-side adversary — keep looping
   until the Advisor satisfies the task graph.
 - `AUDIT-PASS` → implementation is promotable; continue to the tail.
 
-Two gates run inside this loop and must both clear before the audit can PASS.
+**The simplify sub-loop — drive `netAdded` down.** Gate 5 asks whether the diff can be
+smaller and still satisfy every acceptance criterion. On an `AUDIT-FAIL (gate 5)` the
+Advisor removes the code the finding names — it does not argue with it — and re-audits.
+The Advisor owns the round record; the read-only audit route only reads it:
+
+```bash
+COUNTER=".oh/tasks/<slug>/simplify-rounds.json"
+ROUNDS=$(jq -r '.rounds // 0' "$COUNTER" 2>/dev/null || echo 0)
+NET=$(AUDIT_ROOT="$PWD" bash .oh/skills/audit/scripts/implementation-gates.sh \
+        slop-metrics "$BASE" | jq -r .netAdded)
+cat > "$COUNTER" <<JSON
+{ "rounds": $((ROUNDS + 1)), "netAdded": $NET, "lastCommit": "$(git rev-parse HEAD)" }
+JSON
+git add -f "$COUNTER"
+```
+
+Two things end this loop, and neither of them is agreement: the **cap** of 3 rounds, and
+a round whose `netAdded` did not strictly fall below the previous round's. Either way the
+audit stops blocking and passes with `SIMPLICITY-RESIDUAL`, and those residual findings go
+into `evidence.md` under *What remains unverified* for the operator to judge. A simplify
+loop that cannot make the diff smaller has finished its work; one that keeps looping on
+taste has stopped doing work.
+
+Two further gates run inside this loop and must both clear before the audit can PASS.
 
 **The `/eval` gate — run ONCE per cycle.** Run `/eval` while still on the work branch. If it
 updates `.oh/evals/RESULTS.md`, commit the benchmark refresh on the branch. Treat only a NEW

@@ -1,0 +1,71 @@
+# skill-impact — the harness's skill-change ledger
+
+Append-only. One record per skill-edit proposal, one record per verdict. Records are
+appended at the end and never edited in place; `SI-nnnn` ids increase monotonically.
+
+Written by exactly two skills: `/builder` appends the `PROPOSED` record at the moment
+its edit lands, and `/benchmark` appends the matching `SI-nnnn-V` verdict record when
+it scores that change. Read by `/builder`, before it proposes — a record marked
+`REJECTED` is a change already tried and refused, and must not be re-proposed without
+new evidence that contradicts the recorded validation.
+
+This file carries **no YAML frontmatter** deliberately. Both `/wiki lint` § 3 and
+`.oh/evals/probes/wiki-readme-index.sh` skip files with no `slug:` field, so the
+ledger is excluded from the corpus index by construction. It is not an entity page
+and is not returned by `/wiki query`.
+
+Guarded by `.oh/evals/probes/wiki-skill-impact-append-only.sh`.
+
+## Why this is not the deleted memory tier
+
+The `.oh/memory` tier was removed as a concept because it held one entry per session,
+keyed by date, gitignored, with nothing reading it. Every structural property here is
+the opposite.
+
+| `.oh/memory` (deleted) | `skill-impact.md` |
+|---|---|
+| One entry per **skill invocation** — every run, whatever the outcome | One record per **skill-edit proposal** — a durable change to a tracked artifact |
+| Growth unbounded in sessions | Growth bounded by merged changes that edit `.oh/skills/` |
+| No consumer; nothing read it | Two consumers: `/builder` reads it before proposing, `/benchmark` reads it for the redirect signal |
+| Duplicated what `git log` already held | Holds what `git log` does **not**: the motivating pattern, the validation result, and — critically — **rejected proposals, which leave no git trace at all after a revert** |
+| Any skill could write | Exactly two writers, both orchestrator-only |
+
+The sharp test is `/retro`'s own anti-pattern, "inventing a file to save a lesson
+in". This file saves no lessons — lessons live in `corpus/pattern-*.md`. It records
+**decisions about skills**, which today live nowhere.
+
+## Record format
+
+A proposal record and its verdict record are two separate appends, never one record
+mutated twice. `/builder` lands the edit; a human merges it; `/benchmark` scores it
+later. Mutating the `PROPOSED` record in place to add a verdict would break
+append-only and make the invariant unenforceable.
+
+````markdown
+## SI-0001 · YYYY-MM-DD · builder · PROPOSED
+
+- **proposal**: <one sentence — what changes and why it should help>
+- **target**: <exactly one repo-relative artifact path>
+- **motivating patterns**: [[pattern-slug]], [[pattern-slug]] — or `none (direct request)`
+- **proposer**: /builder <type>, <session or issue reference>
+- **diff**:
+
+```diff
+<git diff scoped to the target path>
+```
+
+## SI-0001-V · YYYY-MM-DD · benchmark · ACCEPTED
+
+- **for**: SI-0001
+- **floor**: /eval rc=<n>, <n> regressions (`.oh/evals/RESULTS.md`@<short-sha>)
+- **ceiling**: suite score <before> → <after>; <task> <before> → <after>
+- **verdict**: BENEFICIAL | NOT-BENEFICIAL — ACCEPTED | REJECTED
+````
+
+`motivating patterns: none (direct request)` is a legitimate value. Not every skill
+edit answers a compiled pattern, and recording that honestly is better than inventing
+a pattern to cite.
+
+## Records
+
+<!-- Appended below this line, oldest first. Never edit an existing record. -->

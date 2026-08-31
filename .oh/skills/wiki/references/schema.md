@@ -171,10 +171,10 @@ under `raw/` would recreate the per-session journal tier the harness deliberatel
 removed, wearing a new name.
 
 **Authoring constraint.** Pattern prose discusses harness subsystems, so it is the
-most likely place for retired vocabulary to reappear. A pattern page must not contain
-the tokens `pr-audit`, `harness-audit`, `context-audit`, `skill-lint`, `eval-lint`,
-`drift-check`, `auditor.md`, or the bare route literal `` `/audit` `` — all of them
-turn `.oh/evals/probes/audit-stale-references.sh` red. Use the current route names.
+most likely place for retired vocabulary to reappear. `.oh/evals/probes/audit-stale-references.sh`
+greps every tracked file, this corpus included, for retired route and skill names.
+Read that probe's pattern before writing about an audit subsystem, and use the
+current route names.
 
 ### Word cap and sub-articles
 

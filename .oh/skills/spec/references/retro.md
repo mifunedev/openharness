@@ -66,9 +66,10 @@ Within the workflow owned by `.oh/skills/spec/SKILL.md`, `retro` runs inside the
 `spec-execute` tail (`build ⇄ audit → evidence → spec-retro → improve`). The next
 step is `improve` (compound · compress · benchmark).
 
-The terminal artifact is the log entry plus whatever the propose-then-confirm gate actually
-wrote. Report the counts. There is no `STATUS: SPEC-RETRO-DONE` token — it had no executable
-consumer.
+The terminal artifact is the report itself plus whatever the propose-then-confirm gate
+actually wrote. Report the counts. There is no `STATUS: SPEC-RETRO-DONE` token — it had no
+executable consumer. The supported lessons in that report become durable in the next step,
+`improve`, via `/wiki compile`; this subcommand writes no file of its own.
 
 The `/spec` family's authority is `.oh/skills/spec/SKILL.md`. `retro` always
 completes (like `/retro`), so the execute tail always continues to `improve`.

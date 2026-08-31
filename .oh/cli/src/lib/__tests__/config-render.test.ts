@@ -9,7 +9,39 @@ import { defaultOhConfig, type OhConfig } from "../oh-config.js";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
 const DEVCONTAINER = join(REPO_ROOT, ".devcontainer");
 
-const RETIRED = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR", "OH_PROJECT_ROOT"];
+const RETIRED = [
+  "WORKTREES_DIR",
+  "PROJECTS_DIR",
+  "CRONS_DIR",
+  "OH_PROJECT_ROOT",
+  "INSTALL_DEEPAGENTS",
+  "INSTALL_OPENCODE",
+  "INSTALL_GROK_BUILD",
+  "INSTALL_HERMES",
+  "INSTALL_AGENT_BROWSER",
+  "INSTALL_TAILSCALE",
+  "SANDBOX_SSH_PASSWORD_AUTH",
+  "SANDBOX_SSH_AUTHORIZED_KEYS",
+  "HERMES_DASHBOARD",
+  "HERMES_DASHBOARD_PORT",
+  "CRON_AGENT_BIN",
+  "SKIP_PNPM_INSTALL",
+  "LANGFUSE_BASE_URL",
+  "LANGFUSE_PRIVACY_PRESET",
+];
+
+const HOST_SIDE_KEYS = [
+  "SANDBOX_NAME",
+  "TZ",
+  "OH_HOME_MOUNT",
+  "GIT_USER_NAME",
+  "GIT_USER_EMAIL",
+  "DOCKER_SOCKET",
+  "SANDBOX_SSH",
+  "SANDBOX_SSH_PORT",
+  "OH_SANDBOX_IMAGE",
+  "OH_PULL_POLICY",
+];
 
 function composeInterpolatedVars(): string[] {
   const found = new Set<string>();
@@ -48,33 +80,22 @@ describe("renderComposeEnv", () => {
     }
   });
 
-  it("carries every non-secret setting through from oh.json", () => {
+  it("carries every host-side setting through from oh.json", () => {
     const text = renderComposeEnv(fullConfig());
     expect(text).toContain("SANDBOX_NAME=demo");
     expect(text).toContain("TZ=America/Los_Angeles");
     expect(text).toContain("OH_HOME_MOUNT=/srv/oh-home");
     expect(text).toContain("GIT_USER_NAME=Ada");
     expect(text).toContain("GIT_USER_EMAIL=ada@example.com");
-    expect(text).toContain("INSTALL_OPENCODE=false");
-    expect(text).toContain("INSTALL_GROK_BUILD=false");
-    // #910: deepagents is retired; the key must no longer be rendered.
-    expect(text).not.toContain("INSTALL_DEEPAGENTS");
-    expect(text).toContain("INSTALL_HERMES=false");
-    expect(text).toContain("INSTALL_AGENT_BROWSER=false");
-    expect(text).toContain("INSTALL_TAILSCALE=false");
     expect(text).toContain("DOCKER_SOCKET=true");
     expect(text).toContain("SANDBOX_SSH=true");
     expect(text).toContain("SANDBOX_SSH_PORT=2022");
-    expect(text).toContain("SANDBOX_SSH_PASSWORD_AUTH=true");
-    expect(text).toContain("SANDBOX_SSH_AUTHORIZED_KEYS=ssh-ed25519 AAAA you@laptop");
-    expect(text).toContain("HERMES_DASHBOARD=false");
-    expect(text).toContain("HERMES_DASHBOARD_PORT=9119");
-    expect(text).toContain("CRON_AGENT_BIN=claude");
-    expect(text).toContain("SKIP_PNPM_INSTALL=0");
     expect(text).toContain("OH_SANDBOX_IMAGE=ghcr.io/mifunedev/openharness:latest");
     expect(text).toContain("OH_PULL_POLICY=always");
-    expect(text).toContain("LANGFUSE_BASE_URL=http://langfuse-web:3000");
-    expect(text).toContain("LANGFUSE_PRIVACY_PRESET=metadata-only");
+  });
+
+  it("renders the host-side set and nothing else", () => {
+    expect(keysOf(fullConfig()).sort()).toEqual([...HOST_SIDE_KEYS].sort());
   });
 
   it("covers every variable the real compose files interpolate", () => {
@@ -94,9 +115,18 @@ describe("renderComposeEnv", () => {
     for (const key of SECRET_KEYS) expect(rendered).not.toContain(key);
   });
 
-  it("emits no retired *_DIR variable", () => {
+  it("emits no retired variable", () => {
     const text = renderComposeEnv(fullConfig());
-    for (const key of RETIRED) expect(text).not.toContain(key);
+    for (const key of RETIRED) expect(text, key).not.toContain(`${key}=`);
+  });
+
+  it("declares every retired variable in RETIRED_KEYS, so re-adding a put() throws", () => {
+    const source = readFileSync(join(REPO_ROOT, ".oh/cli/src/lib/config-render.ts"), "utf8");
+    const block = source.slice(
+      source.indexOf("const RETIRED_KEYS = ["),
+      source.indexOf("] as const;"),
+    );
+    for (const key of RETIRED) expect(block, key).toContain(`"${key}"`);
   });
 
   it("omits a key whose oh.json field is unset", () => {
@@ -104,15 +134,22 @@ describe("renderComposeEnv", () => {
     expect(keysOf(config)).toEqual(["SANDBOX_NAME"]);
   });
 
-  it("renders skipPnpmInstall as the 1/0 the entrypoint reads", () => {
+  it("leaves skipPnpmInstall to oh.json — entrypoint.sh reads it through the CLI", () => {
     const config = defaultOhConfig("demo");
     config.build = { skipPnpmInstall: true };
-    expect(renderComposeEnv(config)).toContain("SKIP_PNPM_INSTALL=1");
+    expect(renderComposeEnv(config)).not.toContain("SKIP_PNPM_INSTALL");
+  });
+
+  it("leaves the sshd mode to oh.json, publishing only the port", () => {
+    const text = renderComposeEnv(fullConfig());
+    expect(text).toContain("SANDBOX_SSH_PORT=2022");
+    expect(text).not.toContain("SANDBOX_SSH_PASSWORD_AUTH");
+    expect(text).not.toContain("SANDBOX_SSH_AUTHORIZED_KEYS");
   });
 
   it("refuses a value containing a newline", () => {
     const config = defaultOhConfig("demo");
-    config.access = { sshAuthorizedKeys: "ssh-ed25519 A\nssh-ed25519 B" };
+    config.git = { userName: "Ada\nMalicious" };
     expect(() => renderComposeEnv(config)).toThrow(/must not contain a newline/);
   });
 });

@@ -23,11 +23,40 @@ const CRONS_DIR = path.resolve("crons");
 const WORKTREES_DIR = ".worktrees";
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
-const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
+const AGENT_BIN_FALLBACK = "claude";
 const CRON_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const AGENT_BIN_PATTERN = /^[A-Za-z0-9_./-]+$/;
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const REMOTE_PATTERN = /^[A-Za-z0-9_.-]+$/;
+
+let resolvedAgentBin: string | undefined;
+
+export function resolveAgentBin(): string {
+  if (resolvedAgentBin !== undefined) return resolvedAgentBin;
+  const fromEnv = process.env.CRON_AGENT_BIN;
+  if (fromEnv) {
+    resolvedAgentBin = fromEnv;
+    return resolvedAgentBin;
+  }
+  const shown = spawnSync("oh", ["config", "show"], { encoding: "utf8" });
+  if (shown.status === 0 && shown.stdout) {
+    try {
+      const parsed = JSON.parse(shown.stdout) as { cron?: { agentBin?: string } };
+      if (parsed.cron?.agentBin) {
+        resolvedAgentBin = parsed.cron.agentBin;
+        return resolvedAgentBin;
+      }
+    } catch {
+      resolvedAgentBin = undefined;
+    }
+  }
+  resolvedAgentBin = AGENT_BIN_FALLBACK;
+  return resolvedAgentBin;
+}
+
+export function resetAgentBinCache(): void {
+  resolvedAgentBin = undefined;
+}
 
 export function isValidCronId(id: string): boolean {
   return CRON_ID_PATTERN.test(id);
@@ -672,7 +701,7 @@ function fireTmux(entry: CronEntry): void {
   let cwd = process.cwd();
   let pidFile = idPidFile;
   let worktree: string | undefined;
-  const agentBin = entry.agentBin || AGENT_BIN;
+  const agentBin = entry.agentBin || resolveAgentBin();
   if (!isValidAgentBin(agentBin)) {
     log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
     return;
@@ -797,7 +826,7 @@ export function fire(entry: CronEntry): void {
   const session = tmuxSessionName(liveEntry.id, new Date());
   const promptFile = `/tmp/${session}.prompt`;
   const logFile = `/tmp/${session}.log`;
-  const agentBin = liveEntry.agentBin || AGENT_BIN;
+  const agentBin = liveEntry.agentBin || resolveAgentBin();
   if (!isValidAgentBin(agentBin)) {
     log(liveEntry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
     return;

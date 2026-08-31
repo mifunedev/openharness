@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
+- **BREAKING:** Move eleven settings out of the compose `environment:` block into oh.json, read through the `oh` CLI; a hand-edited `.devcontainer/.env` no longer carries them ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Make `/spec` ship by default: an unrecognized first token routes to a new `ship` node that runs `plan` then `execute`, so `/spec <plan-path>` produces a ready-for-review PR ([#914](https://github.com/mifunedev/openharness/issues/914)).
 - **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
@@ -17,6 +18,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
 
 ### Removed
+- **BREAKING:** Retire `docker-compose.hermes-dashboard.yml` and its published `127.0.0.1:9119`; the dashboard now binds container loopback, reachable over cloudflared or Tailscale ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- Remove the duplicate agent-browser and Tailscale installers from `entrypoint.sh`; the tool catalog is the sole owner of both pins and Tailscale's two checksums ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Remove the `BAKE_HARNESSES` and `AGENTS` build args along with the image bake they gated; the harness catalog is the only source of truth for what gets installed ([#904](https://github.com/mifunedev/openharness/issues/904)).
 - Remove Cloudflare's apt repository and its bookworm-suite pin from the image; Docker's is now the only third-party apt source ([#906](https://github.com/mifunedev/openharness/issues/906)).
 - Remove the four optional-harness build args and the dead `buildArg` catalog field; the `install.*` keys keep working and now drive boot provisioning ([#908](https://github.com/mifunedev/openharness/issues/908)).

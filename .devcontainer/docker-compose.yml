@@ -23,6 +23,13 @@
 # directly and bypasses that wrapper, so it never gets the socket; add the
 # overlay to devcontainer.json to enable it there. See
 # docs/security-considerations.md.
+#
+# The `environment:` block carries only what a process OUTSIDE the sandbox — or
+# the entrypoint BEFORE the control plane is readable — must act on. Everything
+# else lives in oh.json and is read through the `oh` CLI: harness and tool
+# installs come from the catalogs via .oh/scripts/provision-defaults.sh, and
+# entrypoint.sh reads the rest with its oh_config helper. Adding a tool, harness,
+# or setting therefore needs no edit to this file.
 
 name: ${SANDBOX_NAME:-openharness}
 
@@ -58,17 +65,6 @@ services:
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
-      - XAI_API_KEY=${XAI_API_KEY:-}
-      - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
-      - INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-false}
-      - SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}
-      - INSTALL_HERMES=${INSTALL_HERMES:-false}
-      - HERMES_HOME=/home/sandbox/harness/.hermes
-      - HERMES_DASHBOARD=${HERMES_DASHBOARD:-false}
-      - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
-      - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
-      - LANGFUSE_PRIVACY_PRESET=${LANGFUSE_PRIVACY_PRESET:-metadata-only}
     stdin_open: true
     tty: true
     init: true

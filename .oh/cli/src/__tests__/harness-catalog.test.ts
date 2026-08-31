@@ -49,9 +49,9 @@ describe("harness catalog", () => {
     }
   });
 
-  it("excludes agent_browser — it shares the INSTALL_* namespace but is not a harness", () => {
+  it("excludes agent_browser — it shares the install.* namespace but is not a harness", () => {
     expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
-    expect(CONFIG_DOC).toMatch(/^\| `install\.agentBrowser` \|.*`INSTALL_AGENT_BROWSER`/m);
+    expect(CONFIG_DOC).toMatch(/^\| `install\.agentBrowser` \|/m);
   });
 
   it("documents every harness under docs/harnesses/<id>.md", () => {
@@ -96,11 +96,13 @@ describe("harness catalog", () => {
     );
 
     it.each(optional.map((h) => [h.id, h] as const))(
-      "%s: its oh.json key stays documented in docs/configuration.md",
+      "%s: its oh.json key stays documented in docs/configuration.md, with no compose projection",
       (_id, h) => {
-        const arg = `INSTALL_${(h.harnessKey as string).toUpperCase()}`;
+        const field = (h.harnessKey as string).replace(/_(.)/g, (_m, c: string) =>
+          c.toUpperCase(),
+        );
         expect(CONFIG_DOC).toMatch(
-          new RegExp(`^\\| \`install\\.[A-Za-z]+\` \\|.*\`${arg}\``, "m"),
+          new RegExp(`^\\| \`install\\.${field}\` \\|[^|]*\\|[^|]*\\| — \\|`, "m"),
         );
       },
     );
@@ -111,12 +113,12 @@ describe("harness catalog", () => {
       expect(DOCKERFILE).not.toContain("bash -s 0.2.39");
     });
 
-    // INSTALL_HERMES survives as a RUNTIME flag: link-providers.sh vendors the
-    // Hermes skill pack from it and entrypoint.sh wires auth.json. Only its
-    // build-arg role is gone.
-    it("keeps INSTALL_HERMES as a container environment variable", () => {
-      expect(COMPOSE_YML).toContain("- INSTALL_HERMES=${INSTALL_HERMES:-false}");
+    it("gates the Hermes wiring on the binary, never on INSTALL_HERMES", () => {
+      expect(COMPOSE_YML).not.toContain("INSTALL_HERMES");
       expect(DOCKERFILE).not.toContain("INSTALL_HERMES");
+      expect(ENTRYPOINT).not.toContain("INSTALL_HERMES");
+      expect(ENTRYPOINT).toContain("if command -v hermes >/dev/null 2>&1; then");
+      expect(read(".oh/scripts/link-providers.sh")).not.toContain("INSTALL_HERMES");
     });
 
     it("installs every harness as the sandbox user, never root", () => {

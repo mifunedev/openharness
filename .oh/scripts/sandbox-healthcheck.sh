@@ -36,6 +36,16 @@ require_session() {
   fi
 }
 
+oh_config_truthy() {
+  local filter="$1" config="$HARNESS/oh.json"
+  [ -f "$config" ] || return 1
+  command_exists jq || return 1
+  case "$(jq -r "$filter // false" "$config" 2>/dev/null | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 compose_env_value() {
   local key="$1"
   local env_file="$HARNESS/.devcontainer/.env"
@@ -60,7 +70,7 @@ else
     require_session cron-system
   fi
 
-  if [ "${HERMES_DASHBOARD:-false}" = "true" ] && command_exists "$HERMES_BIN"; then
+  if oh_config_truthy '.hermesDashboard.enabled' && command_exists "$HERMES_BIN"; then
     require_session app-hermes-dashboard
   fi
 

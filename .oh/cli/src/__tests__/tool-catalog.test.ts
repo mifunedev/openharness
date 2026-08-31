@@ -130,27 +130,27 @@ describe("the three catalogs are disjoint", () => {
   });
 });
 
-describe("agent-browser matches the entrypoint that really installs it", () => {
+describe("agent-browser is installed from the catalog, not the boot path", () => {
   const ab = findTool("agent-browser")!;
   const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
 
-  it("carries the entrypoint guard, not a build arg", () => {
-    expect(ab.entrypointGuard).toBe("INSTALL_AGENT_BROWSER");
+  it("declares the oh.json opt-in and neither a build arg nor an entrypoint guard", () => {
     expect(Object.keys(ab)).not.toContain("buildArg");
+    expect(Object.keys(ab)).not.toContain("entrypointGuard");
     expect(ab.toolKey).toBe("agent_browser");
   });
 
-  it("is installed by the entrypoint and is ABSENT from the Dockerfile", () => {
-    expect(ENTRYPOINT).toContain("INSTALL_AGENT_BROWSER");
+  it("is absent from the boot path and the Dockerfile", () => {
+    expect(ENTRYPOINT).not.toContain("INSTALL_AGENT_BROWSER");
+    expect(ENTRYPOINT).not.toContain("agent-browser@");
     expect(read(".devcontainer/Dockerfile")).not.toContain("INSTALL_AGENT_BROWSER");
   });
 
-  it("pins the same version the entrypoint pins", () => {
+  it("is the sole owner of the pinned version", () => {
     expect(ab.installArgv!.join(" ")).toContain("agent-browser@0.8.5");
-    expect(ENTRYPOINT).toContain("agent-browser@0.8.5");
   });
 
-  it("reproduces each of the entrypoint's three install steps", () => {
+  it("carries every install step itself", () => {
     const argv = ab.installArgv!.join(" ");
     for (const step of [
       "pnpm add -g agent-browser@0.8.5",
@@ -158,11 +158,10 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
       "agent-browser install --with-deps",
     ]) {
       expect(argv, step).toContain(step);
-      expect(ENTRYPOINT, step).toContain(step);
     }
   });
 
-  it("drops the entrypoint's log cosmetics, which would eat the exit code", () => {
+  it("drops log cosmetics, which would eat the exit code", () => {
     const argv = ab.installArgv!.join(" ");
     expect(argv).not.toContain("tail -5");
     expect(argv).not.toContain("[entrypoint]");
@@ -173,59 +172,47 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
     expect(read(".oh/cli/src/commands/init.ts")).toContain("~1 GB");
   });
 
-  it("keeps the env plumbing wired end to end", () => {
-    expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_AGENT_BROWSER");
-    expect(read("docs/configuration.md")).toMatch(
-      /^\| `install\.agentBrowser` \|.*`INSTALL_AGENT_BROWSER`/m,
-    );
+  it("is reachable only through oh.json — never through compose", () => {
+    expect(read(".devcontainer/docker-compose.yml")).not.toContain("INSTALL_AGENT_BROWSER");
+    expect(read(".oh/cli/src/lib/config-render.ts")).toContain('"INSTALL_AGENT_BROWSER"');
+    expect(read("docs/configuration.md")).toMatch(/^\| `install\.agentBrowser` \|/m);
   });
 });
 
-describe("tailscale matches the entrypoint that really installs it", () => {
+describe("tailscale is installed from the catalog, not the boot path", () => {
   const ts = findTool("tailscale")!;
   const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
   const VERSION = "1.102.3";
   const SHA_AMD64 = "36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5";
   const SHA_ARM64 = "a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25";
 
-  it("carries the entrypoint guard, not a build arg", () => {
-    expect(ts.entrypointGuard).toBe("INSTALL_TAILSCALE");
+  it("declares the oh.json opt-in and neither a build arg nor an entrypoint guard", () => {
     expect(Object.keys(ts)).not.toContain("buildArg");
+    expect(Object.keys(ts)).not.toContain("entrypointGuard");
     expect(ts.toolKey).toBe("tailscale");
     expect(ts.kind).toBe("opt-in");
   });
 
-  it("is installed by the entrypoint and is ABSENT from the Dockerfile", () => {
-    expect(ENTRYPOINT).toContain("INSTALL_TAILSCALE");
+  it("is absent from the boot path and the Dockerfile", () => {
+    expect(ENTRYPOINT).not.toContain("INSTALL_TAILSCALE");
+    expect(ENTRYPOINT).not.toContain(`tailscale_${VERSION}_`);
     expect(read(".devcontainer/Dockerfile")).not.toContain("INSTALL_TAILSCALE");
   });
 
-  it("pins the same version the entrypoint pins", () => {
-    expect(ts.installArgv!.join(" ")).toContain(`tailscale_${VERSION}_`);
-    expect(ENTRYPOINT).toContain(`tailscale_${VERSION}_`);
-  });
-
-  it("verifies the same per-arch sha256 the entrypoint verifies", () => {
+  it("is the sole owner of the pinned version and both checksums", () => {
     const argv = ts.installArgv!.join(" ");
+    expect(argv).toContain(`tailscale_${VERSION}_`);
     for (const sha of [SHA_AMD64, SHA_ARM64]) {
       expect(argv, sha).toContain(sha);
-      expect(ENTRYPOINT, sha).toContain(sha);
+      expect(ENTRYPOINT, sha).not.toContain(sha);
     }
     expect(argv).toContain("sha256sum -c -");
-    expect(ENTRYPOINT).toContain("sha256sum -c -");
   });
 
-  it("downloads from the pinned stable base the entrypoint uses", () => {
-    const base = "https://pkgs.tailscale.com/stable/";
-    expect(ts.installArgv!.join(" ")).toContain(base);
-    expect(ENTRYPOINT).toContain(base);
+  it("downloads from the pinned stable base", () => {
+    expect(ts.installArgv!.join(" ")).toContain("https://pkgs.tailscale.com/stable/");
   });
 
-  // tailscaled runs unprivileged under --tun=userspace-networking, so nothing
-  // here needs root. A root install would hang `oh tool install tailscale` on a
-  // sudo password prompt (commands/tool.ts uses stdio:"inherit", and
-  // /etc/sudoers.d/sandbox has no NOPASSWD), and would put the binaries in an
-  // image-layer path discarded on every container recreate.
   it("installs as the sandbox user into the home mount", () => {
     expect(ts.installUser).toBe("sandbox");
     const argv = ts.installArgv!.join(" ");
@@ -234,9 +221,6 @@ describe("tailscale matches the entrypoint that really installs it", () => {
     expect(argv).not.toContain("/usr/local/bin/tailscaled");
   });
 
-  // /var/run/tailscale is tailscaled's default socket directory and only root
-  // can create it, so it belongs to the entrypoint, not to an install that runs
-  // as the sandbox user.
   it("leaves the root-owned socket directory to the entrypoint", () => {
     expect(ts.installArgv!.join(" ")).not.toContain("/var/run/tailscale");
     expect(ENTRYPOINT).toContain("/var/run/tailscale");
@@ -248,7 +232,7 @@ describe("tailscale matches the entrypoint that really installs it", () => {
     expect(argv).not.toMatch(/(^|[^d])tailscaled\s+--tun/);
   });
 
-  it("drops the entrypoint's log cosmetics, which would eat the exit code", () => {
+  it("drops log cosmetics, which would eat the exit code", () => {
     const argv = ts.installArgv!.join(" ");
     expect(argv).not.toContain("[entrypoint]");
     expect(argv).not.toContain("tail -");
@@ -258,11 +242,10 @@ describe("tailscale matches the entrypoint that really installs it", () => {
     expect(ts.downloadSize).toBeUndefined();
   });
 
-  it("keeps the env plumbing wired end to end", () => {
-    expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_TAILSCALE");
-    expect(read("docs/configuration.md")).toMatch(
-      /^\| `install\.tailscale` \|.*`INSTALL_TAILSCALE`/m,
-    );
+  it("is reachable only through oh.json — never through compose", () => {
+    expect(read(".devcontainer/docker-compose.yml")).not.toContain("INSTALL_TAILSCALE");
+    expect(read(".oh/cli/src/lib/config-render.ts")).toContain('"INSTALL_TAILSCALE"');
+    expect(read("docs/configuration.md")).toMatch(/^\| `install\.tailscale` \|/m);
   });
 });
 
@@ -271,7 +254,6 @@ describe("baked-in tools", () => {
     for (const t of TOOL_CATALOG) {
       if (t.kind !== "baked-in") continue;
       expect(t.toolKey, t.id).toBeUndefined();
-      expect(t.entrypointGuard, t.id).toBeUndefined();
       expect(t.installArgv, t.id).toBeUndefined();
     }
   });

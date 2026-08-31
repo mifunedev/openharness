@@ -35,6 +35,8 @@ import {
   readFailureTail,
   reloadEntryForFire,
   remoteForRepo,
+  resetAgentBinCache,
+  resolveAgentBin,
   reloadBody,
   resetActiveJobs,
   runPreflight,
@@ -223,6 +225,43 @@ describe("isValidCronId", () => {
     for (const id of ["", "../evil", "evil;touch-pwned", "bad id", "Bad", "bad_id"]) {
       expect(isValidCronId(id)).toBe(false);
     }
+  });
+});
+
+describe("resolveAgentBin", () => {
+  const savedBin = process.env.CRON_AGENT_BIN;
+  const savedPath = process.env.PATH;
+
+  afterEach(() => {
+    if (savedBin === undefined) delete process.env.CRON_AGENT_BIN;
+    else process.env.CRON_AGENT_BIN = savedBin;
+    process.env.PATH = savedPath;
+    resetAgentBinCache();
+  });
+
+  it("prefers the CRON_AGENT_BIN override over oh.json", () => {
+    process.env.CRON_AGENT_BIN = "pi";
+    resetAgentBinCache();
+    expect(resolveAgentBin()).toBe("pi");
+  });
+
+  it("reads cron.agentBin from oh.json through the CLI", () => {
+    delete process.env.CRON_AGENT_BIN;
+    const dir = mkdtempSync(path.join(tmpdir(), "cron-agent-bin-"));
+    const stub = path.join(dir, "oh");
+    writeFileSync(stub, '#!/usr/bin/env bash\necho \'{"cron":{"agentBin":"codex"}}\'\n');
+    chmodSync(stub, 0o755);
+    process.env.PATH = `${dir}:/usr/bin:/bin`;
+    resetAgentBinCache();
+    expect(resolveAgentBin()).toBe("codex");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("falls back to claude when the CLI is unavailable", () => {
+    delete process.env.CRON_AGENT_BIN;
+    process.env.PATH = "/nonexistent-path-for-cron-agent-bin";
+    resetAgentBinCache();
+    expect(resolveAgentBin()).toBe("claude");
   });
 });
 

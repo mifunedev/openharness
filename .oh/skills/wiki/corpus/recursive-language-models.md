@@ -3,10 +3,10 @@ title: "Recursive Language Models"
 slug: recursive-language-models
 tags: [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency]
 created: 2026-06-27
-updated: 2026-06-27
+updated: 2026-08-31
 sources:
   - raw/2026-06-27-recursive-language-models.md
-related: [inspectable-agent-harness, prompt-miner, repo2rlenv]
+related: [recursive-self-improvement-survey, molt-agentic-reinforcement-learning]
 confidence: provisional
 ---
 
@@ -31,6 +31,5 @@ Recursive Language Models (RLM) is an inference-time pattern in which a root lan
 `/rlm` supplies the decomposition half: `query-context.mjs` returns an addressed slice plus a chunk map (line ranges, byte offsets, match locations) under a max-bytes guard, and the skill recurses sub-agents over relevant chunks bounded by the existing `Max depth / children / step` recursion budget, reusing the `/spec execute` task cycle and `.worktrees/` by reference. The two compose: `/rlm` fans out per-chunk sub-calls; `/weigh` scores and aggregates the competing answers. Both are `disable-model-invocation: true` manual-invoke skills, so they cost nothing until called.
 
 ## See Also
-- [[inspectable-agent-harness]]
-- [[prompt-miner]]
-- [[repo2rlenv]]
+- [[recursive-self-improvement-survey]]
+- [[molt-agentic-reinforcement-learning]]

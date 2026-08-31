@@ -30,8 +30,15 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| wikiskill-experience-compilation | WikiSkill: Compiling Agent Experience into Persistent Knowledge (arXiv 2608.27454) | [skill-evolution, persistent-knowledge, continual-learning, harness-evolution, self-improvement, wiki, ablation, skill-transfer] | 2026-08-31 |
+| recursive-self-improvement-survey | Recursive Self-Improvement in AI (survey, arXiv 2607.07663) | [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark] | 2026-08-31 |
+| recursive-language-models | Recursive Language Models | [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency] | 2026-08-31 |
+| pattern-wiki-ungated-check-drift | Report-only checks nothing gates on stop being run | [wiki, lint, evals, probes, report-only, drift, gating] | 2026-08-31 |
+| pattern-wiki-external-model-over-mapping | Mapping an external model onto the harness reimports a tier it deleted | [wiki, ingest, architecture, external-sources, scope-creep, design-review] | 2026-08-31 |
+| pattern-evals-unexercised-oracle | A probe that has never failed has an unverified oracle | [evals, probes, oracles, skipped, fault-injection, continual-learning] | 2026-08-31 |
+| pattern-evals-prose-literal-pinning | Contract probes that pin multi-word prose break on reflow, not on drift | [evals, probes, contract-text, grep, false-failure, documentation] | 2026-08-31 |
+| pattern-docs-prohibition-by-example | Documenting a forbidden literal by quoting it violates the rule | [docs, evals, probes, vocabulary, guards, self-reference] | 2026-08-31 |
 | runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-08-27 |
-| recursive-self-improvement-survey | Recursive Self-Improvement in AI (survey, arXiv 2607.07663) | [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark] | 2026-08-27 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-27 |
 | molt-agentic-reinforcement-learning | Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning | [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia] | 2026-08-27 |
 | managed-agents | Scaling Managed Agents: Decoupling the brain from the hands | [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution] | 2026-08-27 |
@@ -42,4 +49,3 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 | audit-architecture | Audit Architecture | [audit, pr, workflow, safety, observability] | 2026-08-12 |
 | document-ingestion | Local Document Ingestion | [wiki, ingestion, markitdown, documents, provenance, security] | 2026-07-18 |
 | sandbox-dependency-installs | Sandbox Dependency Installs | [sandbox, devcontainer, pnpm, dependencies, boot] | 2026-07-01 |
-| recursive-language-models | Recursive Language Models | [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency] | 2026-06-27 |

@@ -380,14 +380,17 @@ writes it from what those routes observed.
 
 On `AUDIT-PASS`, run `/spec retro <slug>` (the execution-side retro). It turns the run's
 signals into falsifiable, evidence-tested lessons and promotes the supported ones behind a
-propose-then-confirm gate. Always logs.
+propose-then-confirm gate. It writes no file; step 8's `compound` is where its supported
+lessons become durable.
 
 ### 8. `improve` — compound · compress · benchmark
 
 The self-improvement tail (`.oh/skills/spec/SKILL.md`):
 
-- **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki ingest`,
-  mint a probe from any guardrail lesson).
+- **compound** — promote durable knowledge so it is reused, not re-derived. Run
+  `/wiki compile` on step 7's retro report to turn its supported lessons into
+  `kind: pattern` entries the next `/builder` proposal will read; run `/wiki ingest`
+  for any external source the run depended on; mint a probe from any guardrail lesson.
 - **compress** — keep the always-loaded context lean and clear (`/audit context`).
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
   regression floor stays green AND the capability-benchmark ceiling held or moved. It reads

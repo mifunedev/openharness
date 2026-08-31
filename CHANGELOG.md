@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
+- Make `/spec` ship by default: an unrecognized first token routes to a new `ship` node that runs `plan` then `execute`, so `/spec <plan-path>` produces a ready-for-review PR ([#914](https://github.com/mifunedev/openharness/issues/914)).
 - **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
 - **BREAKING:** Stop baking Claude Code, Codex, and Pi into the image; boot installs them into the home mount, so a first boot needs network and runs 60-180s longer ([#904](https://github.com/mifunedev/openharness/issues/904)).
@@ -26,6 +27,14 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 - Add gate 5 to `/audit implementation`: fail a promotable change while its diff can still be smaller. Measures net lines and per-function CCN on changed TypeScript via `uvx lizard`. ([#912](https://github.com/mifunedev/openharness/issues/912))
 - Add `audit-slop-gate.sh`, a tier-A probe holding gate 5's termination contract: a finding needs a concrete smaller alternative, and the loop ends on the cap or a non-reducing round. ([#912](https://github.com/mifunedev/openharness/issues/912))
+- Add `/wiki compile`, a `kind: pattern` corpus layer, and an append-only `skill-impact.md` ledger, so a `/retro` lesson becomes a page `/builder` reads before proposing. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add a `--patterns` mode to `/wiki query` that filters on `kind:`, reads up to five pattern entries, and ranks them by term-hit count before recency. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add a fault-injection requirement to the probe contract: a probe is not green until its REGRESSION branch has been driven against a broken input. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add capability task `CB-005` scoring whether a lesson reaches a validated skill change; two runs score 0.67 then 1.33, moving the suite mean to 1.44 over a changed task set. ([#916](https://github.com/mifunedev/openharness/pull/916))
+
+### Fixed
+- Fix `/wiki lint` generating the corpus index from the working tree instead of the git-tracked set, which made any untracked scratch entry a `wiki-readme-index.sh` regression. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Fix three unresolved `related:` and `[[slug]]` links in the `recursive-language-models` wiki entry, and add the `/wiki lint` check that would have caught them. ([#916](https://github.com/mifunedev/openharness/pull/916))
 - Provision the default harnesses into `/home/sandbox/.local` at boot, gated by `OH_PROVISION_HARNESSES`, so `oh harness install` also works from inside the sandbox ([#902](https://github.com/mifunedev/openharness/issues/902)).
 - Add `oh-home-mount.sh`, a tier-A probe holding the single-`$HOME`-mount contract: one mount per compose file, the baked `/opt/home-seed`, and the checkout prune that replaces `-xdev` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Assert boot-provisioned harnesses in the boot smoke and reject a baked default harness in `verify-sandbox-image.sh`, so CI exercises the install path ([#904](https://github.com/mifunedev/openharness/issues/904)).

@@ -128,6 +128,11 @@ describe("validateOhConfig", () => {
       { install: { agentBrowser: 1 } },
       /^oh\.json: install\.agentBrowser must be a boolean$/,
     ],
+    [
+      "install.tailscale",
+      { install: { tailscale: 1 } },
+      /^oh\.json: install\.tailscale must be a boolean$/,
+    ],
     ["access.ssh", { access: { ssh: "yes" } }, /^oh\.json: access\.ssh must be a boolean$/],
     ["access.sshPort", { access: { sshPort: "2222" } }, /^oh\.json: access\.sshPort must be a number$/],
     [

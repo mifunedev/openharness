@@ -29,6 +29,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add `oh tool list --defaults` and generalize the boot provisioner over both catalogs as `provision-defaults.sh` (`OH_PROVISION_DEFAULTS`) ([#906](https://github.com/mifunedev/openharness/issues/906)).
 - Fix `oh harness install` hanging on a sudo password prompt inside the sandbox: every harness now installs as the sandbox user, so no install path needs root ([#908](https://github.com/mifunedev/openharness/issues/908)).
 - Add `skills-task-tool-coupling.sh`, a tier-A probe holding the canonical skill pack and the sandbox in agreement about the Claude-Code-only task tools ([#886](https://github.com/mifunedev/openharness/issues/886)).
+- Add `install.tailscale` and `oh tool install tailscale`, an opt-in userspace Tailscale client installed into `~/.local/bin` as the sandbox user, granting no capability ([#858](https://github.com/mifunedev/openharness/issues/858)).
+
+### Changed
+- `/t3` launches the headless `t3 serve` instead of the local-GUI `t3`, and gains `--tailscale`, a `pair` action for a second device, and a `doctor` preflight ([#858](https://github.com/mifunedev/openharness/issues/858)).
 
 ### Fixed
 - Give the five probes that shipped without one a `# source:` header, so every probe records the lesson it closes and the `source` column in `RESULTS.md` is fully populated ([#889](https://github.com/mifunedev/openharness/issues/889)).

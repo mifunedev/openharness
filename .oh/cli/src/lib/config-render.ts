@@ -32,6 +32,7 @@ export function renderComposeVars(config: OhConfig): RenderedVar[] {
   put("INSTALL_GROK_BUILD", config.install?.grokBuild);
   put("INSTALL_HERMES", config.install?.hermes);
   put("INSTALL_AGENT_BROWSER", config.install?.agentBrowser);
+  put("INSTALL_TAILSCALE", config.install?.tailscale);
 
   put("DOCKER_SOCKET", config.access?.dockerSocket);
   put("SANDBOX_SSH", config.access?.ssh);

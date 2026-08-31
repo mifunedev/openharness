@@ -15,18 +15,24 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".."
 const read = (p: string): string => readFileSync(join(REPO_ROOT, p), "utf8");
 
 describe("tool catalog shape", () => {
-  it("lists the five known tools", () => {
+  it("lists the six known tools", () => {
     expect(toolIds()).toEqual([
       "agent-browser",
       "herdr",
       "cloudflared",
       "docker-cli",
       "gh",
+      "tailscale",
     ]);
   });
 
   it("makes exactly the default and opt-in tools installable", () => {
-    expect(installableToolIds()).toEqual(["agent-browser", "herdr", "cloudflared"]);
+    expect(installableToolIds()).toEqual([
+      "agent-browser",
+      "herdr",
+      "cloudflared",
+      "tailscale",
+    ]);
     for (const t of TOOL_CATALOG) {
       // A kind:"default" tool is provisioned at boot through `oh tool install`,
       // so it MUST be installable; a baked-in one must not be.
@@ -68,7 +74,13 @@ describe("tool catalog shape", () => {
 
   it("declares a version probe only where the flag is a safe standard", () => {
     const withVersion = TOOL_CATALOG.filter((t) => t.versionArgv !== undefined).map((t) => t.id);
-    expect(withVersion).toEqual(["herdr", "cloudflared", "docker-cli", "gh"]);
+    expect(withVersion).toEqual([
+      "herdr",
+      "cloudflared",
+      "docker-cli",
+      "gh",
+      "tailscale",
+    ]);
     for (const t of TOOL_CATALOG) {
       if (t.versionArgv) expect(t.versionArgv, t.id).toEqual([t.binary, "--version"]);
     }
@@ -165,6 +177,91 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
     expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_AGENT_BROWSER");
     expect(read("docs/configuration.md")).toMatch(
       /^\| `install\.agentBrowser` \|.*`INSTALL_AGENT_BROWSER`/m,
+    );
+  });
+});
+
+describe("tailscale matches the entrypoint that really installs it", () => {
+  const ts = findTool("tailscale")!;
+  const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
+  const VERSION = "1.102.3";
+  const SHA_AMD64 = "36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5";
+  const SHA_ARM64 = "a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25";
+
+  it("carries the entrypoint guard, not a build arg", () => {
+    expect(ts.entrypointGuard).toBe("INSTALL_TAILSCALE");
+    expect(Object.keys(ts)).not.toContain("buildArg");
+    expect(ts.toolKey).toBe("tailscale");
+    expect(ts.kind).toBe("opt-in");
+  });
+
+  it("is installed by the entrypoint and is ABSENT from the Dockerfile", () => {
+    expect(ENTRYPOINT).toContain("INSTALL_TAILSCALE");
+    expect(read(".devcontainer/Dockerfile")).not.toContain("INSTALL_TAILSCALE");
+  });
+
+  it("pins the same version the entrypoint pins", () => {
+    expect(ts.installArgv!.join(" ")).toContain(`tailscale_${VERSION}_`);
+    expect(ENTRYPOINT).toContain(`tailscale_${VERSION}_`);
+  });
+
+  it("verifies the same per-arch sha256 the entrypoint verifies", () => {
+    const argv = ts.installArgv!.join(" ");
+    for (const sha of [SHA_AMD64, SHA_ARM64]) {
+      expect(argv, sha).toContain(sha);
+      expect(ENTRYPOINT, sha).toContain(sha);
+    }
+    expect(argv).toContain("sha256sum -c -");
+    expect(ENTRYPOINT).toContain("sha256sum -c -");
+  });
+
+  it("downloads from the pinned stable base the entrypoint uses", () => {
+    const base = "https://pkgs.tailscale.com/stable/";
+    expect(ts.installArgv!.join(" ")).toContain(base);
+    expect(ENTRYPOINT).toContain(base);
+  });
+
+  // tailscaled runs unprivileged under --tun=userspace-networking, so nothing
+  // here needs root. A root install would hang `oh tool install tailscale` on a
+  // sudo password prompt (commands/tool.ts uses stdio:"inherit", and
+  // /etc/sudoers.d/sandbox has no NOPASSWD), and would put the binaries in an
+  // image-layer path discarded on every container recreate.
+  it("installs as the sandbox user into the home mount", () => {
+    expect(ts.installUser).toBe("sandbox");
+    const argv = ts.installArgv!.join(" ");
+    expect(argv).toContain("NPM_USER_PREFIX");
+    expect(argv).not.toContain("/usr/local/bin/tailscale");
+    expect(argv).not.toContain("/usr/local/bin/tailscaled");
+  });
+
+  // /var/run/tailscale is tailscaled's default socket directory and only root
+  // can create it, so it belongs to the entrypoint, not to an install that runs
+  // as the sandbox user.
+  it("leaves the root-owned socket directory to the entrypoint", () => {
+    expect(ts.installArgv!.join(" ")).not.toContain("/var/run/tailscale");
+    expect(ENTRYPOINT).toContain("/var/run/tailscale");
+  });
+
+  it("never joins a tailnet — installation is not authentication", () => {
+    const argv = ts.installArgv!.join(" ");
+    expect(argv).not.toContain("tailscale up");
+    expect(argv).not.toMatch(/(^|[^d])tailscaled\s+--tun/);
+  });
+
+  it("drops the entrypoint's log cosmetics, which would eat the exit code", () => {
+    const argv = ts.installArgv!.join(" ");
+    expect(argv).not.toContain("[entrypoint]");
+    expect(argv).not.toContain("tail -");
+  });
+
+  it("arms no download gate — the tarball is small", () => {
+    expect(ts.downloadSize).toBeUndefined();
+  });
+
+  it("keeps the env plumbing wired end to end", () => {
+    expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_TAILSCALE");
+    expect(read("docs/configuration.md")).toMatch(
+      /^\| `install\.tailscale` \|.*`INSTALL_TAILSCALE`/m,
     );
   });
 });

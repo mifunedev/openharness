@@ -30,6 +30,7 @@ spec
 eval
 health-check
 retro
+t3
 # --- Orchestrator scripts (.oh/scripts/) ---
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh

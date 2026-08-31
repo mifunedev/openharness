@@ -659,6 +659,9 @@ const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
   INSTALL_AGENT_BROWSER: (c, v) => {
     section(c, "install").agentBrowser = asBool(v);
   },
+  INSTALL_TAILSCALE: (c, v) => {
+    section(c, "install").tailscale = asBool(v);
+  },
   SANDBOX_SSH: (c, v) => {
     section(c, "access").ssh = asBool(v);
   },
@@ -777,6 +780,11 @@ async function runWizard(
     { key: "hermes", field: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
     { key: "grok_build", field: "grokBuild", desc: "Grok build tooling" },
     { key: "agent_browser", field: "agentBrowser", desc: "agent-browser + Chromium (~1 GB)" },
+    {
+      key: "tailscale",
+      field: "tailscale",
+      desc: "Tailscale (userspace) — private remote access for T3 Code",
+    },
   ];
   for (const inst of installs) {
     const yes = await confirmWith(askFn, `Install ${inst.key} — ${inst.desc}?`, false);

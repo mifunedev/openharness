@@ -394,6 +394,7 @@ describe("runInit", () => {
       if (q.includes("Git user name")) return "Ada Lovelace";
       if (q.includes("Git user email")) return "ada@example.com";
       if (q.includes("agent_browser")) return "y";
+      if (q.includes("tailscale")) return "y";
       return "";
     };
     const askSecret = async (q: string): Promise<string> =>
@@ -416,6 +417,7 @@ describe("runInit", () => {
     expect(config.timezone).toBe("America/New_York");
     expect(config.git).toEqual({ userName: "Ada Lovelace", userEmail: "ada@example.com" });
     expect(config.install.agentBrowser).toBe(true);
+    expect(config.install.tailscale).toBe(true);
     expect(config.install.hermes).toBe(false);
     expect(config.access.ssh).toBe(false);
     expect(config.access.dockerSocket).toBe(false);
@@ -432,6 +434,7 @@ describe("runInit", () => {
       "GIT_USER_NAME",
       "GIT_USER_EMAIL",
       "INSTALL_AGENT_BROWSER",
+      "INSTALL_TAILSCALE",
       "DOCKER_SOCKET",
     ]) {
       expect(dotenv).not.toContain(nonSecret);
@@ -478,6 +481,7 @@ describe("runInit", () => {
       grokBuild: false,
       hermes: false,
       agentBrowser: false,
+      tailscale: false,
     });
     expect(existsSync(join(t, ".env"))).toBe(false);
     expect(lstatSync(join(t, ".devcontainer/.env")).isSymbolicLink()).toBe(true);

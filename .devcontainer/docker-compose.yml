@@ -60,6 +60,7 @@ services:
       - GH_TOKEN=${GH_TOKEN:-}
       - XAI_API_KEY=${XAI_API_KEY:-}
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
+      - INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-false}
       - SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}
       - INSTALL_HERMES=${INSTALL_HERMES:-false}
       - HERMES_HOME=/home/sandbox/harness/.hermes

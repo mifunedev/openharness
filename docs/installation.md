@@ -314,6 +314,24 @@ Optional CLIs are excluded from the default image; `oh harness install <name>` f
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: `oh harness install hermes` |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: `oh harness install grok-build` |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `oh tool install agent-browser` |
+| Tailscale | `tailscale` | Private tailnet access for remote/mobile T3 Code (userspace networking; no container capabilities) | optional: `oh tool install tailscale` |
+
+Two tools are **not** baked in and install on demand with `oh tool install <name>`:
+`agent-browser` and `tailscale`. `oh tool install` persists the opt-in in the
+tracked `oh.json` (`install.agentBrowser`, `install.tailscale`) so it survives
+container recreation, and installs into a running sandbox when one is up. Both
+installs are idempotent. If no sandbox is running, only the flag is persisted —
+run `oh sandbox` and the entrypoint installs the tool on boot. Neither needs an
+image rebuild.
+
+Installing `tailscale` places the `tailscale` and `tailscaled` binaries in
+`~/.local/bin` and nothing more. It starts no daemon and joins no tailnet.
+Networking activates only when a human starts `tailscaled` in
+userspace-networking mode and runs `tailscale up` interactively — see
+[Connecting → Mobile access over Tailscale](connecting.md#mobile-access-over-tailscale).
+Its node identity and daemon state live in `~/.tailscale`, inside the single
+`/home/sandbox` mount, so the node does not re-authenticate on every container
+recreate.
 
 ### Runtimes & package managers
 

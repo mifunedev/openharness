@@ -57,7 +57,8 @@ to; `—` means the field is consumed by the `oh` CLI itself and never rendered.
 All off by default. `oh harness install <name>` flips the matching field and
 installs into the running sandbox with no rebuild. The four harness fields map
 to `oh harness` names: `opencode`, `grok-build`, `hermes`.
-`agentBrowser` is not a harness — `oh tool install agent-browser` manages it.
+`agentBrowser` and `tailscale` are not harnesses — `oh tool install agent-browser`
+and `oh tool install tailscale` manage them.
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
@@ -65,6 +66,7 @@ to `oh harness` names: `opencode`, `grok-build`, `hermes`.
 | `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
 | `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Install the Hermes CLI into `~/.local` at boot and enable its runtime wiring (skill vendoring, `auth.json`). |
 | `install.agentBrowser` | boolean | `false` | `INSTALL_AGENT_BROWSER` | Install agent-browser and Chromium (about 1 GB). |
+| `install.tailscale` | boolean | `false` | `INSTALL_TAILSCALE` | Install the Tailscale client for private remote access (userspace networking; no container capabilities). |
 
 ### Access
 

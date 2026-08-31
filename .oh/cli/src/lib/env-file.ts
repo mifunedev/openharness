@@ -27,6 +27,7 @@ export const INSTALL_FIELDS: Record<string, string> = {
   grok_build: "install.grokBuild",
   hermes: "install.hermes",
   agent_browser: "install.agentBrowser",
+  tailscale: "install.tailscale",
 };
 
 export const CONFIG_FIELD_BY_ENV_KEY: Record<string, string> = {
@@ -35,6 +36,7 @@ export const CONFIG_FIELD_BY_ENV_KEY: Record<string, string> = {
   INSTALL_GROK_BUILD: INSTALL_FIELDS.grok_build,
   INSTALL_HERMES: INSTALL_FIELDS.hermes,
   INSTALL_AGENT_BROWSER: INSTALL_FIELDS.agent_browser,
+  INSTALL_TAILSCALE: INSTALL_FIELDS.tailscale,
 };
 
 export function installFieldPath(key: string): string {

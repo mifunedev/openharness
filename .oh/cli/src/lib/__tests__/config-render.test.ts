@@ -61,6 +61,7 @@ describe("renderComposeEnv", () => {
     expect(text).not.toContain("INSTALL_DEEPAGENTS");
     expect(text).toContain("INSTALL_HERMES=false");
     expect(text).toContain("INSTALL_AGENT_BROWSER=false");
+    expect(text).toContain("INSTALL_TAILSCALE=false");
     expect(text).toContain("DOCKER_SOCKET=true");
     expect(text).toContain("SANDBOX_SSH=true");
     expect(text).toContain("SANDBOX_SSH_PORT=2022");

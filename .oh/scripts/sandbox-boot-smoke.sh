@@ -87,13 +87,14 @@ first_real_line() {
   grep -vE "^WARNING: The requested image's platform" | grep -m1 -E '[^[:space:]]' || true
 }
 
-# The default harnesses are no longer baked into the image (#904); the boot path
-# installs them into the home mount. That install therefore runs on EVERY fresh
-# boot, and nothing else in CI exercises it — this is its only oracle. Assert the
-# outcome, not the log line: each default harness must resolve to a real binary
-# under NPM_USER_PREFIX, owned by the sandbox user, that prints its own version.
-verify_default_harnesses() {
-  local cid="$1"
+# The default harnesses (#904) and default tools (#906) are no longer baked into
+# the image; the boot path installs them into the home mount. That install runs
+# on EVERY fresh boot, and nothing else in CI exercises it — this is its only
+# oracle. Assert the outcome, not the log line: each default entry must resolve
+# to a real binary under NPM_USER_PREFIX, owned by the sandbox user, that prints
+# its own version.
+verify_default_catalog() {
+  local cid="$1" noun="$2" cmd="$3"
   local prefix="${NPM_USER_PREFIX:-/home/sandbox/.local}"
   local states ids binary sandbox_uid out line
 
@@ -102,15 +103,15 @@ verify_default_harnesses() {
     return 1
   fi
 
-  if ! states=$(docker exec -u sandbox "$cid" bash -lc 'oh harness list --defaults --json' 2>/tmp/sandbox-boot-smoke-harness.err); then
-    echo "sandbox boot smoke failed: 'oh harness list --defaults --json' did not run in the booted sandbox" >&2
-    cat /tmp/sandbox-boot-smoke-harness.err >&2 || true
+  if ! states=$(docker exec -u sandbox "$cid" bash -lc "oh $cmd list --defaults --json" 2>/tmp/sandbox-boot-smoke-catalog.err); then
+    echo "sandbox boot smoke failed: 'oh $cmd list --defaults --json' did not run in the booted sandbox" >&2
+    cat /tmp/sandbox-boot-smoke-catalog.err >&2 || true
     return 1
   fi
 
   ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$states")
   if [ -z "$ids" ]; then
-    echo "sandbox boot smoke failed: the harness catalog reported no kind:\"default\" harnesses, so this check would pass vacuously" >&2
+    echo "sandbox boot smoke failed: the $noun catalog reported no kind:\"default\" entries, so this check would pass vacuously" >&2
     return 1
   fi
 
@@ -121,7 +122,7 @@ verify_default_harnesses() {
     [ -n "$id" ] || continue
     binary=$(jq -r --arg id "$id" '.[] | select(.id == $id) | .binary' <<<"$states")
     if [ -z "$binary" ] || [ "$binary" = "null" ]; then
-      echo "sandbox boot smoke failed: default harness '$id' declares no binary to check" >&2
+      echo "sandbox boot smoke failed: default $noun '$id' declares no binary to check" >&2
       failed=1
       continue
     fi
@@ -136,7 +137,7 @@ verify_default_harnesses() {
         [ \"\$owner\" = '$sandbox_uid' ] || { echo \"binary is owned by uid \$owner, not sandbox ($sandbox_uid)\" >&2; exit 1; }
         \"\$path\" --version
       " 2>&1); then
-      echo "sandbox boot smoke failed: default harness '$id' was not provisioned into the home mount at boot" >&2
+      echo "sandbox boot smoke failed: default $noun '$id' was not provisioned into the home mount at boot" >&2
       printf '  %s\n' "$out" >&2
       failed=1
       continue
@@ -169,7 +170,7 @@ while [ "$(date +%s)" -le "$end" ]; do
     # shellcheck disable=SC2086 # HEALTH_CMD intentionally splits into command argv.
     if docker exec "$cid" $HEALTH_CMD >/tmp/sandbox-boot-smoke-health.out 2>/tmp/sandbox-boot-smoke-health.err; then
       if ! docker exec -u sandbox "$cid" sh -lc \
-        'test "$(herdr --version)" = "herdr 0.7.4" && test -w "$HOME/.config" && test -w "$HOME/.herdr" && command -v lsof >/dev/null && lsof -v >/dev/null 2>&1 && command -v htop >/dev/null && htop --version >/dev/null && command -v telnet >/dev/null && telnet --version >/dev/null'; then
+        'test -w "$HOME/.config" && test -w "$HOME/.herdr" && command -v lsof >/dev/null && lsof -v >/dev/null 2>&1 && command -v htop >/dev/null && htop --version >/dev/null && command -v telnet >/dev/null && telnet --version >/dev/null'; then
         echo "sandbox boot smoke failed: required utilities, Herdr runtime, or writable state is unavailable" >&2
         status_diagnostics "$cid"
         exit 1
@@ -178,11 +179,15 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      if ! verify_default_harnesses "$cid"; then
+      if ! verify_default_catalog "$cid" harness harness; then
         status_diagnostics "$cid"
         exit 1
       fi
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and boot-provisioned harness checks"
+      if ! verify_default_catalog "$cid" tool tool; then
+        status_diagnostics "$cid"
+        exit 1
+      fi
+      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and boot-provisioned harness and tool checks"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

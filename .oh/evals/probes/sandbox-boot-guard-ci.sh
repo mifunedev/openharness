@@ -76,8 +76,8 @@ fi
 
 # #904: boot-time harness provisioning is exercised nowhere else. Turning it off
 # here to save CI minutes would restore it to untested dead code.
-if grep -Eq 'OH_PROVISION_HARNESSES: *"?false' <<<"$text"; then
-  missing+=("the boot guard disables OH_PROVISION_HARNESSES — this job is the only place the boot-time harness install runs")
+if grep -Eq 'OH_PROVISION_DEFAULTS: *"?false' <<<"$text"; then
+  missing+=("the boot guard disables OH_PROVISION_DEFAULTS — this job is the only place the boot-time harness install runs")
 fi
 has 'Sandbox boot guard only' "comment explaining non-release intent"
 

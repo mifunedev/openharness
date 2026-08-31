@@ -57,11 +57,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # Boot now installs the default harnesses into the home mount instead of
-      # unpacking them from the image (entrypoint.sh, bounded by
-      # OH_PROVISION_HARNESSES_TIMEOUT). A cold first boot on a fresh home mount
-      # therefore spends up to 180s on npm before the control plane is reachable.
-      # 300s left ~120s for the rest of boot; 600s keeps the same headroom.
+      # Boot installs the default harnesses AND the default tools (herdr,
+      # cloudflared) into the home mount instead of unpacking them from the
+      # image (entrypoint.sh, bounded by OH_PROVISION_DEFAULTS_TIMEOUT). A cold
+      # first boot on a fresh home mount therefore spends up to 240s downloading
+      # before the control plane is reachable; 600s leaves room for the rest.
       start_period: 600s
     restart: unless-stopped
 

@@ -137,7 +137,7 @@ describe("sandbox healthcheck", () => {
     expect(compose).toContain("healthcheck:");
     expect(compose).toContain("/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh");
     // Boot installs the default harnesses into the home mount (#904), bounded
-    // by OH_PROVISION_HARNESSES_TIMEOUT (180s). The start period has to cover
+    // by OH_PROVISION_DEFAULTS_TIMEOUT (240s). The start period has to cover
     // that plus the rest of boot, so assert the floor rather than a literal
     // that a reduction could slip past.
     const startPeriod = /start_period: (\d+)s/.exec(compose);

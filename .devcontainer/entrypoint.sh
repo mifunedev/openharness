@@ -150,10 +150,11 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   fi
 fi
 
-if [ "${OH_PROVISION_HARNESSES:-true}" = "true" ] \
-   && [ -x "$HARNESS/.oh/scripts/provision-harnesses.sh" ]; then
-  if ! OH_EXECUTION_TARGET=local timeout "${OH_PROVISION_HARNESSES_TIMEOUT:-180}" bash "$HARNESS/.oh/scripts/provision-harnesses.sh"; then
-    echo "[entrypoint] WARNING: harness provisioning did not complete; run: bash .oh/scripts/provision-harnesses.sh" >&2
+if [ "${OH_PROVISION_DEFAULTS:-true}" = "true" ] \
+   && [ -x "$HARNESS/.oh/scripts/provision-defaults.sh" ]; then
+  if ! OH_EXECUTION_TARGET=local timeout "${OH_PROVISION_DEFAULTS_TIMEOUT:-240}" bash "$HARNESS/.oh/scripts/provision-defaults.sh"; then
+    echo "[entrypoint] WARNING: default provisioning did not complete; run: bash .oh/scripts/provision-defaults.sh" >&2
+    echo "[entrypoint] WARNING: herdr may be unavailable — 'tmux' still works as a fallback multiplexer" >&2
   fi
 fi
 

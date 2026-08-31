@@ -239,7 +239,7 @@ into `/home/sandbox/.local`; they are not baked into the image. Expect the boot
 to run 60–180s longer than the `sleep 8` above and to need network — check with
 `docker exec "$NAME" bash -lc 'oh harness list --defaults'`. If the registry was
 unreachable the container still comes up; re-run
-`docker exec "$NAME" bash -lc 'bash /home/sandbox/harness/.oh/scripts/provision-harnesses.sh'`.
+`docker exec "$NAME" bash -lc 'bash /home/sandbox/harness/.oh/scripts/provision-defaults.sh'`.
 
 ```bash
 # ── 4. Attach an interactive shell (once the container is stable) ──

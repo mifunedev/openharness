@@ -7,14 +7,23 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const readRepoFile = (file: string): string => readFileSync(path.join(repoRoot, file), "utf8");
 
 describe("default Herdr integration", () => {
+  // #906: the pin moved out of the Dockerfile and into the tool catalog, which
+  // provisions Herdr into the home mount at boot. The image no longer carries it.
   it("pins and verifies Herdr for both supported architectures", () => {
+    const catalog = readRepoFile(".oh/cli/src/lib/tools/catalog.ts");
+
+    expect(catalog).toContain("version=0.7.4");
+    expect(catalog).toContain("bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059");
+    expect(catalog).toContain("544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2");
+    expect(catalog).toContain("sha256sum -c -");
+    expect(catalog).toContain('test "$("$prefix/bin/herdr" --version)" = "herdr $version"');
+  });
+
+  it("no longer bakes Herdr into the image", () => {
     const dockerfile = readRepoFile(".devcontainer/Dockerfile");
 
-    expect(dockerfile).toContain("HERDR_VERSION=0.7.4");
-    expect(dockerfile).toContain("bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059");
-    expect(dockerfile).toContain("544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2");
-    expect(dockerfile).toContain("sha256sum -c -");
-    expect(dockerfile).toContain('test "$(herdr --version)" = "herdr ${HERDR_VERSION}"');
+    expect(dockerfile).not.toContain("HERDR_VERSION");
+    expect(dockerfile).not.toContain("github.com/ogulcancelik/herdr");
   });
 
   it.each(["docker-compose.yml", "docker-compose.image-only.yml"])(

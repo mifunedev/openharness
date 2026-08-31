@@ -18,6 +18,7 @@ function fixture(
     markerOwner?: string;
     harnessProbeFails?: boolean;
     noDefaultHarnesses?: boolean;
+    noDefaultTools?: boolean;
   } = {},
 ) {
   const runtimeUid = opts.runtimeUid ?? HOST_UID;
@@ -84,6 +85,19 @@ ${
     : `[
   { "id": "claude-code", "title": "Claude Code", "binary": "claude", "kind": "default", "enabled": null, "installed": true, "docs": "x" },
   { "id": "pi", "title": "Pi", "binary": "pi", "kind": "default", "enabled": null, "installed": true, "docs": "x" }
+]`
+}
+JSON
+        exit 0
+        ;;
+      *"oh tool list --defaults --json"*)
+        cat <<'JSON'
+${
+  opts.noDefaultTools
+    ? "[]"
+    : `[
+  { "id": "herdr", "title": "Herdr", "binary": "herdr", "kind": "default", "enabled": null, "installed": true, "docs": "x" },
+  { "id": "cloudflared", "title": "cloudflared", "binary": "cloudflared", "kind": "default", "enabled": null, "installed": true, "docs": "x" }
 ]`
 }
 JSON
@@ -166,9 +180,12 @@ describe("sandbox boot smoke", () => {
       `sandbox user, bind mount, and sandbox-created files all resolve to ${HOST_UID}:${HOST_GID}`,
     );
     expect(dockerCalls).toContain("oh harness list --defaults --json");
+    expect(dockerCalls).toContain("oh tool list --defaults --json");
     expect(dockerCalls).toContain("type -P");
     expect(result.stdout).toContain("claude-code provisioned at boot -> 1.2.3");
     expect(result.stdout).toContain("pi provisioned at boot -> 1.2.3");
+    expect(result.stdout).toContain("herdr provisioned at boot -> 1.2.3");
+    expect(result.stdout).toContain("cloudflared provisioned at boot -> 1.2.3");
   });
 
   // #904 deleted the image bake, so this assertion is the only thing standing
@@ -186,13 +203,16 @@ describe("sandbox boot smoke", () => {
     expect(readFileSync(fx.composeLog, "utf8")).toContain("down -v --remove-orphans");
   });
 
-  it("refuses to pass vacuously when the catalog reports no default harnesses", () => {
-    const fx = fixture({ noDefaultHarnesses: true });
+  it.each<[string, { noDefaultHarnesses?: boolean; noDefaultTools?: boolean }]>([
+    ["harness", { noDefaultHarnesses: true }],
+    ["tool", { noDefaultTools: true }],
+  ])("refuses to pass vacuously when the %s catalog reports no defaults", (noun, overrides) => {
+    const fx = fixture(overrides);
 
     const result = runSmoke(fx);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain('reported no kind:"default" harnesses');
+    expect(result.stderr).toContain(`the ${noun} catalog reported no kind:"default" entries`);
   });
 
   it("fails when the runtime sandbox user does not match the checkout owner", () => {

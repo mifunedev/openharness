@@ -69,3 +69,11 @@ a pattern to cite.
 ## Records
 
 <!-- Appended below this line, oldest first. Never edit an existing record. -->
+
+## SI-0001 · 2026-08-31 · builder · PROPOSED
+
+- **proposal**: add a `related:`-slug resolution check to `/wiki lint` and a deterministic probe that fails on the findings, so an unrun report-only check cannot hide broken links
+- **target**: `.oh/skills/wiki/references/lint.md`
+- **motivating patterns**: [[pattern-wiki-ungated-check-drift]]
+- **proposer**: /builder skill, wiki co-evolution change (branch `skill/wiki-coevolution`)
+- **diff**: `8fab04ab` — `/wiki lint` § 7a plus `.oh/evals/probes/wiki-related-slugs.sh`

@@ -88,7 +88,7 @@ RUN printf '%s\n' \
       'export NPM_USER_PREFIX="/home/sandbox/.local"' \
       'export PNPM_HOME="/usr/local/share/pnpm"' \
       'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
-      '# uv/Python env written by .oh/scripts/provision-python.sh (PRIME_AGENT_KERNEL_PYTHON).' \
+      '# uv/Python env written by .oh/scripts/provision-python.sh.' \
       '[ -r "$HOME/.local/share/oh/python-env.sh" ] && . "$HOME/.local/share/oh/python-env.sh"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \
  && chown sandbox:sandbox /home/sandbox/.profile /home/sandbox/.zprofile

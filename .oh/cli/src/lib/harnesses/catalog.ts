@@ -127,20 +127,6 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     docsPath: "docs/harnesses/t3code.md",
     kind: "on-demand",
   },
-  {
-    id: "prime-agent",
-    title: "Prime Agent",
-    binary: "prime-agent",
-    installArgv: [
-      "bash",
-      "-lc",
-      "curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh | PRIME_AGENT_BOOTSTRAP_KERNEL_ON_INSTALL=0 npm_config_prefix=/home/sandbox/.local setsid --wait sh",
-    ],
-    installUser: "sandbox",
-    verifyArgv: ["prime-agent", "--version"],
-    docsPath: "docs/harnesses/prime-agent.md",
-    kind: "on-demand",
-  },
 ];
 
 export function optionalHarnesses(): readonly HarnessEntry[] {

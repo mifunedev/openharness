@@ -20,6 +20,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Remove Cloudflare's apt repository and its bookworm-suite pin from the image; Docker's is now the only third-party apt source ([#906](https://github.com/mifunedev/openharness/issues/906)).
 - Remove the four optional-harness build args and the dead `buildArg` catalog field; the `install.*` keys keep working and now drive boot provisioning ([#908](https://github.com/mifunedev/openharness/issues/908)).
 - **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
+- **BREAKING:** Retire Prime Agent and its `.prime/agent/` provider surface; `oh harness install prime-agent` is no longer available ([#918](https://github.com/mifunedev/openharness/issues/918)).
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
 
 ### Added

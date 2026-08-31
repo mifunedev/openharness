@@ -67,7 +67,6 @@ ENV_FILE="$HOME/.local/share/oh/python-env.sh"
 if [ "$MODE" = "print-env" ]; then
   printf 'export UV_PYTHON_INSTALL_DIR=%s\n' "$UV_PYTHON_INSTALL_DIR"
   printf 'export UV_CACHE_DIR=%s\n' "$UV_CACHE_DIR"
-  printf 'export PRIME_AGENT_KERNEL_PYTHON=%s\n' "$KERNEL_PYTHON"
   exit 0
 fi
 
@@ -147,7 +146,6 @@ export UV_PYTHON_INSTALL_DIR="$UV_PYTHON_INSTALL_DIR"
 export UV_CACHE_DIR="$UV_CACHE_DIR"
 export UV_TOOL_DIR="$UV_TOOL_DIR"
 export UV_TOOL_BIN_DIR="$UV_TOOL_BIN_DIR"
-export PRIME_AGENT_KERNEL_PYTHON="\${PRIME_AGENT_KERNEL_PYTHON:-$KERNEL_PYTHON}"
 ENVEOF
 fi
 
@@ -169,4 +167,3 @@ done
 
 log "OK  python=$PY_PATH"
 log "OK  kernel=$KERNEL_PYTHON (ipykernel present)"
-log "OK  PRIME_AGENT_KERNEL_PYTHON=$KERNEL_PYTHON"

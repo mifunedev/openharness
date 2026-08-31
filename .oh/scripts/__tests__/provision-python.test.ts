@@ -72,7 +72,8 @@ describe("provision-python.sh", () => {
       encoding: "utf8",
       env: { ...process.env, HOME: "/home/sandbox" },
     });
-    expect(out).toContain("export PRIME_AGENT_KERNEL_PYTHON=");
+    expect(out).toContain("export UV_PYTHON_INSTALL_DIR=");
+    expect(out).toContain("export UV_CACHE_DIR=");
     expect(out).not.toContain("/root/");
   });
 });

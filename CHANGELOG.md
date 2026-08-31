@@ -10,7 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 - Add `skills-task-tool-coupling.sh`, a tier-A probe holding the canonical skill pack and the sandbox in agreement about the Claude-Code-only task tools ([#886](https://github.com/mifunedev/openharness/issues/886)).
-- Add `install.tailscale` and `oh tool install tailscale`, an opt-in userspace Tailscale client giving T3 Code private tailnet access with no container capability and no published port ([#858](https://github.com/mifunedev/openharness/issues/858)).
+- Add `install.tailscale` and `oh tool install tailscale`, an opt-in userspace Tailscale client installed into `~/.local/bin` as the sandbox user, granting no capability ([#858](https://github.com/mifunedev/openharness/issues/858)).
 
 ### Changed
 - `/t3` launches the headless `t3 serve` instead of the local-GUI `t3`, and gains `--tailscale`, a `pair` action for a second device, and a `doctor` preflight ([#858](https://github.com/mifunedev/openharness/issues/858)).

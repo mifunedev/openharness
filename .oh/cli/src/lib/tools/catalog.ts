@@ -94,9 +94,9 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     installArgv: Object.freeze([
       "bash",
       "-lc",
-      "set -e\narch=\"$(dpkg --print-architecture)\"\ncase \"$arch\" in\n  amd64) tarball=tailscale_1.102.3_amd64.tgz; sha=36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5 ;;\n  arm64) tarball=tailscale_1.102.3_arm64.tgz; sha=a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25 ;;\n  *) echo \"no pinned Tailscale build for $arch\" >&2; exit 1 ;;\nesac\ntmp=\"$(mktemp -d)\"\ntrap 'rm -rf \"$tmp\"' EXIT\ncurl -fsSL \"https://pkgs.tailscale.com/stable/$tarball\" -o \"$tmp/$tarball\"\necho \"$sha  $tmp/$tarball\" | sha256sum -c -\ntar -xzf \"$tmp/$tarball\" -C \"$tmp\"\ninstall -m 0755 \"$tmp/tailscale_1.102.3_$arch/tailscale\" /usr/local/bin/tailscale\ninstall -m 0755 \"$tmp/tailscale_1.102.3_$arch/tailscaled\" /usr/local/bin/tailscaled\ninstall -d -o sandbox -g sandbox -m 0700 /home/sandbox/.tailscale\ninstall -d -o sandbox -g sandbox -m 0755 /var/run/tailscale",
+      "set -e\narch=\"$(dpkg --print-architecture)\"\ncase \"$arch\" in\n  amd64) tarball=tailscale_1.102.3_amd64.tgz; sha=36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5 ;;\n  arm64) tarball=tailscale_1.102.3_arm64.tgz; sha=a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25 ;;\n  *) echo \"no pinned Tailscale build for $arch\" >&2; exit 1 ;;\nesac\nprefix=\"${NPM_USER_PREFIX:-$HOME/.local}\"\ntmp=\"$(mktemp -d)\"\ntrap 'rm -rf \"$tmp\"' EXIT\ncurl -fsSL \"https://pkgs.tailscale.com/stable/$tarball\" -o \"$tmp/$tarball\"\necho \"$sha  $tmp/$tarball\" | sha256sum -c -\ntar -xzf \"$tmp/$tarball\" -C \"$tmp\"\ninstall -d \"$prefix/bin\"\ninstall -m 0755 \"$tmp/tailscale_1.102.3_$arch/tailscale\" \"$prefix/bin/tailscale\"\ninstall -m 0755 \"$tmp/tailscale_1.102.3_$arch/tailscaled\" \"$prefix/bin/tailscaled\"\ninstall -d -m 0700 \"$HOME/.tailscale\"",
     ]),
-    installUser: "root",
+    installUser: "sandbox",
     docsPath: TOOLS_DOC,
   }),
 ]);

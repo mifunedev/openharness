@@ -6,6 +6,9 @@
 #         structurally instead: the sandbox gains no capability, no tun device and no
 #         published port, the boot path installs a pinned checksummed binary without
 #         ever joining a tailnet, and no Funnel command or reusable auth key ships.
+#         #908 additionally proved a root-installed tool is unusable from inside the
+#         sandbox: commands/tool.ts uses stdio:"inherit", so a root install becomes an
+#         interactive `sudo` and /etc/sudoers.d/sandbox has no NOPASSWD.
 # desc: the Tailscale optional tool stays a zero-privilege, zero-exposure install —
 #       entrypointGuard (not buildArg) ground truth, version and both sha256 pins
 #       agreeing between the entrypoint and the tool catalog, no cap_add/devices/
@@ -100,6 +103,37 @@ else
     || missing+=("$CATALOG: the tailscale entry has no toolKey \"tailscale\" — the oh.json opt-in is not wired")
   grep -qE 'entrypointGuard:[[:space:]]*"INSTALL_TAILSCALE"' <<<"$entry_block" \
     || missing+=("$CATALOG: the tailscale entry has no entrypointGuard \"INSTALL_TAILSCALE\"")
+  # tailscaled runs fine unprivileged with --tun=userspace-networking, so nothing
+  # here needs root. A root install would hang `oh tool install tailscale` on a
+  # sudo password prompt no agent can answer, and would put the binary in an
+  # image-layer path that no running sandbox can upgrade and every container
+  # recreate discards.
+  grep -qE 'installUser:[[:space:]]*"root"' <<<"$entry_block" \
+    && missing+=("$CATALOG: the tailscale entry installs as root — commands/tool.ts uses stdio:\"inherit\", so that becomes an interactive \`sudo\`, and /etc/sudoers.d/sandbox has no NOPASSWD")
+  grep -qE 'installUser:[[:space:]]*"sandbox"' <<<"$entry_block" \
+    || missing+=("$CATALOG: the tailscale entry does not declare installUser \"sandbox\"")
+  grep -qF 'NPM_USER_PREFIX' <<<"$entry_block" \
+    || missing+=("$CATALOG: the tailscale entry does not install into NPM_USER_PREFIX — the binary must land in the home mount, not an image-layer path")
+  grep -qE '/usr/local/bin/tailscale' <<<"$entry_block" \
+    && missing+=("$CATALOG: the tailscale entry writes to /usr/local/bin — that needs root and is discarded on container recreate")
+fi
+
+# The boot path must agree with the catalog: same destination, same user.
+grep -qE 'install -m 0755 [^ ]+ /usr/local/bin/tailscaled?' "$ENTRY" \
+  && missing+=("$ENTRY: installs Tailscale into /usr/local/bin — the catalog installs it into the home mount, and an image-layer copy is lost on every recreate")
+
+# tailscaled's default control socket is /var/run/tailscale/tailscaled.sock and
+# t3-code.sh calls a bare `tailscale status`. Only root can create that directory,
+# so the entrypoint must, and it must not be gated behind INSTALL_TAILSCALE —
+# `oh tool install tailscale` is supposed to leave the tool usable immediately.
+socket_dir_line=$(grep -nE 'install -d .*-o sandbox .*/var/run/tailscale' "$ENTRY" | head -1 | cut -d: -f1)
+if [ -z "$socket_dir_line" ]; then
+  missing+=("$ENTRY: never creates /var/run/tailscale — tailscaled's default socket path is unwritable, so a bare \`tailscale status\` cannot work")
+else
+  guard_line=$(grep -nE '^if \[ "\$\{INSTALL_TAILSCALE:-false\}" = "true" \]' "$ENTRY" | head -1 | cut -d: -f1)
+  if [ -n "$guard_line" ] && [ "$socket_dir_line" -gt "$guard_line" ]; then
+    missing+=("$ENTRY: creates /var/run/tailscale inside the INSTALL_TAILSCALE guard — a later \`oh tool install tailscale\` would then need a reboot before the socket path exists")
+  fi
 fi
 
 funnel=$(grep -rniE '\bfunnel\b' .oh/skills/t3 .devcontainer 2>/dev/null || true)
@@ -117,4 +151,4 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS: Tailscale installs pinned and checksummed, grants no capability, publishes no port, joins no tailnet on boot, and ships no Funnel or auth key" >&2
+echo "PASS: Tailscale installs pinned and checksummed into the home mount as the sandbox user, grants no capability, publishes no port, joins no tailnet on boot, and ships no Funnel or auth key" >&2

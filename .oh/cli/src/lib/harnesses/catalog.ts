@@ -22,8 +22,15 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     id: "claude-code",
     title: "Claude Code",
     binary: "claude",
-    installArgv: ["npm", "install", "-g", "@anthropic-ai/claude-code"],
-    installUser: "root",
+    installArgv: [
+      "npm",
+      "--prefix",
+      "/home/sandbox/.local",
+      "install",
+      "-g",
+      "@anthropic-ai/claude-code",
+    ],
+    installUser: "sandbox",
     verifyArgv: ["claude", "--version"],
     docsPath: "docs/harnesses/claude-code.md",
     kind: "default",
@@ -32,8 +39,15 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     id: "codex",
     title: "Codex",
     binary: "codex",
-    installArgv: ["npm", "install", "-g", "@openai/codex"],
-    installUser: "root",
+    installArgv: [
+      "npm",
+      "--prefix",
+      "/home/sandbox/.local",
+      "install",
+      "-g",
+      "@openai/codex",
+    ],
+    installUser: "sandbox",
     verifyArgv: ["codex", "--version"],
     docsPath: "docs/harnesses/codex.md",
     kind: "default",
@@ -137,6 +151,10 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     kind: "on-demand",
   },
 ];
+
+export function defaultHarnesses(): readonly HarnessEntry[] {
+  return HARNESS_CATALOG.filter((h) => h.kind === "default");
+}
 
 export function findHarness(id: string): HarnessEntry | undefined {
   return HARNESS_CATALOG.find((h) => h.id === id);

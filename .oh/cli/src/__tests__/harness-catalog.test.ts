@@ -16,6 +16,32 @@ const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8")
 const DOCKERFILE = read(".devcontainer/Dockerfile");
 const COMPOSE_YML = read(".devcontainer/docker-compose.yml");
 const CONFIG_DOC = read("docs/configuration.md");
+const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
+const NPM_USER_PREFIX = "/home/sandbox/.local";
+
+const BAKE_GATE = 'if [ "${BAKE_HARNESSES}" = "true" ]';
+
+function dockerfileStage(stage: string): string {
+  const lines = DOCKERFILE.split("\n");
+  const start = lines.findIndex((l) => new RegExp(`^FROM .* AS ${stage}$`).test(l));
+  if (start === -1) return "";
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((l) => l.startsWith("FROM "));
+  return (end === -1 ? rest : rest.slice(0, end)).join("\n");
+}
+
+function dockerfileRunWith(needle: string): string {
+  const blocks: string[] = [];
+  let buf: string | null = null;
+  for (const line of DOCKERFILE.split("\n")) {
+    if (buf === null && !line.startsWith("RUN ")) continue;
+    buf = buf === null ? line : `${buf}\n${line}`;
+    if (line.endsWith("\\")) continue;
+    blocks.push(buf);
+    buf = null;
+  }
+  return blocks.find((b) => b.includes(needle)) ?? "";
+}
 
 function versionPins(argv: readonly string[]): string[] {
   const pins = new Set<string>();
@@ -125,6 +151,57 @@ describe("harness catalog", () => {
       expect(h.installArgv[2]).not.toContain("${");
       expect(h.installArgv).toHaveLength(3);
     }
+  });
+
+  describe("default harnesses install into the home mount, not the image", () => {
+    const defaults = HARNESS_CATALOG.filter((h) => h.kind === "default");
+
+    it("covers claude-code, codex and pi", () => {
+      expect(defaults.map((h) => h.id).sort()).toEqual(["claude-code", "codex", "pi"]);
+    });
+
+    it("declares NPM_USER_PREFIX as the prefix the catalog installs into", () => {
+      expect(DOCKERFILE).toContain(`ENV NPM_USER_PREFIX="${NPM_USER_PREFIX}"`);
+    });
+
+    it.each(defaults.map((h) => [h.id, h] as const))(
+      "%s: installs as the sandbox user into NPM_USER_PREFIX",
+      (_id, h) => {
+        expect(h.installUser).toBe("sandbox");
+        expect(h.installArgv).toContain(NPM_USER_PREFIX);
+      },
+    );
+
+    it("keeps claude-code's postinstall, which copies the native binary over the placeholder", () => {
+      expect(findHarness("claude-code")!.installArgv).not.toContain("--ignore-scripts");
+    });
+
+    it("lets the image bake be turned off, and provisions the same harnesses at boot", () => {
+      expect(DOCKERFILE).toMatch(/^ARG BAKE_HARNESSES=true$/m);
+      expect(ENTRYPOINT).toContain("OH_PROVISION_HARNESSES");
+      expect(ENTRYPOINT).toContain(".oh/scripts/provision-harnesses.sh");
+    });
+
+    it.each(["base", "home"])(
+      "%s declares BAKE_HARNESSES, which ARG scopes to that stage alone",
+      (stage) => {
+        expect(dockerfileStage(stage)).toMatch(/^ARG BAKE_HARNESSES/m);
+      },
+    );
+
+    it("gates every baked default install on BAKE_HARNESSES, pi included", () => {
+      expect(dockerfileRunWith("read -ra agents")).toContain(BAKE_GATE);
+      expect(dockerfileRunWith("--ignore-scripts @earendil-works/pi-coding-agent")).toContain(
+        BAKE_GATE,
+      );
+    });
+
+    it("bounds the boot-path provisioner so an unreachable registry cannot stall the entrypoint", () => {
+      expect(ENTRYPOINT).toMatch(
+        /timeout "\$\{OH_PROVISION_HARNESSES_TIMEOUT:-\d+\}" bash "\$HARNESS\/\.oh\/scripts\/provision-harnesses\.sh"/,
+      );
+      expect(ENTRYPOINT).toContain("WARNING: harness provisioning did not complete");
+    });
   });
 
   it("findHarness resolves known ids and rejects unknown ones", () => {

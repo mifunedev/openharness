@@ -56,6 +56,38 @@ probes from an arbitrary working directory, so the canonical preamble is:
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"   # .oh/evals/probes/<id>.sh -> root
 ```
 
+### Fault injection — a probe is not green until it has been red
+
+A probe that has only ever been run against a passing repository proves its PASS
+branch exists and nothing about whether its oracle can detect the condition it was
+written for. Before landing a probe, drive its REGRESSION branch against a
+deliberately broken input and confirm it fails for the stated reason.
+
+Commit the work under test **before** injecting faults. A sweep that restores state
+with `git checkout -- .` reverts uncommitted edits in the same tree, including the
+contract text the probe is meant to guard.
+
+Where the condition lives in git history rather than the working tree, expose the
+comparison point as an environment override so the failing branch stays reachable
+after the fact — `.oh/evals/probes/wiki-skill-impact-append-only.sh` takes
+`WIKI_LEDGER_BASE`, and `.oh/evals/probes/wiki-pattern-persistence.sh` takes
+`WIKI_PERSISTENCE_BASE`, for exactly this reason. A one-off manual check that
+leaves no such handle cannot be repeated by the next author.
+
+Treat `SKIPPED` the same way. A probe whose skip guard can fire in the environment
+that normally runs it is unexercised, not healthy; prefer a guard whose absence is
+itself a REGRESSION over one that exits 2.
+
+### Pinning contract text
+
+A contract-text probe asserts a document still makes a claim. Pin the shortest
+fragment that is still unique — a heading, a table cell, a code token, or four to
+six distinctive words. Do not pin a whole prose sentence: `grep -qF` matches within
+a single line, so a sentence stored across a hard wrap can never match, and the
+assertion breaks on reflow without the contract having changed. Where a whole
+sentence is genuinely required, normalize whitespace before matching rather than
+pinning the stored bytes.
+
 ### Timeout
 
 Every probe must complete within a bounded time; the `/eval` runner wraps each

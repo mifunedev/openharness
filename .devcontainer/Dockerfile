@@ -83,27 +83,10 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate \
 
 SHELL ["/bin/bash", "-c"]
 
-ARG AGENTS="claude-code,codex,pi-coding-agent"
 ARG INSTALL_OPENCODE=false
 ARG INSTALL_GROK_BUILD=false
-ARG BAKE_HARNESSES=true
 
 RUN set -e; \
-    declare -A PKG=( \
-        [claude-code]=@anthropic-ai/claude-code \
-        [codex]=@openai/codex \
-        [pi-coding-agent]=@earendil-works/pi-coding-agent \
-        [opencode]=opencode-ai \
-    ); \
-    if [ "${BAKE_HARNESSES}" = "true" ]; then \
-        IFS=',' read -ra agents <<< "$AGENTS"; \
-        for a in "${agents[@]}"; do \
-            if [ "$a" = "pi-coding-agent" ]; then continue; fi; \
-            pkg="${PKG[$a]:-}"; \
-            if [ -n "$pkg" ]; then npm install -g "$pkg"; \
-            else echo "Unknown agent: $a"; exit 1; fi; \
-        done; \
-    else echo "Skipping baked Claude Code and Codex installs (BAKE_HARNESSES=${BAKE_HARNESSES}); .oh/scripts/provision-harnesses.sh installs every kind:\"default\" harness into /home/sandbox/.local at boot"; fi; \
     if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
     else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi; \
     if [ "${INSTALL_GROK_BUILD}" = "true" ]; then \
@@ -131,8 +114,6 @@ ENV UV_PYTHON_INSTALL_DIR=/home/sandbox/.local/share/uv/python
 ENV UV_CACHE_DIR=/home/sandbox/.cache/uv
 
 FROM base AS home
-ARG AGENTS="claude-code,codex,pi-coding-agent"
-ARG BAKE_HARNESSES=true
 RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
  && install -d -o sandbox -g sandbox \
       /home/sandbox/.local \
@@ -143,14 +124,8 @@ RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
       /home/sandbox/.herdr \
       "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"
 
-RUN set -e; \
-    install -d -o sandbox -g sandbox "$NPM_USER_PREFIX"; \
-    if [ "${BAKE_HARNESSES}" = "true" ]; then \
-        if [[ ",${AGENTS}," == *",pi-coding-agent,"* ]]; then \
-            su - sandbox -c 'npm --prefix "$HOME/.local" install -g --ignore-scripts @earendil-works/pi-coding-agent'; \
-        fi; \
-    else echo "Skipping baked Pi install (BAKE_HARNESSES=${BAKE_HARNESSES}); .oh/scripts/provision-harnesses.sh installs it into /home/sandbox/.local at boot"; fi; \
-    rm -rf /home/sandbox/.npm
+RUN install -d -o sandbox -g sandbox "$NPM_USER_PREFIX" \
+ && rm -rf /home/sandbox/.npm
 
 RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" --unattended" \
  && su - sandbox -c "git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions         /home/sandbox/.oh-my-zsh/custom/plugins/zsh-autosuggestions" \

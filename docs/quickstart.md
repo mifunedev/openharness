@@ -119,9 +119,14 @@ continue to run independently under tmux.
 
 ## Set up agents inside Herdr
 
-The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
-DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
-demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use.
+The sandbox provisions Claude Code, Codex, and Pi into `~/.local` on first boot —
+they live in the home mount, not the image, so `oh harness install <id>` upgrades
+them in place without a rebuild. A first boot on a fresh home mount therefore needs
+network access and takes a minute or two longer; the sandbox still comes up as a
+usable shell if the registry is unreachable, and you can retry with
+`bash .oh/scripts/provision-harnesses.sh`. OpenCode, DeepAgents, Hermes, and Grok
+Build are optional image-level installs; T3 Code runs on demand via the `/t3` skill
+or direct `npx`. Authenticate at least one harness before use.
 
 > **Simplest cross-provider login — device mode via `/login`.** The most straightforward path
 > that works the same across most harnesses: launch the agent in **interactive mode**, run

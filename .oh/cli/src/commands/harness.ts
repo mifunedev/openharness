@@ -42,6 +42,7 @@ export interface HarnessInstallOptions extends HarnessOptions {
 interface HarnessState {
   id: string;
   title: string;
+  binary: string;
   kind: string;
   enabled: boolean | null;
   installed: boolean | null;
@@ -107,6 +108,7 @@ async function collectStates(
     states.push({
       id: entry.id,
       title: entry.title,
+      binary: entry.binary,
       kind: entry.kind,
       enabled:
         entry.harnessKey === undefined ? null : isInstallFlagEnabled(root, entry.harnessKey),

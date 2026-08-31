@@ -4,7 +4,7 @@ title: "OpenCode"
 
 # OpenCode
 
-OpenCode is a terminal coding agent that can run interactively or execute one-shot tasks. It is an optional image-level runtime in Open Harness; the default sandbox image ships Claude Code, Codex, and Pi only.
+OpenCode is a terminal coding agent that can run interactively or execute one-shot tasks. It is an optional image-level runtime in Open Harness; the default harnesses — Claude Code, Codex, and Pi — are provisioned into `~/.local` at boot instead of being baked into the image.
 
 ## Install (optional)
 

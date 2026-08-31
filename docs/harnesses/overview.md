@@ -76,7 +76,7 @@ prime-agent --version   # Prime Agent (not preinstalled — oh harness install p
 
 ## Authentication
 
-Open Harness ships Claude Code, Codex, and Pi in the default image. Authenticate at least one default harness before use; authenticate optional harnesses after enabling their install flags:
+Open Harness provisions Claude Code, Codex, and Pi into `~/.local` on first boot rather than baking them into the image. Authenticate at least one default harness before use; authenticate optional harnesses after enabling their install flags:
 
 - **Claude Code**: run `claude` and follow the OAuth prompt (see [Claude Code](./claude-code.md)).
 - **Codex**: run `codex login` (see [Codex](./codex.md)).

@@ -19,29 +19,10 @@ const CONFIG_DOC = read("docs/configuration.md");
 const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
 const NPM_USER_PREFIX = "/home/sandbox/.local";
 
-const BAKE_GATE = 'if [ "${BAKE_HARNESSES}" = "true" ]';
-
-function dockerfileStage(stage: string): string {
-  const lines = DOCKERFILE.split("\n");
-  const start = lines.findIndex((l) => new RegExp(`^FROM .* AS ${stage}$`).test(l));
-  if (start === -1) return "";
-  const rest = lines.slice(start + 1);
-  const end = rest.findIndex((l) => l.startsWith("FROM "));
-  return (end === -1 ? rest : rest.slice(0, end)).join("\n");
-}
-
-function dockerfileRunWith(needle: string): string {
-  const blocks: string[] = [];
-  let buf: string | null = null;
-  for (const line of DOCKERFILE.split("\n")) {
-    if (buf === null && !line.startsWith("RUN ")) continue;
-    buf = buf === null ? line : `${buf}\n${line}`;
-    if (line.endsWith("\\")) continue;
-    blocks.push(buf);
-    buf = null;
-  }
-  return blocks.find((b) => b.includes(needle)) ?? "";
-}
+// Comments may legitimately name a harness package; only instructions may not.
+const DOCKERFILE_CODE = DOCKERFILE.split("\n")
+  .filter((l) => !/^\s*#/.test(l))
+  .join("\n");
 
 function versionPins(argv: readonly string[]): string[] {
   const pins = new Set<string>();
@@ -176,24 +157,25 @@ describe("harness catalog", () => {
       expect(findHarness("claude-code")!.installArgv).not.toContain("--ignore-scripts");
     });
 
-    it("lets the image bake be turned off, and provisions the same harnesses at boot", () => {
-      expect(DOCKERFILE).toMatch(/^ARG BAKE_HARNESSES=true$/m);
+    it("provisions the default harnesses at boot rather than baking them", () => {
       expect(ENTRYPOINT).toContain("OH_PROVISION_HARNESSES");
       expect(ENTRYPOINT).toContain(".oh/scripts/provision-harnesses.sh");
     });
 
-    it.each(["base", "home"])(
-      "%s declares BAKE_HARNESSES, which ARG scopes to that stage alone",
-      (stage) => {
-        expect(dockerfileStage(stage)).toMatch(/^ARG BAKE_HARNESSES/m);
+    it.each(defaults.map((h) => [h.id, h] as const))(
+      "%s: its npm package is absent from the Dockerfile",
+      (id, h) => {
+        const pkg = h.installArgv[h.installArgv.length - 1];
+        expect(pkg, `${id} declares no install package`).toMatch(/^(@[^/]+\/)?[^-].*/);
+        expect(
+          DOCKERFILE_CODE,
+          `${id} is baked into the image; it belongs to provision-harnesses.sh`,
+        ).not.toContain(pkg);
       },
     );
 
-    it("gates every baked default install on BAKE_HARNESSES, pi included", () => {
-      expect(dockerfileRunWith("read -ra agents")).toContain(BAKE_GATE);
-      expect(dockerfileRunWith("--ignore-scripts @earendil-works/pi-coding-agent")).toContain(
-        BAKE_GATE,
-      );
+    it("keeps no build arg that could re-bake the default harnesses", () => {
+      expect(DOCKERFILE_CODE).not.toMatch(/^ARG (BAKE_HARNESSES|AGENTS)=/m);
     });
 
     it("bounds the boot-path provisioner so an unreachable registry cannot stall the entrypoint", () => {

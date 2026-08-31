@@ -7,7 +7,6 @@
   "install": {
     "opencode": false,
     "grokBuild": false,
-    "deepagents": false,
     "hermes": false,
     "agentBrowser": false
   },

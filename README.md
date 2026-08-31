@@ -174,7 +174,6 @@ herdr            # first command: open the primary interactive workspace
 #   codex      # OpenAI Codex CLI
 #   pi         # Pi Coding Agent
 #   opencode   # OpenCode   (optional: oh harness install opencode)
-#   deepagents # LangChain DeepAgents (optional: oh harness install deepagents)
 #   hermes     # Nous Research Hermes (optional: oh harness install hermes)
 #   grok       # xAI Grok Build       (optional: oh harness install grok-build)
 oh stop          # stop the sandbox, keeping volumes
@@ -216,7 +215,7 @@ the image-mode recipe.
 
 | | |
 |---|---|
-| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes, Grok Build |
+| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, Hermes, Grok Build |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Herdr, Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |

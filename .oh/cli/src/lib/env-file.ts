@@ -25,7 +25,6 @@ function stripQuotes(s: string): string {
 export const INSTALL_FIELDS: Record<string, string> = {
   opencode: "install.opencode",
   grok_build: "install.grokBuild",
-  deepagents: "install.deepagents",
   hermes: "install.hermes",
   agent_browser: "install.agentBrowser",
 };
@@ -34,7 +33,6 @@ export const CONFIG_FIELD_BY_ENV_KEY: Record<string, string> = {
   DOCKER_SOCKET: "access.dockerSocket",
   INSTALL_OPENCODE: INSTALL_FIELDS.opencode,
   INSTALL_GROK_BUILD: INSTALL_FIELDS.grok_build,
-  INSTALL_DEEPAGENTS: INSTALL_FIELDS.deepagents,
   INSTALL_HERMES: INSTALL_FIELDS.hermes,
   INSTALL_AGENT_BROWSER: INSTALL_FIELDS.agent_browser,
 };

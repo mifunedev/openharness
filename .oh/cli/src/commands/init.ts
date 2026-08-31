@@ -653,9 +653,6 @@ const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
   INSTALL_GROK_BUILD: (c, v) => {
     section(c, "install").grokBuild = asBool(v);
   },
-  INSTALL_DEEPAGENTS: (c, v) => {
-    section(c, "install").deepagents = asBool(v);
-  },
   INSTALL_HERMES: (c, v) => {
     section(c, "install").hermes = asBool(v);
   },
@@ -777,7 +774,6 @@ async function runWizard(
   prompt.step(2, 5, "Optional installs");
   const installs: { key: string; field: string; desc: string }[] = [
     { key: "opencode", field: "opencode", desc: "OpenCode TUI coding agent" },
-    { key: "deepagents", field: "deepagents", desc: "DeepAgents multi-agent runtime" },
     { key: "hermes", field: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
     { key: "grok_build", field: "grokBuild", desc: "Grok build tooling" },
     { key: "agent_browser", field: "agentBrowser", desc: "agent-browser + Chromium (~1 GB)" },

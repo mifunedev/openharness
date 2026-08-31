@@ -36,7 +36,6 @@ export interface GitIdentity {
 export interface InstallFlags {
   opencode?: boolean;
   grokBuild?: boolean;
-  deepagents?: boolean;
   hermes?: boolean;
   agentBrowser?: boolean;
 }
@@ -126,7 +125,6 @@ export function defaultOhConfig(name: string): OhConfig {
     install: {
       opencode: false,
       grokBuild: false,
-      deepagents: false,
       hermes: false,
       agentBrowser: false,
     },
@@ -222,7 +220,7 @@ export function validateOhConfig(value: unknown): OhConfig {
 
   const install = expectSection(record, "install");
   if (install) {
-    for (const key of ["opencode", "grokBuild", "deepagents", "hermes", "agentBrowser"]) {
+    for (const key of ["opencode", "grokBuild", "hermes", "agentBrowser"]) {
       expectBoolean(install, key, "install.");
     }
   }
@@ -349,7 +347,6 @@ export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
   { path: "git.userEmail", type: "string" },
   { path: "install.opencode", type: "boolean" },
   { path: "install.grokBuild", type: "boolean" },
-  { path: "install.deepagents", type: "boolean" },
   { path: "install.hermes", type: "boolean" },
   { path: "install.agentBrowser", type: "boolean" },
   { path: "access.ssh", type: "boolean" },

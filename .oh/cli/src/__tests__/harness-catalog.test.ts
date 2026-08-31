@@ -68,7 +68,6 @@ describe("harness catalog", () => {
 
     it("covers all four optional harnesses", () => {
       expect(optional.map((h) => h.id).sort()).toEqual([
-        "deepagents",
         "grok-build",
         "hermes",
         "opencode",

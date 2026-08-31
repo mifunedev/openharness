@@ -4,7 +4,7 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness provisions three agent CLIs into `~/.local` on first boot: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional — install one with `oh harness install <id>`, which also sets its `install.*` key so a fresh home mount reinstalls it at boot. No harness is baked into the image. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773, and **Prime Agent** installs on demand with `oh harness install prime-agent` — neither has an `INSTALL_*` key, because neither is ever baked into the image. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
+Open Harness provisions three agent CLIs into `~/.local` on first boot: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **Hermes**, and **Grok Build** are optional — install one with `oh harness install <id>`, which also sets its `install.*` key so a fresh home mount reinstalls it at boot. No harness is baked into the image. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773, and **Prime Agent** installs on demand with `oh harness install prime-agent` — neither has an `INSTALL_*` key, because neither is ever baked into the image. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
@@ -51,7 +51,6 @@ The manual path still works: uncomment the key in `.devcontainer/.env` (or expor
 | [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | preinstalled |
 | [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | optional: `oh harness install opencode` |
 | [Pi](./pi.md) | Lightweight, customizable agent | `pi` | default |
-| [DeepAgents](./deepagents.md) | LangChain's multi-provider terminal agent | `deepagents` | optional: `oh harness install deepagents` |
 | [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | optional: `oh harness install hermes` |
 | [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | optional: `oh harness install grok-build` |
 | [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `/t3` or `npx t3` | on-demand |
@@ -66,7 +65,6 @@ pi --version
 
 # Optional CLIs, present only after `oh harness install <id>` (or its install.* key):
 opencode --version      # install.opencode: true
-deepagents -v           # install.deepagents: true
 hermes --version        # install.hermes: true
 grok --version          # install.grok_build: true
 
@@ -82,7 +80,6 @@ Open Harness provisions Claude Code, Codex, and Pi into `~/.local` on first boot
 - **Codex**: run `codex login` (see [Codex](./codex.md)).
 - **OpenCode**: run `opencode auth login` (see [OpenCode](./opencode.md)).
 - **Pi**: configure provider keys via environment variables (see [Pi](./pi.md)).
-- **DeepAgents**: write provider keys to `~/.deepagents/.env` (see [DeepAgents](./deepagents.md)).
 - **Hermes**: run `hermes setup` (see [Hermes](./hermes.md)).
 - **Grok Build**: run `grok login --device-auth` for headless/remote auth, `grok login` for interactive OAuth, or set `XAI_API_KEY` as a fallback (see [Grok Build](./grok-build.md)). Cached `~/.grok/auth.json` takes precedence over `XAI_API_KEY`.
 - **Prime Agent**: run `prime-agent`, then `/login` — OAuth for ChatGPT Plus/Pro (Codex), Claude Pro/Max, or GitHub Copilot; API keys via environment variables or the same `/login` flow. Credentials land in `~/.prime/agent/auth.json` (see [Prime Agent](./prime-agent.md)).

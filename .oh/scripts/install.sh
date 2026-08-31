@@ -118,7 +118,7 @@ Env vars:
                        same name is already running (default: refuse, so a live
                        sandbox is never overwritten)
   INSTALL_HERMES=true  Enable an optional agent non-interactively. Also:
-                       INSTALL_OPENCODE, INSTALL_DEEPAGENTS, INSTALL_GROK_BUILD,
+                       INSTALL_OPENCODE, INSTALL_GROK_BUILD,
                        INSTALL_AGENT_BROWSER
   DOCKER_SOCKET=true   Mount the host Docker socket into the sandbox
                        non-interactively. OFF by default (socket access is
@@ -438,7 +438,6 @@ _opt_install() {
 }
 _opt_install HERMES        install.hermes      "Hermes — Nous self-improving agent CLI"
 _opt_install OPENCODE      install.opencode    "OpenCode — OpenAI-OAuth terminal agent"
-_opt_install DEEPAGENTS    install.deepagents  "DeepAgents — LangChain multi-provider agent"
 _opt_install GROK_BUILD    install.grokBuild   "Grok Build — xAI terminal agent"
 _opt_install AGENT_BROWSER install.agentBrowser "agent-browser + Chromium (~1 GB)"
 
@@ -492,7 +491,6 @@ printf "  ${CYAN}Optional capabilities${NC}  (installed live — no rebuild)\n"
 printf "  ──────────────────────────────────────\n"
 printf "       oh harness install hermes        — Hermes agent (then 'hermes setup'; optional dashboard)\n"
 printf "       oh harness install opencode      — OpenCode terminal agent\n"
-printf "       oh harness install deepagents    — LangChain DeepAgents\n"
 printf "       oh harness install grok-build    — xAI Grok Build\n"
 printf "       oh tool install agent-browser    — headless Chromium for screenshots / previews (~1 GB)\n"
 printf "                                          (each flips the matching install.* flag in oh.json)\n"

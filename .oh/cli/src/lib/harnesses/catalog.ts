@@ -103,17 +103,6 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     kind: "optional",
   },
   {
-    id: "deepagents",
-    title: "DeepAgents",
-    binary: "deepagents",
-    harnessKey: "deepagents",
-    installArgv: ["uv", "tool", "install", "deepagents-cli"],
-    installUser: "sandbox",
-    verifyArgv: ["deepagents", "--version"],
-    docsPath: "docs/harnesses/deepagents.md",
-    kind: "optional",
-  },
-  {
     id: "hermes",
     title: "Hermes",
     binary: "hermes",

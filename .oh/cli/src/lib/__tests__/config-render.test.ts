@@ -57,7 +57,8 @@ describe("renderComposeEnv", () => {
     expect(text).toContain("GIT_USER_EMAIL=ada@example.com");
     expect(text).toContain("INSTALL_OPENCODE=false");
     expect(text).toContain("INSTALL_GROK_BUILD=false");
-    expect(text).toContain("INSTALL_DEEPAGENTS=false");
+    // #910: deepagents is retired; the key must no longer be rendered.
+    expect(text).not.toContain("INSTALL_DEEPAGENTS");
     expect(text).toContain("INSTALL_HERMES=false");
     expect(text).toContain("INSTALL_AGENT_BROWSER=false");
     expect(text).toContain("DOCKER_SOCKET=true");

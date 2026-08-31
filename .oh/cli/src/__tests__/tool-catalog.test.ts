@@ -49,10 +49,8 @@ describe("tool catalog shape", () => {
     for (const t of TOOL_CATALOG) {
       if (t.kind !== "default") continue;
       expect(t.installUser, t.id).toBe("sandbox");
-      expect(t.installArgv!.join("
-"), t.id).toContain("NPM_USER_PREFIX");
-      expect(t.installArgv!.join("
-"), t.id).toContain("sha256sum -c -");
+      expect(t.installArgv!.join("\n"), t.id).toContain("NPM_USER_PREFIX");
+      expect(t.installArgv!.join("\n"), t.id).toContain("sha256sum -c -");
     }
   });
 

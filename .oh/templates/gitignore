@@ -9,6 +9,9 @@
 .claude/.env.claude
 .hermes/.env
 .hermes/auth.json
+.prime/agent/auth.json
+.prime/agent/sessions/
+.prime/agent/telemetry.json
 .oh/cli/dist/
 .oh/cli/node_modules/
 # Worktree and project-clone roots — only the directory guide is tracked.

@@ -6,9 +6,11 @@
 # and control plane included, lives in the single /home/sandbox mount: the
 # named volume ${SANDBOX_NAME}_workspace by default, or an absolute HOST
 # path when OH_HOME_MOUNT is set. The workspace at /home/sandbox/harness is
-# a directory inside that mount, seeded from the image's baked /opt/oh-seed
-# on first boot by entrypoint.sh (see OH_IMAGE_ONLY handling); the rest of
-# the home comes from /opt/home-seed via seed_home. Edits made inside the
+# a directory inside that mount, seeded from the image's baked /opt/oh-seed on
+# first boot by entrypoint.sh, which detects the absence of a checkout bind at
+# /home/sandbox/harness rather than reading a flag; the rest of the home comes
+# from /opt/home-seed via seed_home. The environment: block below is therefore
+# byte-identical to the one in docker-compose.yml. Edits made inside the
 # running sandbox persist across image pulls and container recreation.
 #
 # Usage:
@@ -42,7 +44,6 @@ services:
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
-      - OH_IMAGE_ONLY=1
     stdin_open: true
     tty: true
     init: true

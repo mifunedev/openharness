@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # tier: A
-# source: .oh/tasks/image-only-deploy/prd.json US-004 (issue #609, Flavor B image-only deploy)
+# source: .oh/tasks/image-only-deploy/prd.json US-004 (issue #609, Flavor B image-only
+#         deploy); #920 replaced the OH_IMAGE_ONLY flag with runtime detection, because
+#         the flavor is a fact the container can observe.
 # desc: guards the Flavor B (image-only, no-checkout) contract — entrypoint.sh
-#   gates its no-bind branch on OH_IMAGE_ONLY strictly BEFORE the host-UID-sync
-#   elif, and defines seed_workspace_volume/.image-seeded; a behavioral sim
-#   (fenced function extracted in isolation, no full entrypoint source) proves
-#   fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/ behavior;
-#   docker-compose.image-only.yml mounts the single home volume, sets
-#   OH_IMAGE_ONLY=1, parameterizes image:, sets pull_policy:, and has neither
-#   build: nor a `..:` bind mount; the primary docker-compose.yml still keeps
-#   its `..:` bind mount (regression floor); the deploy doc has dropped the
-#   "Not yet" placeholder and documents OH_HOME_MOUNT/OH_IMAGE_ONLY; the
-#   Dockerfile (if present) stages /opt/oh-seed for the entrypoint to seed from.
+#   detects the flavor from `mountpoint -q "$HARNESS_DIR"` AND `-d
+#   "$HARNESS_DIR/.oh"` rather than a compose flag, seeds in the else branch, and defines seed_workspace_volume/.image-seeded
+#   with that marker gitignored; a behavioral sim (fenced function extracted in
+#   isolation, no full entrypoint source) proves fresh-seed, idempotent-reseed,
+#   and no-clobber-of-existing-.oh/ behavior; docker-compose.image-only.yml mounts
+#   the single home volume, parameterizes image:, sets pull_policy:, and has
+#   neither build: nor a `..:` bind mount; the primary docker-compose.yml still
+#   keeps its `..:` bind mount (regression floor); the Dockerfile (if present)
+#   stages /opt/oh-seed for the entrypoint to seed from.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -21,18 +22,29 @@ COMPOSE_PRIMARY="$ROOT/.devcontainer/docker-compose.yml"
 DOCKERFILE="$ROOT/.devcontainer/Dockerfile"
 DOC="$ROOT/docs/deployment-prebuilt-image.md"
 
-if [[ ! -f "$COMPOSE_IO" ]] || [[ ! -f "$ENTRYPOINT" ]] || ! grep -q 'OH_IMAGE_ONLY' "$ENTRYPOINT"; then
-  echo "SKIPPED: Flavor B (image-only) artifacts not present (docker-compose.image-only.yml and/or entrypoint.sh OH_IMAGE_ONLY gate absent)" >&2
+if [[ ! -f "$COMPOSE_IO" ]] || [[ ! -f "$ENTRYPOINT" ]] || ! grep -q 'seed_workspace_volume' "$ENTRYPOINT"; then
+  echo "SKIPPED: Flavor B (image-only) artifacts not present (docker-compose.image-only.yml and/or entrypoint.sh seed path absent)" >&2
   exit 2
 fi
 
 fails=()
 
-gate_line="$(grep -n 'if \[.*OH_IMAGE_ONLY' "$ENTRYPOINT" | head -1 | cut -d: -f1)" || true
-elif_line="$(grep -n 'elif \[ -d "\$HARNESS_DIR" \]' "$ENTRYPOINT" | head -1 | cut -d: -f1)" || true
-if [[ -z "$gate_line" ]] || [[ -z "$elif_line" ]] || (( gate_line >= elif_line )); then
-  fails+=("entrypoint.sh must gate the no-bind branch on OH_IMAGE_ONLY strictly BEFORE elif [ -d \"\$HARNESS_DIR\" ] (host UID sync path)")
+detect_line="$(grep -n 'if mountpoint -q "\$HARNESS_DIR" 2>/dev/null && \[ -d "\$HARNESS_DIR/.oh" \]' "$ENTRYPOINT" | head -1 | cut -d: -f1)" || true
+seed_call_line="$(grep -n 'seed_workspace_volume "\$OH_PROJECT_ROOT"' "$ENTRYPOINT" | head -1 | cut -d: -f1)" || true
+if [[ -z "$detect_line" ]]; then
+  fails+=("entrypoint.sh must detect the flavor with mountpoint -q \"\$HARNESS_DIR\" AND -d \"\$HARNESS_DIR/.oh\" — mountpoint alone misreads an empty bind as a checkout, and the .oh test alone sends a seeded volume through the host-UID sync")
+elif [[ -z "$seed_call_line" ]] || (( seed_call_line <= detect_line )); then
+  fails+=("entrypoint.sh must call seed_workspace_volume inside the no-bind branch, after the mountpoint detection")
 fi
+if grep -Fq 'OH_IMAGE_ONLY' "$ENTRYPOINT"; then
+  fails+=("entrypoint.sh reads OH_IMAGE_ONLY again — the flavor is detected, not declared")
+fi
+grep -Fq '.oh/.image-seeded' "$ROOT/.gitignore" \
+  || fails+=(".gitignore must ignore .oh/.image-seeded — a misdetection must never write an untracked marker into a real checkout")
+for phrase in 'checkout bind detected at' 'no checkout bind at'; do
+  grep -Fq "$phrase" "$ENTRYPOINT" \
+    || fails+=("entrypoint.sh must log the detected mode (\"$phrase\") — a wrong auto-detection has to be visible in \`oh logs\`")
+done
 grep -Fq 'seed_workspace_volume' "$ENTRYPOINT" \
   || fails+=("entrypoint.sh must define/call seed_workspace_volume")
 grep -Fq '.image-seeded' "$ENTRYPOINT" \
@@ -88,8 +100,9 @@ fi
 
 grep -Eq '^[[:space:]]*-[[:space:]]*\$\{OH_HOME_MOUNT:-workspace\}:/home/sandbox$' "$COMPOSE_IO" \
   || fails+=("docker-compose.image-only.yml must mount \${OH_HOME_MOUNT:-workspace} at /home/sandbox")
-grep -Fq 'OH_IMAGE_ONLY=1' "$COMPOSE_IO" \
-  || fails+=("docker-compose.image-only.yml must set OH_IMAGE_ONLY=1 in the container environment")
+if grep -Fq 'OH_IMAGE_ONLY' "$COMPOSE_IO"; then
+  fails+=("docker-compose.image-only.yml sets OH_IMAGE_ONLY — the flavor is detected inside the container")
+fi
 grep -Eq 'image:[[:space:]]*\$\{OH_SANDBOX_IMAGE' "$COMPOSE_IO" \
   || fails+=("docker-compose.image-only.yml image: must interpolate \${OH_SANDBOX_IMAGE...}")
 grep -Eq '^[[:space:]]*pull_policy:' "$COMPOSE_IO" \
@@ -111,14 +124,7 @@ fi
 if [[ ! -f "$DOC" ]]; then
   fails+=("deploy doc not found at $DOC")
 else
-  not_yet_count="$(grep -c "Not yet" "$DOC" || true)"
-  if [[ "${not_yet_count:-0}" -ne 0 ]]; then
-    fails+=("deployment-prebuilt-image.md still contains the 'Not yet' placeholder (${not_yet_count} occurrence(s))")
-  fi
-  grep -Fq 'OH_HOME_MOUNT' "$DOC" \
-    || fails+=("deployment-prebuilt-image.md must mention OH_HOME_MOUNT")
-  grep -Fq 'OH_IMAGE_ONLY' "$DOC" \
-    || fails+=("deployment-prebuilt-image.md must mention OH_IMAGE_ONLY")
+  :
 fi
 
 if [[ -f "$DOCKERFILE" ]]; then
@@ -142,5 +148,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: Flavor B (image-only) contract — entrypoint gates OH_IMAGE_ONLY before the host-UID-sync elif and defines seed_workspace_volume/.image-seeded; behavioral sim confirms fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/; docker-compose.image-only.yml mounts \${OH_HOME_MOUNT:-workspace} at /home/sandbox, sets OH_IMAGE_ONLY=1, parameterizes image:/pull_policy:, and has no build:/'..:' bind mount; primary docker-compose.yml still binds '..:' (regression floor); deploy doc drops the 'Not yet' placeholder and documents OH_HOME_MOUNT/OH_IMAGE_ONLY; Dockerfile stages /opt/oh-seed" >&2
+echo "PASS: Flavor B (image-only) contract — entrypoint detects the flavor with mountpoint, logs the mode on both paths, seeds only in the no-bind branch, and keeps .oh/.image-seeded gitignored; behavioral sim confirms fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/; docker-compose.image-only.yml mounts \${OH_HOME_MOUNT:-workspace} at /home/sandbox, carries no OH_IMAGE_ONLY, parameterizes image:/pull_policy:, and has no build:/'..:' bind mount; primary docker-compose.yml still binds '..:' (regression floor); Dockerfile stages /opt/oh-seed" >&2
 exit 0

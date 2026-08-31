@@ -122,16 +122,12 @@ uid_reconcile_step() {
 }
 
 HARNESS_DIR="$OH_PROJECT_ROOT"
-if [ "${OH_IMAGE_ONLY:-}" = "1" ]; then
-  echo "[entrypoint] OH_IMAGE_ONLY=1 — no-bind mode; skipping host UID/GID sync"
-  seed_workspace_volume "$OH_PROJECT_ROOT"
-  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
-    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
-    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
-  else
-    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
-  fi
-elif [ -d "$HARNESS_DIR" ]; then
+# The sandbox flavor is observable, not declared. Both conditions are load-bearing:
+# mountpoint alone would misread an empty bind (a runtime that mounts a fresh host
+# directory straight at the project root) as a checkout, and the .oh/ test alone
+# would send a seeded no-bind volume through the host-UID sync on its second boot.
+if mountpoint -q "$HARNESS_DIR" 2>/dev/null && [ -d "$HARNESS_DIR/.oh" ]; then
+  echo "[entrypoint] checkout bind detected at $HARNESS_DIR — syncing host UID/GID"
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
@@ -154,6 +150,15 @@ elif [ -d "$HARNESS_DIR" ]; then
     else
       echo "[entrypoint] WARNING: sandbox UID/GID reconciliation incomplete; continuing with current ownership" >&2
     fi
+  fi
+else
+  echo "[entrypoint] no checkout bind at $HARNESS_DIR — seeding from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+  seed_workspace_volume "$OH_PROJECT_ROOT"
+  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
+    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  else
+    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
   fi
 fi
 

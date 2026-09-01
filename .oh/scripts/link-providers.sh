@@ -30,7 +30,6 @@ provider_links=(
   ".claude/agents|../.oh/agents"
   ".claude/hooks|../.oh/hooks"
   ".codex/agents|../.claude/agents"
-  ".prime/agent/skills|../../.oh/skills"
 )
 
 HERMES_LINK=".hermes/skills/openharness"
@@ -72,7 +71,6 @@ print_state() {
   cat >&2 <<EOF
 Vendored skill pack: .oh/skills (expected to exist as tracked files)
 Provider surfaces:   .pi/skills .claude/skills .codex/skills -> ../.oh/skills
-                     .prime/agent/skills -> ../../.oh/skills
 Remediation: bash .oh/scripts/link-providers.sh --init
 EOF
 }
@@ -221,4 +219,4 @@ if [ "$failures" -ne 0 ]; then
   exit 1
 fi
 
-printf 'Providers OK: .pi/.claude/.codex/.prime skills -> .oh/skills (vendored pack present)\n'
+printf 'Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'

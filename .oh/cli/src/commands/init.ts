@@ -357,7 +357,7 @@ export async function runInit(
     prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded an empty tasks/");
     prompt.ok("Copied the full .devcontainer/ (local image build)");
     prompt.ok(
-      "Configured 5 provider surfaces (.claude .codex .pi .prime .hermes) → vendored .oh/skills",
+      "Configured 4 provider surfaces (.claude .codex .pi .hermes) → vendored .oh/skills",
     );
   }
   if (force && totalOverwritten > 0) {
@@ -496,7 +496,6 @@ const PROVIDER_LINKS: [string, string][] = [
   [".claude/hooks", "../.oh/hooks"],
   [".codex/agents", "../.claude/agents"],
   [".codex/specs", "../.claude/specs"],
-  [".prime/agent/skills", "../../.oh/skills"],
 ];
 
 function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {

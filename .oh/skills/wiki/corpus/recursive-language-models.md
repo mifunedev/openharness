@@ -6,7 +6,7 @@ created: 2026-06-27
 updated: 2026-08-31
 sources:
   - raw/2026-06-27-recursive-language-models.md
-related: [recursive-self-improvement-survey, molt-agentic-reinforcement-learning, prime-agent-harness]
+related: [recursive-self-improvement-survey, molt-agentic-reinforcement-learning]
 confidence: provisional
 ---
 
@@ -33,4 +33,3 @@ Recursive Language Models (RLM) is an inference-time pattern in which a root lan
 ## See Also
 - [[recursive-self-improvement-survey]]
 - [[molt-agentic-reinforcement-learning]]
-- [[prime-agent-harness]]

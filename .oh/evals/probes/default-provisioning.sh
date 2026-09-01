@@ -94,8 +94,6 @@ DOCKERFILE_CODE=$(strip_dockerfile_comments)
 
 pkgs=0
 while IFS= read -r entry; do
-  # on-demand entries (t3code, prime-agent) are fetched per invocation and were
-  # never baked; skip them rather than assert against an npx incantation.
   [[ $entry == *'kind: "default"'* || $entry == *'kind: "optional"'* ]] || continue
   id=$(sed -n 's/.*id: "\([^"]*\)".*/\1/p' <<<"$entry")
   # The package specifier is the last element of installArgv. Read it from that

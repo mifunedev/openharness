@@ -189,7 +189,7 @@ Write `- none` when nothing qualified.
 
 This block is a nomination, not a write. `/retro` does not create `.oh/evals/probes/<id>.sh`, and does not write any file. Minting the probe is separate work performed by the operator or a follow-up task.
 
-`--dry-run` and `auto-approve` remain accepted for call-site compatibility — including the Advisor running `/spec execute`'s tail — and produce the same report, because there is nothing to gate.
+`--dry-run` and `auto-approve` remain accepted for call-site compatibility — including the owner running `/spec execute`'s tail — and produce the same report, because there is nothing to gate.
 
 ### 7. Close the report
 

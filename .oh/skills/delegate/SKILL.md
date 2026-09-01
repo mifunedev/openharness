@@ -145,7 +145,7 @@ can pick up the worktree. Write the graph to disk before spawning any worker.
 | `delegate-graph.json` | Every task's ID, title, description, `dependsOn`, files, complexity, model override plus its reason, thinking level, acceptance criteria, assigned wave, and `status` (`pending`/`running`/`completed`/`FAIL`/`BLOCKED`) |
 | `delegate-log.txt` | Append-only run log; one line per wave boundary and per status change |
 
-Never write `prd.json` or `progress.txt`. Those belong to the Advisor
+Never write `prd.json` or `progress.txt`. Those belong to the implementation owner
 (`.oh/tasks/README.md`), and `progress.txt` in particular must not be edited by hand.
 This skill's two files sit beside them without collision.
 

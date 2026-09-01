@@ -71,7 +71,7 @@ subcommand.
 
 4. **Run `execute`.** Follow `references/execute.md` with
    `<slug> [--repo ...] [--remote ...] [--base ...]`, which owns the issue, branch, draft
-   PR, Advisor build, `implementation ⇄ audit` loop, evidence, `/eval` and wiki gates,
+   PR, implementation, `implementation ⇄ audit` loop, evidence, `/eval` and wiki gates,
    and the undraft. `ship` neither reimplements nor relaxes any of it: a
    `DRAFT-BLOCKED (<gate>)` from `execute` is `ship`'s outcome verbatim.
 

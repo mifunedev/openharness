@@ -2,16 +2,18 @@
 
 Spec task workdirs. Each `<slug>/` subfolder is one `/spec execute` task's
 four-file contract, created by `/spec plan` (the `/ralph` skill produces the
-`prd.json` inside it) and implemented by the single Advisor session.
+`prd.json` inside it) and implemented by that task's single implementation owner —
+the agent that runs `/spec execute`. Ownership is a role, not a terminal session:
+a task folder's identity and state never depend on a session, tab, or pane.
 
 A task directory typically contains:
 
 | File           | Purpose                                                  |
 | -------------- | -------------------------------------------------------- |
-| `prd.json`     | Ralph-formatted PRD — the Advisor's authoritative task graph |
+| `prd.json`     | Ralph-formatted PRD — the owner's authoritative task graph |
 | `prd.md`       | Human-readable PRD that `prd.json` was generated from    |
-| `prompt.md`    | Task-specific instructions for the Advisor's implementation |
-| `progress.txt` | Advisor's running log; ends with `STATUS: COMPLETE` on done |
+| `prompt.md`    | Task-specific instructions for the owner's implementation |
+| `progress.txt` | Owner's running log; ends with `STATUS: COMPLETE` on done |
 | `critique.md`  | Optional critic notes from PRD review                    |
 
 ## Conventions
@@ -24,7 +26,7 @@ A task directory typically contains:
   `eval-result.json` — are added explicitly with **`git add -f`**. A bare
   `git add .oh/tasks/<slug>/` stages nothing and commits silently without them, which
   is the same as never having written them from a reviewer's seat.
-- **Do not edit `progress.txt` by hand** — the Advisor appends to it.
+- **Do not edit `progress.txt` by hand** — the implementation owner appends to it.
 
 ## Lifecycle
 

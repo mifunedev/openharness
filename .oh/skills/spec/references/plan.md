@@ -43,9 +43,9 @@ folder for `/spec execute` to consume.
 Run these in order; each is an existing primitive — compose, don't re-derive.
 
 1. **Derive `<slug>`** (per the `/prd` skill's rules): lowercase kebab-case, `[a-z0-9-]+`,
-   ≤5 hyphen-words, not `archive`. The slug is the universal key — task directory, branch
-   second segment, tmux session name. Choose once; reject and ask for a shorter name if
-   invalid. `--slug` overrides derivation.
+   ≤5 hyphen-words, not `archive`. The slug is the universal key — task directory and branch
+   second segment; it never names a terminal session, tab, or pane. Choose once; reject and
+   ask for a shorter name if invalid. `--slug` overrides derivation.
 
 2. **`/prd` → `.oh/tasks/<slug>/prd.md`**. Invoke the `prd` skill with `<topic>`
    (or `--plan` content, with an explicit instruction to skip clarifying questions when a
@@ -92,8 +92,9 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
    `.oh/skills/spec/templates/task-prompt.md`. Render it into
    `.oh/tasks/<slug>/prompt.md` by substituting `<slug>`, `<branch>`, and `<issue>` with
    the task slug, `prd.json`'s `branchName`, and the issue number as bare digits. This
-   prompt is the single Advisor handoff; no separate implementation process or session
-   prompt exists. Confirm no angle-bracket placeholder survives the render. Write
+   prompt states the single-owner contract for whichever agent runs `/spec execute`; it is
+   not a handoff to a separately launched process or session. Confirm no angle-bracket
+   placeholder survives the render. Write
    `.oh/tasks/<slug>/progress.txt` with the `# progress` header only.
 
 Verify the four-file contract before handing off:

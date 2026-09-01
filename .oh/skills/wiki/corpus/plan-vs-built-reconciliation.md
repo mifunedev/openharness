@@ -19,7 +19,7 @@ confidence: provisional
 - `.oh/tasks/<slug>/prd.md` / `progress.txt` / `evidence.md` — the plan, the implementation narrative, and the answer back.
 
 ## Summary
-The pipeline had ~10 verification nodes and zero comprehension nodes: every gate asked *is this correct?* and none asked *is this still what you agreed to?* An operator's model of the work stops at the plan they approved, while the Advisor carries implementation and verification through one owned workflow. Reconciliation closes that gap with one tracked artifact — `.oh/tasks/<slug>/evidence.md` — which the merge gate **refuses to undraft without** (`execute.md:393`).
+The pipeline had ~10 verification nodes and zero comprehension nodes: every gate asked *is this correct?* and none asked *is this still what you agreed to?* An operator's model of the work stops at the plan they approved, while the single implementation owner — the agent running `/spec execute` — carries implementation and verification through one owned workflow. Reconciliation closes that gap with one tracked artifact — `.oh/tasks/<slug>/evidence.md` — which the merge gate **refuses to undraft without** (`execute.md:393`).
 
 ## Detail
 **It is a gate condition, not a report.** `/spec execute` checks two things before `gh pr ready`: that the file exists, and that `git ls-files --error-unmatch` finds it. The second half is not redundant — `.oh/tasks/` is gitignored, so a doc written without `git add -f` sits on disk and is **absent from the PR diff**, which from the reviewer's seat is identical to never writing it (`execute.md:432-436`). Failing either half is terminal status `DRAFT-BLOCKED (evidence)`, not a warning.
@@ -32,7 +32,7 @@ The pipeline had ~10 verification nodes and zero comprehension nodes: every gate
 
 **Do not confuse the two evidence artifacts.** `AUDIT_EVIDENCE_PATH` (`evidence.json`, schema v1, invocation-scoped, never inside `AUDIT_ROOT`) is the machine record that lets the audit boundary log `complete`. `evidence.md` is a separate tracked Markdown artifact for humans, correlated to the same `AUDIT_RUN_ID` (`reviewer-evidence-doc.md:13-16`). A stale run id means the doc is rewritten, not kept (`execute.md:530`).
 
-**The implementation narrative is promoted, not stranded.** `progress.txt` holds the per-story record; the Advisor folds it and `evidence.md` into the PR body so the reviewer meets the work in the PR rather than by opening the task folder (`execute.md:410-418`).
+**The implementation narrative is promoted, not stranded.** `progress.txt` holds the per-story record; the owner folds it and `evidence.md` into the PR body so the reviewer meets the work in the PR rather than by opening the task folder (`execute.md:410-418`).
 
 **DeepWiki comparison.** Run 2026-08-24 against `https://deepwiki.com/mifunedev/openharness` (Overview page). DeepWiki has **no** entry for this concept: it does not mention `evidence.md` or any plan-versus-built reconciliation gate, and its planning-phase table still lists `/ship-spec` with the gloss *"Convert specs into executable tasks via a critic"* — the critic gate US-001 removed. So this page is **net-new relative to DeepWiki**, not a re-synthesis of it, and the divergence is upstream staleness rather than a contradiction to resolve. **The workflow no longer runs this comparison** (2026-08-24): DeepWiki regenerates on no schedule the gate could depend on, so `/spec plan` and `/spec execute` dropped it — the staleness recorded here is the evidence for that removal, kept as rationale rather than as a standing obligation.
 
@@ -54,7 +54,7 @@ flowchart LR
 | Artifact | Written by | Read by | Tracked |
 | --- | --- | --- | --- |
 | `prd.md` | `/spec plan` | operator (the go/no-go) | yes (`add -f`) |
-| `progress.txt` | the Advisor | `/spec execute` implementation stage | yes (`add -f`) |
+| `progress.txt` | the implementation owner | `/spec execute` implementation stage | yes (`add -f`) |
 | `evidence.md` | `/spec execute` step 6 | the PR reviewer | yes (`add -f`) — gated |
 | `evidence.json` | the audit boundary | the boundary's terminal log | no (invocation-scoped) |
 

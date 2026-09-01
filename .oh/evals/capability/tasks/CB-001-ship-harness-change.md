@@ -28,7 +28,7 @@ Given a small harness-infra change request (a skill, rule, doc, script, or cron 
 | unattended | Reached ready-for-review with zero human intervention after the initial ask | Completed but needed ≥1 human nudge (re-run, conflict resolution) | Required hands-on human authoring/fixing to finish |
 
 ## Evidence basis
-Recent ready-for-review PRs demonstrate the end-to-end path: e.g. #147 (default Pi monitor support) and #141, plus the executable-loop series #157/#163. `/spec plan` composes `/prd` → `/ralph` into the four-file folder; `/spec execute` then keeps implementation and its gates in one Advisor-owned session — issue → branch → draft PR → implementation → `implementation ⇄ audit` (with `/eval` inside it) → `/audit pr` → ready PR.
+Recent ready-for-review PRs demonstrate the end-to-end path: e.g. #147 (default Pi monitor support) and #141, plus the executable-loop series #157/#163. `/spec plan` composes `/prd` → `/ralph` into the four-file folder; `/spec execute` then keeps implementation and its gates with one implementation owner — issue → branch → draft PR → implementation → `implementation ⇄ audit` (with `/eval` inside it) → `/audit pr` → ready PR. The capability is scored on task ownership and the ready-PR outcome; the terminal topology behind it (tmux, Herdr, a plain shell) is not part of the measurement.
 
 **Re-authored 2026-08-24 (spec-simplification US-003)** when `/ship-spec` was absorbed into
 `/spec execute` and deleted. The capability under test is unchanged; only the surface that

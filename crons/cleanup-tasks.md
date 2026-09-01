@@ -12,6 +12,8 @@ description: Weekly `/spec execute` task sweep — archive completed tasks
 # Weekly Task Cleanup
 
 Sweep `.oh/tasks/` once per week and archive anything that has finished.
+Completion is read from `progress.txt` alone; a task's identity and state are never
+tied to a terminal session, so this sweep detects and kills no agent session.
 Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
 note. The same weekly pass also grooms stale `.worktrees/` branch
@@ -75,8 +77,6 @@ only — never a `.oh/tasks/` subfolder.
    `.oh/tasks/archive/`):
    - If `.oh/tasks/<taskdesc>/progress.txt` ends with a line matching exactly
      `STATUS: COMPLETE`:
-     - Kill the matching tmux session if one exists:
-       `tmux kill-session -t agent-spec-<taskdesc> 2>/dev/null || true`.
      - Move the folder inside the worktree:
        `git -C .worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
        (falls back to `mv` + `git -C .worktrees/archive/$TODAY add` if

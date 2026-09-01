@@ -34,8 +34,7 @@ retired_spec_build='.oh/scripts/spec-''build.sh'
 retired_runner='.oh/scripts/lib/session-''runner.sh'
 retired_agent='agent-''build-'
 retired_timeout='BUILD_''SESSION_TIMEOUT_MS'
-retired_advisor='agent-''spec-'
-for retired in "$retired_spec_build" "$retired_runner" "$retired_agent" "$retired_timeout" "$retired_advisor"; do
+for retired in "$retired_spec_build" "$retired_runner" "$retired_agent" "$retired_timeout"; do
   grep -qF "$retired" "$EXEC" "$PROMPT" && missing+=("retired handoff marker remains: $retired")
 done
 

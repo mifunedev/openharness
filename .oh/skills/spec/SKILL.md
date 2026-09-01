@@ -109,7 +109,7 @@ esac
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces it;
   `execute` and `retro` are each pointed at it. The `<slug>` is the
   universal key (task directory, branch second segment). It is never a terminal
-  identifier — no tmux session name, Herdr tab or pane id, or other runtime handle.
+  identifier — not a multiplexer session, not a Herdr tab or pane, not any runtime handle.
 - **Compose, don't fork** — each node reuses existing skills rather than
   re-implementing them: `ship` composes `plan` then `execute` and owns no build
   mechanics of its own; `plan` composes `/prd` + `/ralph`; `execute` is owned by the

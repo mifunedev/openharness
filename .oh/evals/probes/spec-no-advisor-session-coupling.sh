@@ -26,28 +26,9 @@ retired_session='agent-''spec-'
 hits=$(grep -rnF -- "$retired_session" "${SCOPE[@]}" || true)
 [[ -n "$hits" ]] && found+=("retired session prefix '$retired_session': ${hits//$'\n'/ ; }")
 
-# A coupling claim ties task identity/state to a runtime handle WITHOUT negating it.
-# Prohibition prose ("never a tmux session name") is the point of this change, so a hit is
-# exempt only when a negation appears BEFORE the handle on the same line; text after it, or a
-# negation about something else, does not launder an affirmative coupling.
-coupling_terms='tmux session name|herdr tab id|herdr pane id|tab id|pane id|$CRON_TMUX_SESSION'
-coupling=$(grep -rniF -- "$(printf '%s\n' "${coupling_terms//|/$'\n'}")" "${SCOPE[@]}" \
-  | awk -v terms="$coupling_terms" '
-      {
-        line = $0
-        sub(/^[^:]*:[0-9]+:/, "", line)
-        low = tolower(line)
-        n = split(terms, t, "|")
-        best = 0
-        for (i = 1; i <= n; i++) {
-          p = index(low, tolower(t[i]))
-          if (p > 0 && (best == 0 || p < best)) best = p
-        }
-        if (best == 0) next
-        pre = substr(low, 1, best - 1)
-        if (pre ~ /never|neither|not |no |independent of|rather than/) next
-        print $0
-      }' || true)
+# With the prohibition prose written so it never uses these handles as its own words, an
+# affirmative recoupling is exactly a literal occurrence — no negation-aware matcher needed.
+coupling=$(grep -rniF -- "$(printf '%s\n' 'tmux session name' 'Herdr tab id' 'Herdr pane id' 'tab id' 'pane id' '$CRON_TMUX_SESSION')" "${SCOPE[@]}" || true)
 [[ -n "$coupling" ]] && found+=("affirmative session coupling: ${coupling//$'\n'/ ; }")
 
 missing=()
@@ -56,7 +37,7 @@ grep -qiF 'never the existence of a named process, session, tab, or pane' "$EXEC
   || missing+=("execute.md no longer decouples RUNNING task state from a named process/session/tab/pane")
 grep -qiF 'it never names a terminal session, tab, or pane' "$PLAN" \
   || missing+=("plan.md no longer decouples the slug from a terminal session name")
-grep -qiF 'never depend on a session, tab, or pane id' "$TASKS" \
+grep -qiF 'never depend on a session, tab, or pane' "$TASKS" \
   || missing+=(".oh/tasks/README.md no longer decouples task identity from a session/tab/pane id")
 grep -qiF 'implementation owner' "$GLOSSARY" \
   || missing+=("docs/glossary.md no longer distinguishes the implementation owner from the terminal backend")

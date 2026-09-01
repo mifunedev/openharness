@@ -4,7 +4,7 @@ Spec task workdirs. Each `<slug>/` subfolder is one `/spec execute` task's
 four-file contract, created by `/spec plan` (the `/ralph` skill produces the
 `prd.json` inside it) and implemented by that task's single implementation owner —
 the agent that runs `/spec execute`. Ownership is a role, not a terminal session:
-a task folder's identity and state never depend on a session, tab, or pane id.
+a task folder's identity and state never depend on a session, tab, or pane.
 
 A task directory typically contains:
 

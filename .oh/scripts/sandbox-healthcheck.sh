@@ -85,6 +85,19 @@ else
   fi
 fi
 
+# A provisioning failure must not present as a healthy sandbox. entrypoint.sh
+# downgrades it to a WARNING so a transient registry outage cannot abort boot —
+# correct, but it left `docker ps` reporting (healthy) with a harness or tool the
+# operator explicitly asked for simply absent, and nothing but the log said so.
+# provision-defaults.sh writes this marker when a requested install is missing and
+# removes it on a clean run, so the recovery command it already prints is also
+# what clears the signal.
+PROVISION_MARKER="${OH_PROVISION_MARKER:-/home/sandbox/.local/share/oh/provision-failed}"
+if [ -f "$PROVISION_MARKER" ]; then
+  reason=$(tr -d '\n' <"$PROVISION_MARKER" 2>/dev/null)
+  record_failure "boot provisioning did not complete (${reason:-see the boot log}) — recover with: bash $HARNESS/.oh/scripts/provision-defaults.sh"
+fi
+
 if [ "${#failures[@]}" -gt 0 ]; then
   printf 'sandbox healthcheck failed:\n' >&2
   printf -- '- %s\n' "${failures[@]}" >&2

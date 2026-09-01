@@ -34,12 +34,21 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
-ENV PNPM_HOME="/usr/local/share/pnpm"
+# PNPM_HOME lives in the home mount, beside NPM_USER_PREFIX. `pnpm add -g` writes
+# to PNPM_HOME and ignores NPM_USER_PREFIX, so a system path here means every
+# pnpm-installed tool is unreachable to the sandbox user: `oh tool install
+# agent-browser` (the one catalog entry that uses `pnpm add -g`) died with
+# `EACCES: permission denied, mkdir '/usr/local/share/pnpm'`, on every image, for
+# every non-root user. The `home` stage creates this directory sandbox-owned.
+# `pnpm setup` is deliberately not run: its only jobs are to write PNPM_HOME into
+# the shell rc files, which this Dockerfile does explicitly below, and to create
+# the directory, which now belongs to the `home` stage — and running it here, as
+# root before `useradd`, would create /home/sandbox root-owned.
+ENV PNPM_HOME="/home/sandbox/.local/share/pnpm"
 ENV NPM_USER_PREFIX="/home/sandbox/.local"
 ENV PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate \
- && pnpm setup --force 2>/dev/null || true
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 SHELL ["/bin/bash", "-c"]
 
@@ -72,7 +81,7 @@ RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
       /home/sandbox/.herdr \
       "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"
 
-RUN install -d -o sandbox -g sandbox "$NPM_USER_PREFIX" \
+RUN install -d -o sandbox -g sandbox "$NPM_USER_PREFIX" "$PNPM_HOME" \
  && rm -rf /home/sandbox/.npm
 
 RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" --unattended" \
@@ -86,7 +95,7 @@ COPY --chown=sandbox:sandbox .oh/install/.zshrc /home/sandbox/.zshrc
 
 RUN printf '%s\n' \
       'export NPM_USER_PREFIX="/home/sandbox/.local"' \
-      'export PNPM_HOME="/usr/local/share/pnpm"' \
+      'export PNPM_HOME="/home/sandbox/.local/share/pnpm"' \
       'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
       '[ -r "$HOME/.local/share/oh/python-env.sh" ] && . "$HOME/.local/share/oh/python-env.sh"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \

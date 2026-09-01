@@ -14,6 +14,23 @@ esac
 
 log() { echo "[provision-defaults] $*"; }
 
+# entrypoint.sh downgrades a failure here to a WARNING and lets boot continue, so
+# a sandbox can come up `healthy` with a harness or tool the operator explicitly
+# asked for simply absent. This marker is how that reaches the healthcheck: it is
+# written when a requested install is missing and removed on a clean run, so
+# `bash .oh/scripts/provision-defaults.sh` is both the documented recovery and the
+# thing that clears the signal.
+PROVISION_MARKER="${OH_PROVISION_MARKER:-$HOME/.local/share/oh/provision-failed}"
+
+mark_failed() {
+  mkdir -p "$(dirname "$PROVISION_MARKER")" 2>/dev/null || return 0
+  printf '%s\n' "$*" >"$PROVISION_MARKER" 2>/dev/null || true
+}
+
+clear_marker() {
+  rm -f "$PROVISION_MARKER" 2>/dev/null || true
+}
+
 die() {
   echo "[provision-defaults] ERROR: $1" >&2
   shift
@@ -166,17 +183,21 @@ if ((provisioned == 0)); then
 fi
 
 if [ "$MODE" = "verify" ] && ((${#missing[@]})); then
+  mark_failed "not installed: ${missing[*]}"
   die "defaults are not installed: ${missing[*]}" \
       "run inside the sandbox (\`oh shell\` from the host):" \
       "  bash .oh/scripts/provision-defaults.sh"
 fi
 
 if ((${#failed[@]})); then
+  mark_failed "failed to install: ${failed[*]}"
   die "failed to install: ${failed[*]}" \
       "each install runs as '$SANDBOX_USER' into $NPM_USER_PREFIX; a network outage is the usual cause." \
       "re-run inside the sandbox once it has network:" \
       "  bash .oh/scripts/provision-defaults.sh"
 fi
+
+clear_marker
 
 if [ "$MODE" = "verify" ]; then
   log "OK  all $provisioned default harnesses and tools present under $NPM_USER_PREFIX"

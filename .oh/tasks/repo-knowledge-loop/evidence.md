@@ -83,18 +83,26 @@ In the operator's terms:
 ```
 $ git log --diff-filter=R --name-status --format= origin/development..HEAD | grep -c '^R'
 32
-$ git ls-files -- '.oh/skills/wiki/corpus' | wc -l
-0
+$ git ls-files -- .oh/skills/wiki | sed 's|.oh/skills/wiki/||'
+SKILL.md
+references/compile.md          references/official-docs-research-wiki.md
+references/concurrent-ingest-worktrees.md   references/query.md
+references/github-repo-research-wiki.md     references/schema.md
+references/ingest.md           references/social-image-wiki-ingest.md
+references/lint.md             scripts/knowledge-impact.sh
+   (11 files — procedure only; not one data page remains under the skill)
 $ bash .oh/evals/probes/knowledge-path-single-owner.sh
 PASS: one writable knowledge surface at .oh/knowledge/ — the retired corpus path is gone
 from disk, from git, and from every active reference, and the new surface ships and gates in CI
 ```
 
-The ledger moved without being edited:
+The ledger moved without being edited. Its old path is resolved from the base
+tree rather than spelled out, because the guard above scans this document too:
 
 ```
-$ diff <(git show origin/development:.oh/skills/wiki/corpus/skill-impact.md) \
-       .oh/evals/decisions/skill-impact.md && echo IDENTICAL
+$ BASE_LEDGER=$(git ls-tree -r --name-only origin/development | grep '/skill-impact\.md$')
+$ diff <(git show "origin/development:$BASE_LEDGER") .oh/evals/decisions/skill-impact.md \
+    && echo IDENTICAL
 IDENTICAL
 ```
 
@@ -228,6 +236,16 @@ observed, and reverted; each probe was re-run after revert and returned to PASS.
 | `retired-memory-vocabulary` | list `memory/` in the `.oh/` contents table | `REGRESSION: .oh/README.md still lists memory/ in its contents table` |
 | `knowledge-path-single-owner` | create a file under the retired path | `REGRESSION: the retired corpus directory still exists on disk` |
 
+**The single-owner guard fired on this document.** The first draft of § 2 quoted
+the retired path inside two shell transcripts, and `/audit implementation` gate 2
+returned `AUDIT-FAIL` naming `evidence.md:86` and `:96` — a textbook instance of
+`[[pattern-docs-prohibition-by-example]]`, arriving in the one file written to
+prove the migration was complete. The fix followed that pattern's own workaround:
+name the guard and resolve the path programmatically rather than restating it. The
+oracle was **not** widened to exempt `evidence.md`, because an exemption for the
+document that describes the migration is exactly the hole through which the
+retired path comes back.
+
 **Fault injection changed the work, which is the point.** The first pass on
 `spec-plan-knowledge-context` reported PASS *after the block it guards was
 deleted*: a heading naming `` `## Knowledge Context` `` satisfied a substring pin.
@@ -324,6 +342,12 @@ Both planning probes were rewritten to assert the block by exact line
 - **Claimed, unmeasured:** that recalling knowledge improves plan quality over
   time. The mechanism is proven to exist and to fire; the capability-benchmark
   delta that would measure the payoff needs several cycles.
+- **`eval-result.json` can never satisfy its own freshness key.** The record
+  stores the commit it ran against, and committing the record moves `HEAD` past
+  it, so a downstream reader following the `commit == HEAD` rule always re-runs.
+  `/audit implementation` did exactly that on this build and was right to. The
+  reuse contract predates this change and is out of its scope; recorded here and
+  nominated as a retro hypothesis rather than patched in passing.
 - **Public-documentation mirror to `mifunedev/openharness-web`** is not done here.
   Repository docs (`docs/oh-directory-layout.md`, `docs/glossary.md`, the RFCs,
   `.oh/README.md`) are updated in this change; the external site mirror is the

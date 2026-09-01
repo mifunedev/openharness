@@ -368,7 +368,7 @@ Write the unit with every number. Write the absolute path or the repo-relative p
 
 ```text
 Wrong: The timeout is large. Edit the config in the scripts folder.
-Right: `/spec execute` keeps implementation in one Advisor-owned session. Read `.oh/skills/spec/references/execute.md` for the workflow.
+Right: `/spec execute` keeps implementation with one owner. Read `.oh/skills/spec/references/execute.md` for the workflow.
 ```
 
 ### 39. A heading is not an antecedent

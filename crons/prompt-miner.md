@@ -90,8 +90,9 @@ Read the mined markers (stratified by session type; see `references/markers.md`)
 
 ### 3. Ship the candidate to origin via `/spec`
 
-Hand the issue to `/spec`, which owns plan and build end-to-end (worktree Advisor,
-`/delegate` + the Advisor-owned implementation workflow, the `/eval` gate, `/audit pr` undraft) and targets the fork:
+Hand the issue to `/spec`, which owns plan and build end-to-end (isolated worktree,
+single-owner implementation with bounded `/delegate` fan-out, the `/eval` gate, `/audit pr`
+undraft) and targets the fork:
 
 ```bash
 /spec plan --issue <N> --repo mifunedev/openharness --base development

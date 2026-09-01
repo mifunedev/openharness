@@ -30,6 +30,16 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Changed
 - `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
+- **BREAKING:** `/spec execute` no longer launches a coding agent: the agent that runs it is the single implementation owner through the final PR gates ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- Task identity and `RUNNING` state depend on `.oh/tasks/<slug>/` alone, never on a tmux session name, Herdr tab or pane id, or another runtime handle ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- Rename the `advisor-monitored-loop` probe to `spec-single-owner` and reword ownership prose from "Advisor" to "implementation owner" across skills, crons, and docs ([#928](https://github.com/mifunedev/openharness/issues/928)).
+
+### Removed
+- **BREAKING:** Retire the automated `/spec` Advisor handoff — the detached tmux launch, `agent-spec-*` sessions, `tmux pipe-pane` logging, and every runner fallback ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- Drop the `agent-spec-*` session kill from the weekly `cleanup-tasks` sweep; archival keys on the `progress.txt` `STATUS: COMPLETE` marker alone ([#928](https://github.com/mifunedev/openharness/issues/928)).
+
+### Added
+- Add four tier-A probes: `spec-no-agent-handoff`, `spec-no-advisor-session-coupling`, `cleanup-no-agent-session-coupling`, and `headless-tmux-preserved` ([#928](https://github.com/mifunedev/openharness/issues/928)).
 
 ### Added
 - Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))

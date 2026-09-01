@@ -34,7 +34,7 @@ runs only that node, which is what fan-out and recovery need.
 
 This is the **only** spec pipeline; there is no all-in-one composer beside it.
 `references/execute.md` holds the build mechanics in full — the issue, the branch,
-the draft PR, the build launch, the `/eval` and wiki gates, the promotable
+the draft PR, the implementation, the `/eval` and wiki gates, the promotable
 classification, and the undraft — so learning what the build does never sends a
 reader to a second skill. The dispatcher splits the pipeline so each node can be
 run independently or fanned out at scale via `/delegate`.
@@ -51,7 +51,10 @@ approval, so `ship` carries it through to `execute` without a second prompt. A b
 topic with no plan file has no such approval behind it: `ship` stops after `plan` and
 hands the operator the folder to approve. `/spec execute` runs
 `build ⇄ audit → evidence → spec-retro → improve` and stops at a ready-for-review
-pull request. The human alone merges. The runner performs `reset` or `clean`.
+pull request. **`/spec` never launches another coding-agent process to do that work** —
+the agent invoking `execute` is the single implementation owner, from the isolated
+worktree through the final PR gates. The human alone merges. The runner performs
+`reset` or `clean`.
 
 The `.oh/tasks/<slug>/` folder is the interface between all three subcommands.
 `evidence.md` records plan requirements, build results, reasons for divergence,
@@ -105,17 +108,18 @@ esac
   four direct references. Do not duplicate the workflow in root instructions.
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces it;
   `execute` and `retro` are each pointed at it. The `<slug>` is the
-  universal key (task directory, branch second segment, tmux session name).
+  universal key (task directory, branch second segment). It is never a terminal
+  identifier — no tmux session name, Herdr tab or pane id, or other runtime handle.
 - **Compose, don't fork** — each node reuses existing skills rather than
   re-implementing them: `ship` composes `plan` then `execute` and owns no build
-  mechanics of its own; `plan` composes `/prd` + `/ralph`; `execute` owns the
-  implementation in one Advisor session, uses `/delegate` only for bounded fan-out,
+  mechanics of its own; `plan` composes `/prd` + `/ralph`; `execute` is owned by the
+  agent running it, uses `/delegate` only for bounded fan-out,
   and composes `/audit implementation` + `/eval` + `/audit pr`; `retro` composes
   `/retro`. The build **literals** — the `gh` invocations, the branch and PR shapes,
-  the Advisor launch, and the handoff-free implementation rules — live in
+  and the handoff-free implementation rules — live in
   `references/execute.md`, which is the single source for them and is a protected path.
 - **One adversarial loop** — `implementation ⇄ audit` inside `execute` vets the
-  implementation (`AUDIT-FAIL` routes back to the same Advisor session). The plan
+  implementation (`AUDIT-FAIL` routes back to the same owner). The plan
   itself is vetted by the operator who approves it: **approving `prd.md` is the
   commitment gate**, and nothing GitHub-side exists until `execute` starts.
 - **Honest terminal reports** — each subcommand reports what it actually produced: `plan`

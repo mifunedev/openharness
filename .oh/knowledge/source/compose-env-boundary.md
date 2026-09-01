@@ -4,9 +4,11 @@ slug: compose-env-boundary
 kind: repo
 tags: [compose, devcontainer, oh-json, cli, entrypoint, boundary, provisioning, sandbox]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 sources:
   - .devcontainer/docker-compose.yml
+  - .oh/scripts/docker-compose.sh
+  - .oh/scripts/deployment-compose.sh
   - .devcontainer/docker-compose.image-only.yml
   - .devcontainer/entrypoint.sh
   - .oh/cli/src/lib/config-render.ts
@@ -26,6 +28,8 @@ confidence: confirmed
 - `.oh/cli/src/lib/config-render.ts` — renders the host-side subset into `.devcontainer/.env`, and refuses to render anything in `RETIRED_KEYS`.
 - `.oh/scripts/provision-defaults.sh` — installs harnesses and tools from the catalogs, keyed on oh.json rather than the environment.
 - `.oh/evals/probes/compose-env-boundary.sh` — the tier-A probe that enforces the rule across every compose file and overlay.
+- `.oh/scripts/docker-compose.sh` — the lifecycle door's driver; pins flavor A's compose file and passes the rendered dotenv as `--env-file`.
+- `.oh/scripts/deployment-compose.sh` — flavor B's driver; pins the image-only compose file and passes no `--env-file` at all.
 
 ## Summary
 A value reaches the sandbox through Compose only if a process **outside** the sandbox — or the entrypoint **before** the control plane is readable — must act on it. Everything else lives in the tracked `oh.json` and is read inside the container through the `oh` CLI. The rule exists because the consumer at the end of the old `oh.json → config-render → .env → compose → entrypoint` pipeline sits in the home mount next to the CLI and can read `oh.json` directly; the hop bought nothing and cost three defects.
@@ -39,7 +43,9 @@ Four compose `environment:` literals survive that no config read can supply: `SA
 
 Two guards keep the boundary closed. `RETIRED_KEYS` throws if a `put()` for a retired variable is ever re-added (`.oh/cli/src/lib/config-render.ts:56`), and the tier-A probe fails on any `INSTALL_*` key, on `OH_IMAGE_ONLY`, or on any `environment:` key outside the rendered set — across every `docker-compose*.yml` including overlays. Overlay `ports:` and `volumes:` blocks are unrestricted; that payload is the part only Docker can act on.
 
-Non-goals worth recording so a later reader does not treat them as oversights: flavor B survives, because `/opt/oh-seed` ships regardless and deleting the no-checkout deploy would be a product decision, not a cleanup; `INSTALL_PYTHON_KERNEL` remains, because it is a Dockerfile↔entrypoint duplication rather than a compose one; and every retired `oh.json` field stays settable through `oh config set` — only its `.env` projection is gone.
+**Two drivers, and the dotenv is what separates them.** `docker-compose.sh` is the door for the flavor `oh` manages: it pins `.devcontainer/docker-compose.yml`, layers the `composeOverrides[]`, and passes the rendered dotenv as `--env-file`. That dotenv is exactly the host-side subset above, so it carries the operator's own `SANDBOX_NAME`, `OH_SANDBOX_IMAGE`, and `OH_PULL_POLICY`. A caller that wants to boot a *different* image under a *different* project name therefore cannot reuse it, and `.oh/scripts/deployment-compose.sh` exists for that: it pins `.devcontainer/docker-compose.image-only.yml`, passes no `--env-file`, takes its whole configuration from the environment its caller exports, and points `DOCKER_CONFIG` at an empty directory so an ambient `credsStore` cannot fail an anonymous pull. It adds no compose file and no `environment:` key, so the boundary probe's scope is unchanged. `.oh/scripts/deployment-guard.sh` — and through it `/deploy-check` and `.github/workflows/deployment-guard.yml` — is its only caller (#937).
+
+Non-goals worth recording so a later reader does not treat them as oversights: flavor B survives, and since #937 it is no longer only a survivor — it is the flavor the deployment guard boots, so the entrypoint's seed branch and the boot-time install now have a live oracle instead of only the in-process simulation in `oh-image-only-deploy.sh`; `INSTALL_PYTHON_KERNEL` remains, because it is a Dockerfile↔entrypoint duplication rather than a compose one; and every retired `oh.json` field stays settable through `oh config set` — only its `.env` projection is gone.
 
 ## System Relationships
 ```mermaid

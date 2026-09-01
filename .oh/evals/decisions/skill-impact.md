@@ -100,3 +100,11 @@ a pattern to cite.
 - **motivating patterns**: [[pattern-evals-unexercised-oracle]], [[pattern-evals-prose-literal-pinning]]
 - **proposer**: /builder skill, closing the `/retro` nominations rather than leaving them to decay
 - **diff**: `.oh/evals/README.md` §§ "Fault injection" and "Pinning contract text"; `.oh/evals/probes/continual-learning-20260831.sh`; `.oh/evals/probes/eval-contract-text-20260831.sh`. Both probes had every REGRESSION branch driven against injected faults before landing (5 injections, 5 caught).
+
+## SI-0004 · 2026-08-31 · builder · PROPOSED
+
+- **proposal**: add `/deploy-check`, an operator-facing skill that validates a deployment of the sandbox image in a throwaway container without touching the operator's own sandbox, as the local door to `.oh/scripts/deployment-guard.sh`
+- **target**: `.oh/skills/deploy-check/SKILL.md`
+- **motivating patterns**: [[pattern-wiki-ungated-check-drift]] — `docs/deployment-prebuilt-image.md` shipped a section titled "Manual live-host smoke checklist (non-gating)", which is that pattern's exact shape; the workaround it prescribes is to give the check a deterministic runner and let a suite enforce the findings, which this skill and its CI twin do. [[pattern-evals-unexercised-oracle]] — the accompanying probe ships with a `DEPLOY_GUARD_PROBE_ROOT` override so its REGRESSION branch stays reachable, and all 20 injections were driven red before it landed.
+- **proposer**: /builder skill, invoked from `/spec` on issue #937 after the operator asked for a local instrument rather than a CI-only one
+- **diff**: `.oh/skills/deploy-check/SKILL.md` (new); mechanism in `.oh/scripts/deployment-guard.sh`, guarded by `.oh/evals/probes/deployment-guard-ci.sh`

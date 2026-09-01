@@ -21,7 +21,7 @@
 # It never runs any `prune` verb and never touches a resource it did not create.
 #
 # Usage: deployment-guard.sh [--keep] [--run <token>] [<image-ref>]
-# Env:   OH_SANDBOX_IMAGE, OH_DEPLOY_RUN, OH_DEPLOY_KEEP,
+# Env:   OH_SANDBOX_IMAGE, OH_DEFAULT_SANDBOX_IMAGE, OH_DEPLOY_RUN, OH_DEPLOY_KEEP,
 #        OH_DEPLOY_TIMEOUT_SECONDS, OH_DEPLOY_DOCKER_CONFIG
 
 set -euo pipefail
@@ -33,7 +33,7 @@ IMAGE_VERIFIER="$SCRIPT_DIR/verify-sandbox-image.sh"
 BOOT_SMOKE="$SCRIPT_DIR/sandbox-boot-smoke.sh"
 COMPOSE_FILE="$REPO_DIR/.devcontainer/docker-compose.image-only.yml"
 
-DEFAULT_IMAGE=ghcr.io/mifunedev/openharness:latest
+DEFAULT_IMAGE=${OH_DEFAULT_SANDBOX_IMAGE:-ghcr.io/mifunedev/openharness:latest}
 PROJECT_ROOT=/home/sandbox/harness
 SEED_MARKER="$PROJECT_ROOT/.oh/.image-seeded"
 

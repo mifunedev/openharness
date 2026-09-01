@@ -17,8 +17,8 @@
         "It adds no compose file and no compose `environment:` key, so .oh/evals/probes/compose-env-boundary.sh still passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "shellcheck clean; `deployment-compose.sh config --quiet` exits 0 and resolves name/container/image from the exported env with no dotenv read; compose-env-boundary probe still PASS."
     },
     {
       "id": "US-002",
@@ -34,8 +34,8 @@
         "shellcheck -S warning passes on the file"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "BOOT_SMOKE_FLAVOR=bogus exits 2 naming the accepted values; the live image-only run printed \"sandbox boot smoke ok [image-only] ... no bind-ownership check on this flavor\"; verify_default_catalog reused byte-for-byte."
     },
     {
       "id": "US-003",
@@ -57,8 +57,8 @@
         "shellcheck -S warning passes on the file"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Live run against :latest printed 32 ok: lines and exit 0. Negative run against :0.5.1 exit 1 with 6 named failures. Collision and SIGTERM tests both left the daemon byte-identical."
     },
     {
       "id": "US-004",
@@ -77,8 +77,8 @@
         "Every path, command, and flag named in the skill body is verified to exist before the skill is reported done"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Skill mirrored through .claude/skills (symlink); link-providers --check exits 0; frontmatter and every named path/command/sibling-skill verified; SI-0004 appended to the skill-impact ledger."
     },
     {
       "id": "US-005",
@@ -99,8 +99,8 @@
         "shellcheck -S warning passes on the file"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "20/20 fault injections caught via DEPLOY_GUARD_PROBE_ROOT, baseline green on an unmodified copy; runs sub-second; RESULTS.md row added."
     },
     {
       "id": "US-006",
@@ -115,8 +115,8 @@
         "It does not push, log in to a registry, request packages write, or reference secrets beyond the default token"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Workflow parses; workflow_run on Release + workflow_dispatch; no push/login/packages:write. NOT yet fired \u2014 workflow_run only fires from the default branch, so first proof is the release after merge."
     },
     {
       "id": "US-007",
@@ -130,8 +130,8 @@
         "No other section of the file changes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "\"non-gating\" no longer appears in docs/deployment-prebuilt-image.md; the section now points at /deploy-check, the guard, and the workflow; the defaults sentence names the catalogs as the source of truth."
     },
     {
       "id": "US-008",
@@ -148,8 +148,8 @@
         "`bash .oh/skills/eval/run.sh` reports no green-to-red transition"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Full pass, discrimination, interrupt, and collision tests all run on a daemon with 13 pre-existing containers; every inventory byte-identical. Bind-flavor live non-regression is delegated to sandbox-boot-guard.yml on this PR (disclosed in evidence.md)."
     },
     {
       "id": "US-009",
@@ -163,8 +163,8 @@
         "`bash .oh/skills/wiki/scripts/knowledge-impact.sh` reports no page left NEEDS-REVIEW by this diff without being addressed"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "knowledge-impact.sh reported no NEEDS-REVIEW; the Expected union resolved as compose-env-boundary UPDATED (verified_at advanced after re-reading cited claims), audit-architecture UPDATED (verified_at deliberately not advanced), sandbox-dependency-installs NOT-AFFECTED. wiki-readme-index PASS."
     }
   ]
 }

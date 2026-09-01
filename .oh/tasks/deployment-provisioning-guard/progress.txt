@@ -17,3 +17,33 @@ primary door is a `/deploy-check` skill for local validation in a throwaway
 sandbox, with CI as its second consumer. Added R0 and US-004; renumbered the
 remaining stories. Recorded in prd.md under Plan Reconciliation as an
 operator-directed deviation, already approved by the instruction itself.
+
+2026-09-01 execute — implemented all 9 stories on task/937-deployment-provisioning-guard.
+Files: .oh/scripts/deployment-compose.sh (new), .oh/scripts/deployment-guard.sh (new),
+.oh/scripts/sandbox-boot-smoke.sh (BOOT_SMOKE_FLAVOR switch, only edit),
+.oh/skills/deploy-check/SKILL.md (new), .oh/evals/probes/deployment-guard-ci.sh (new),
+.github/workflows/deployment-guard.yml (new), docs/deployment-prebuilt-image.md,
+.oh/scripts/README.md, .oh/evals/decisions/skill-impact.md (SI-0004),
+.oh/knowledge/source/{compose-env-boundary,audit-architecture}.md, .oh/knowledge/README.md.
+Commits: 084dfaa0 (implementation), plus this tail commit.
+
+Results. Live run against ghcr.io/mifunedev/openharness:latest: 32 ok: lines, exit 0,
+~6 min. Negative run against :0.5.1: exit 1, 6 named failures including the seed-branch
+and seed-marker assertions and the install check's vacuity guard. Interrupt (SIGTERM
+mid-boot) and collision (--run on an existing container name) both left the daemon's
+13 containers / 34 volumes / 10 networks byte-identical. Probe: 20/20 fault injections
+caught, baseline green. /eval: exit 0, 139 probes, no green->red delta.
+
+Learnings.
+- The plan's claim that teardown is inherited from the boot smoke's trap was wrong: the
+  smoke tears down on SUCCESS too, so the guard neutralises BOOT_SMOKE_DOWN_ARGS and owns
+  teardown itself.
+- A bare `docker inspect` re-exposes Config.Env and is rejected by a repository guard;
+  narrow --format templates are both safer and shorter.
+- `oh harness list --json` exposes `enabled` (computed from oh.json) but not `harnessKey`,
+  so the persist half is asserted through the CLI's own view rather than by duplicating
+  its id-to-field mapping in shell.
+- oh-shipped-repo-overridable caught a real new regression: the hardcoded default image
+  ref. Fixed with the ${OH_DEFAULT_SANDBOX_IMAGE:-...} form.
+- The planner predicted sandbox-dependency-installs would need an update; the diff says
+  NOT-AFFECTED. That is the step-6 gate doing its job.

@@ -4,7 +4,7 @@ slug: audit-architecture
 kind: repo
 tags: [audit, pr, workflow, safety, observability]
 created: 2026-07-17
-updated: 2026-08-12
+updated: 2026-09-01
 sources:
   - raw/2026-07-17-audit-architecture.md
   - .oh/skills/audit/SKILL.md
@@ -30,7 +30,7 @@ confidence: confirmed
 `/audit` is one explicit namespace over nine audit targets. It routes to specialized protocols without flattening their native verdicts, while private PR and recovery primitives provide deterministic evidence shared by workflow callers.
 
 ## Detail
-The public targets are `implementation`, `pr`, `prs`, `harness`, `context`, `skills`, `eval-quality`, `drift`, and `full` (`.oh/skills/audit/SKILL.md:25`). `/eval`, `/benchmark`, `/ci-status`, `/health-check`, and `/wiki lint` remain independent instruments because they execute floors, ceilings, polling, readiness, remediation, or corpus maintenance rather than owning audit targets.
+The public targets are `implementation`, `pr`, `prs`, `harness`, `context`, `skills`, `eval-quality`, `drift`, and `full` (`.oh/skills/audit/SKILL.md:25`). `/eval`, `/benchmark`, `/ci-status`, `/health-check`, `/deploy-check`, and `/wiki lint` remain independent instruments because they execute floors, ceilings, polling, readiness, remediation, or corpus maintenance rather than owning audit targets. `/deploy-check` (#937) is the newest of them and the clearest case: it boots a throwaway container from a published image and asserts what provisioned, which is a live readiness floor rather than a report over repository state.
 
 PR acquisition is network-facing but classification is pure JSON-in/JSON-out. Real GitHub CheckRun shapes may carry `status: COMPLETED` alongside a terminal conclusion; failure conclusion takes precedence, pending status follows, and unknown/malformed combinations fail evidence closed. Readiness is intentionally split: `readyForReview` applies only to a green/mergeable/clean draft, `readyToMerge` only to a corresponding non-draft with approved or explicitly review-free state, and `promotable` is their union (`.oh/skills/audit/references/pr-classification.md:5`). Audit never undrafts or merges.
 

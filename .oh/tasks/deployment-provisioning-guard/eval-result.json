@@ -1,0 +1,9 @@
+{
+  "commit": "084dfaa0fbb7822b3c3dcb1f1cad3da126949f63",
+  "runnerExit": 0,
+  "ranAt": "2026-09-01T04:21:05Z",
+  "probeCount": 139,
+  "newRegressions": [],
+  "preExistingReds": ["compose-config-path-parity"],
+  "note": "compose-config-path-parity reports REGRESSION only in this checkout, because an untracked machine-local root .env makes docker-compose.sh prefer it over .devcontainer/.env. A fresh worktree of the same origin/development tree reports PASS, so the committed RESULTS.md row keeps PASS; the local red is disclosed in evidence.md and is not caused by this branch. The runner classified it PERSISTENT RED, not gating, delta=unchanged."
+}

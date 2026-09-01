@@ -1,11 +1,16 @@
 ---
 title: "Plan-vs-Built Reconciliation"
 slug: plan-vs-built-reconciliation
+kind: repo
 tags: [spec-execute, evidence, merge-gate, comprehension, audit, task-folder, review]
 created: 2026-08-24
 updated: 2026-08-24
 sources:
   - raw/2026-08-24-plan-vs-built-reconciliation.md
+  - .oh/skills/spec/references/execute.md
+  - .oh/skills/audit/references/reviewer-evidence-doc.md
+  - .oh/evals/probes/spec-ready-finalization.sh
+verified_at: 4ea6e01e6dfe05127864afa940c4db77b0c06b28
 related: [audit-architecture]
 confidence: provisional
 ---

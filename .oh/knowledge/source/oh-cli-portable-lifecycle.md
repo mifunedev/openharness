@@ -1,6 +1,7 @@
 ---
 title: "oh CLI Portable Lifecycle"
 slug: oh-cli-portable-lifecycle
+kind: repo
 tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
 created: 2026-07-03
 updated: 2026-08-27
@@ -21,6 +22,7 @@ sources:
   - .oh/README.md
   - docs/oh-directory-layout.md
   - docs/rfcs/rfc-brain-hands-boundary.md
+verified_at: af16fc85be4468a5681ba87b0d27b371cbd54db2
 related: [fresh-machine-setup]
 confidence: provisional
 ---

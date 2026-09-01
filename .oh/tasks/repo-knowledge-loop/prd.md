@@ -9,7 +9,7 @@ Issue: [#926](https://github.com/mifunedev/openharness/issues/926) · slug
 - **Base commit**: `ecc49800a7d6a7bd525099383998865a3e6a1a49`
 - **Queries**: `wiki knowledge corpus compile`, `spec plan execute retro`,
   `evals probes oracles`, `docs vocabulary guards` (run against the tracked
-  corpus at the base commit, before any migration)
+  knowledge set at the base commit, before any migration)
 - **Knowledge used**:
   `[[wikiskill-experience-compilation]]`, `[[plan-vs-built-reconciliation]]`,
   `[[audit-architecture]]`, `[[pattern-wiki-external-model-over-mapping]]`,
@@ -142,7 +142,7 @@ into durable patterns — with the redundant surfaces retired in the same change
 
 ### US-001 — `.oh/knowledge/` becomes the knowledge surface
 
-Migrate `.oh/skills/wiki/corpus/**` to `.oh/knowledge/{source,patterns,raw,local}/`
+Migrate the retired corpus path to `.oh/knowledge/{source,patterns,raw,local}/`
 with no compatibility alias, update `.gitignore` so `source/` and `patterns/` are
 tracked while `raw/` and `local/` are ignored, add `knowledge/**` to
 `.oh/manifest.json`, add `.oh/knowledge/**` to the CI path filters, and move

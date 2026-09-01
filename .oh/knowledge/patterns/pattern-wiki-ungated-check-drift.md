@@ -6,7 +6,7 @@ tags: [wiki, lint, evals, probes, report-only, drift, gating]
 created: 2026-08-31
 updated: 2026-08-31
 sources:
-  - .oh/skills/wiki/corpus/recursive-language-models.md@8fab04ab
+  - .oh/knowledge/source/recursive-language-models.md@8fab04ab
   - .oh/skills/wiki/references/lint.md@8fab04ab
   - .oh/evals/probes/wiki-readme-index.sh@8fab04ab
 confidence: provisional
@@ -16,7 +16,7 @@ confidence: provisional
 
 ## Relevant Source Files
 - `.oh/skills/wiki/references/lint.md` — the six health checks, all report-only.
-- `.oh/skills/wiki/corpus/recursive-language-models.md@8fab04ab` — carried three unresolvable links for two months.
+- `.oh/knowledge/source/recursive-language-models.md@8fab04ab` — carried three unresolvable links for two months.
 - `.oh/evals/probes/wiki-related-slugs.sh` — the probe minted to close this instance.
 - `.oh/skills/spec/references/execute.md` — where the groom triad was deliberately cut from the cycle.
 
@@ -26,7 +26,7 @@ being run at all. Its findings do not accumulate as visible debt; they accumulat
 silence, and the check's own green-looking absence is mistaken for health.
 
 ## Detail
-**Symptom.** `.oh/skills/wiki/corpus/recursive-language-models.md@8fab04ab` shipped
+**Symptom.** `.oh/knowledge/source/recursive-language-models.md@8fab04ab` shipped
 `related: [inspectable-agent-harness, prompt-miner, repo2rlenv]` and three matching
 `[[slug]]` body links. None of the three slugs has ever existed in the corpus. The
 `related:` list was genuinely unchecked, but the body links were covered by `/wiki

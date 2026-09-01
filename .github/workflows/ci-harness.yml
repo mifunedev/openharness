@@ -25,6 +25,7 @@ on:
       - "crons/**"
       - ".devcontainer/**"
       - ".oh/evals/**"
+      - ".oh/knowledge/**"
       - "AGENTS.md"
       - "CLAUDE.md"
   pull_request:
@@ -47,6 +48,7 @@ on:
       - "crons/**"
       - ".devcontainer/**"
       - ".oh/evals/**"
+      - ".oh/knowledge/**"
       - "AGENTS.md"
       - "CLAUDE.md"
 

@@ -15,8 +15,9 @@
 
 # Wiki Compile
 
-Consolidate a `/retro` or `/spec retro` report into `kind: pattern` entries — the
-harness's durable record of its own failure modes and working strategies.
+Consolidate a `/retro` report into `kind: pattern` entries under
+`.oh/knowledge/patterns/` — the harness's durable record of its own failure
+modes and working strategies.
 
 This is the Wiki Maintainer role. It exists because the harness produces lessons and
 discards them: `/retro` nominates probe ids and writes nothing, and no skill owns the
@@ -26,15 +27,16 @@ that gap without touching `/retro`, whose report-only contract is guarded by
 
 ## When to Use
 
-- After `/retro` or `/spec retro` emits a report with at least one `supported`
-  hypothesis at `medium` or `high` confidence.
+- After `/retro` (including its task-scoped form, `/retro --task <slug>`) emits a
+  report with at least one `supported` hypothesis at `medium` or `high`
+  confidence.
 - To record counter-evidence against a pattern a later run refuted.
 - Before `/builder` proposes a skill change, so the proposal has a pattern to cite.
 
 ## When NOT to Use
 
 - **`/wiki ingest`** — for an external source. `compile` never fetches a URL and
-  never writes to `corpus/raw/`.
+  never writes to `.oh/knowledge/raw/`.
 - **A per-run note.** One page per failure mode, never one per run. See the
   anti-patterns.
 - **An `inconclusive` hypothesis.** It is not knowledge yet.
@@ -49,7 +51,7 @@ that gap without touching `/retro`, whose report-only contract is guarded by
 |----------|---------|
 | *(none)* | Consume the `/retro` report already present in the current session's context. This is the normal path — `/retro` writes no file, so its report exists only as terminal output. |
 | `--from <path>` | Read the report from a file: an operator-saved copy, or a sub-agent draft at `$TMPDIR/oh-wiki-drafts/<slug>.md`. |
-| `--task <slug>` | Scope to `.oh/tasks/<slug>/`. Used to derive pinned-evidence `sources:` paths and to read `prd.md`, `progress.txt`, and `critique.md` as corroborating evidence. |
+| `--task <slug>` | Scope to `.oh/tasks/<slug>/`. Used to derive pinned-evidence `sources:` paths and to read `prd.md`, `progress.txt`, and `evidence.md` as corroborating evidence. |
 | `--dry-run` | Print the proposed create-or-patch for each target page. Write nothing. |
 
 The interface is locked; adding a flag requires editing this reference and
@@ -90,7 +92,7 @@ GOOD  pattern-eval-probe-provenance-decay
 BAD   pattern-2026-08-31-retro-findings
 ```
 
-The `<subsystem>` token is the **corpus's** subsystem vocabulary — the prefix a
+The `<subsystem>` token is the **knowledge base's** subsystem vocabulary — the prefix a
 reader would grep for (`evals`, `wiki`, `docs`, `spec`) — not `/retro`'s
 five-lens taxonomy, which names where a signal was *noticed* rather than what the
 page is about. A lesson noticed through the continual-learning lens about probe
@@ -105,7 +107,7 @@ directions, they are two.
 Enumerate existing patterns before writing:
 
 ```bash
-ls .oh/skills/wiki/corpus/pattern-*.md 2>/dev/null
+ls .oh/knowledge/patterns/pattern-*.md 2>/dev/null
 ```
 
 If a page for that failure mode exists, **patch it**. A run that surfaces three
@@ -114,7 +116,7 @@ lessons about one failure mode produces one patch, not three pages.
 ### 4. Create or patch
 
 **Create** follows the pattern body layout in
-`.oh/skills/wiki/references/schema.md` § 2: `kind: pattern`, `confidence:
+`.oh/skills/wiki/references/schema.md` § 3: `kind: pattern`, `confidence:
 provisional`, a required `## Relevant Source Files`, and `## Detail` carrying
 `**Symptom.**`, `**Root cause.**`, and `**Workaround.**` as bold leads.
 
@@ -131,19 +133,21 @@ the per-session journal tier the harness deliberately removed, wearing a new nam
 and would launder around `/retro`'s report-only contract.
 
 **Patch** applies the body-merge strategy in
-`.oh/skills/wiki/references/schema.md` § 7 as amended by § 7a. This reference does
-not restate those steps and must not diverge from them. The load-bearing part of
-§ 7a: `**Workaround.**` is append-only, and a workaround shown not to work is
+`.oh/skills/wiki/references/schema.md` § 11 as amended by § 11a. This reference
+does not restate those steps and must not diverge from them. The load-bearing
+part of § 11a: `**Workaround.**` is append-only, and a workaround shown not to work is
 annotated `(superseded YYYY-MM-DD, SI-nnnn)` rather than deleted.
 
 ### 5. Promote and reindex
 
-Pattern pages are always force-added. An untracked pattern page is invisible
-provenance, and it is the corpus's only durable record of what a rejected cycle
-taught.
+Pattern pages are always staged. An untracked pattern page is invisible
+provenance, and it is the knowledge base's only durable record of what a rejected
+cycle taught. `.oh/knowledge/patterns/` is tracked by default
+(`schema.md` § 2), so a plain `git add` is enough — the `-f` the gitignored
+corpus used to need is gone with it.
 
 ```bash
-git add -f .oh/skills/wiki/corpus/pattern-<name>.md
+git add .oh/knowledge/patterns/pattern-<name>.md
 ```
 
 Then regenerate the index by running `/wiki lint` (non-dry-run) and verify:
@@ -152,7 +156,7 @@ Then regenerate the index by running `/wiki lint` (non-dry-run) and verify:
 bash .oh/evals/probes/wiki-readme-index.sh
 ```
 
-`compile` never hand-edits `.oh/skills/wiki/corpus/README.md` — `lint` owns it.
+`compile` never hand-edits `.oh/knowledge/README.md` — `lint` owns it.
 
 ### 6. Report
 
@@ -180,7 +184,7 @@ The `.oh/memory` tier was removed as a concept (`CHANGELOG.md`) because it held 
 entry per session, keyed by date, with no consumer. Every structural property here is
 the opposite:
 
-| `.oh/memory` (deleted) | `corpus/pattern-*.md` |
+| `.oh/memory` (deleted) | `.oh/knowledge/patterns/pattern-*.md` |
 |---|---|
 | One entry per session, keyed by date | One page per **failure mode**, keyed by subsystem and mode |
 | Grew with every run | Grows only when a run teaches something not already recorded |
@@ -196,28 +200,28 @@ rather than appended to, and cited by a skill proposal, passes it.
 
 - **One page per run** — the single failure mode of this subcommand. A page named
   for a date is a journal entry. Name it for the failure mode and patch on repeat.
-- **Snapshotting the retro report into `corpus/raw/`** — see § 4. `raw/` is for
-  external sources; `/retro` output is ephemeral by contract.
+- **Snapshotting the retro report into `.oh/knowledge/raw/`** — see § 4. `raw/`
+  is for external sources; `/retro` output is ephemeral by contract.
 - **Compiling an `inconclusive` hypothesis** — the report already judged it not to be
-  knowledge. Compiling it launders a guess into the corpus.
+  knowledge. Compiling it launders a guess into the knowledge base.
 - **Deleting or blanking a pattern page because the change it motivated was
-  rejected** — forbidden by `.oh/skills/wiki/references/schema.md` § 8. That
+  rejected** — forbidden by `.oh/skills/wiki/references/schema.md` § 12. That
   knowledge is the rejected cycle's entire output.
-- **Replacing `## Detail` wholesale** — that is § 7 behavior for source pages. For a
-  pattern it erases accumulated failure knowledge; § 7a governs instead.
-- **Restating the merge steps here** — § 7 and § 7a own them. A second copy will
-  drift.
+- **Replacing `## Detail` wholesale** — that is § 11 behavior for entity pages.
+  For a pattern it erases accumulated failure knowledge; § 11a governs instead.
+- **Restating the merge steps here** — § 11 and § 11a own them. A second copy
+  will drift.
 - **Retired audit vocabulary in pattern prose** — the token list enforced by
-  `.oh/evals/probes/audit-stale-references.sh` covers every tracked file, this corpus
-  included. Read that probe's pattern before writing about an audit subsystem, and
+  `.oh/evals/probes/audit-stale-references.sh` covers every tracked file, this
+  knowledge base included. Read that probe's pattern before writing about an audit subsystem, and
   use the current route names.
 - **Skipping the reindex** — a new tracked pattern page without a regenerated
   `README.md` is an immediate `wiki-readme-index.sh` regression.
 
 ## See Also
 
-- `.oh/skills/wiki/references/schema.md` — § 2 pattern layout and placement, § 5 confidence, § 7a merge amendment, § 8 persistence invariant
+- `.oh/skills/wiki/references/schema.md` — § 2 layout and the tracked boundary, § 3 pattern body layout, § 8 confidence, § 11a merge amendment, § 12 persistence invariant
 - `.oh/skills/wiki/references/query.md` — the `--patterns` read path
 - `.oh/skills/wiki/references/lint.md` — index regeneration and the health checks
 - `.oh/skills/retro/SKILL.md` — the report this subcommand consumes; report-only by contract
-- `.oh/skills/wiki/corpus/skill-impact.md` — where the proposal a pattern motivates is recorded
+- `.oh/evals/decisions/skill-impact.md` — where the proposal a pattern motivates is recorded

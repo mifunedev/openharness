@@ -69,20 +69,21 @@ crons/*.log
 # Legacy/future workspace package build artifacts
 packages/*/build/
 packages/*/node_modules/
-# Wiki corpus owned by the /wiki skill — entries are local scratch by default;
-# the operator whitelists curated entries into git with `git add -f`. Raw
-# snapshots are immutable provenance, fully ignored except the directory anchor.
-.oh/skills/wiki/corpus/*
-!.oh/skills/wiki/corpus/README.md
-!.oh/skills/wiki/corpus/raw/
-.oh/skills/wiki/corpus/raw/*
-!.oh/skills/wiki/corpus/raw/README.md
+# Durable repository knowledge (.oh/knowledge/) is TRACKED: source/ and
+# patterns/ hold shared synthesis, raw/ holds the immutable external evidence
+# those pages cite. Only local/ is ignored — per-machine scratch that /wiki query
+# and every /spec flow refuse to read, so a page on one machine can never
+# silently inform a plan another machine cannot reproduce.
+.oh/knowledge/local/*
+!.oh/knowledge/local/README.md
 
-# Per-session agent memory and cron runtime state — local scratch, like the
-# wiki corpus above. Nothing here is tracked on any branch; the operator
-# whitelists an entry with `git add -f` if one is ever worth keeping.
-# Written by entrypoint.sh's seed_workspace_volume when there is no checkout bind.
-# It must never land in a real checkout, so it is ignored on every branch.
+# Cron runtime state written by entrypoint.sh's seed_workspace_volume when there
+# is no checkout bind. It must never land in a real checkout, so it is ignored on
+# every branch.
 .oh/.image-seeded
-.oh/memory/
 .oh/crons/
+
+# RETIRED COMPATIBILITY TOMBSTONE — .oh/memory/ was deleted as a concept; nothing
+# writes or reads it. This rule exists only so a stale directory left by a
+# pre-0.4.0 checkout can never be committed. Remove it in 0.7.0.
+.oh/memory/

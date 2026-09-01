@@ -9,6 +9,13 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
+- **BREAKING:** Move durable repository knowledge to a tracked `.oh/knowledge/` surface — `source/`, `patterns/`, `raw/` tracked, `local/` ignored — with no compatibility alias. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Make `/spec plan` recall tracked knowledge and re-ground it before the PRD; `prd.md` carries Knowledge Context, Expected Knowledge Impact, and Plan Reconciliation. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Derive final knowledge impact in `/spec execute` from the actual diff plus page dependencies, resolving every impacted page to UPDATED, REVERIFIED, or NOT-AFFECTED. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Replace age-based wiki staleness with source-change freshness: a `kind: repo` page pins `verified_at` and goes needs-review when a declared source changed after it. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Model detached `/spec execute` as PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(gate) in `/tmp/agent-spec-<slug>.state`; launching the Advisor reports RUNNING. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Reduce `/wiki lint` to six correctness checks and demote `/compact` to an optional non-gating step that runs only after evidence, retro, and pattern compilation. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Reduce `/spec retro` to an explicit wrapper around `/retro --task <slug>`, which `/retro` now accepts; `/retro` stays report-only and `/wiki compile` stays the durable pattern writer. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Move eleven settings out of the compose `environment:` block into oh.json, read through the `oh` CLI; a hand-edited `.devcontainer/.env` no longer carries them ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Make `/spec` ship by default: an unrecognized first token routes to a new `ship` node that runs `plan` then `execute`, so `/spec <plan-path>` produces a ready-for-review PR ([#914](https://github.com/mifunedev/openharness/issues/914)).
 - **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
@@ -18,6 +25,12 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
 
 ### Removed
+- **BREAKING:** Retire the `/spec ship` node; an unrecognized first token is an approved plan path that runs `plan` then `execute`, so `/spec <plan-path>` is unchanged. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire the generated `.oh/tasks/<slug>/prompt.md`; the Advisor launch prompt is rendered at execution time from its template and never persisted. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire the `STATUS: COMPLETE` sentinel; task completion derives from `prd.json` story state, which the `cleanup-tasks` cron now reads. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Move the skill-impact ledger to `.oh/evals/decisions/skill-impact.md`; it is a decision record, not a knowledge page. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Retire orphan detection and the 90-day rule as `/wiki lint` health failures; age survives as informational `last-reviewed` telemetry only. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Finish retiring `.oh/memory` from current architecture docs; the surviving `.gitignore` rule is labelled a compatibility tombstone with a 0.7.0 removal horizon. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Retire the `OH_IMAGE_ONLY` flag; `entrypoint.sh` detects the sandbox flavor from whether `/home/sandbox/harness` is a bind mount holding `.oh/`, and logs the detected mode ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - **BREAKING:** Retire `docker-compose.hermes-dashboard.yml` and its published `127.0.0.1:9119`; the dashboard now binds container loopback, reachable over cloudflared or Tailscale ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Remove the duplicate agent-browser and Tailscale installers from `entrypoint.sh`; the tool catalog is the sole owner of both pins and Tailscale's two checksums ([#920](https://github.com/mifunedev/openharness/issues/920)).
@@ -32,6 +45,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
 
 ### Added
+- Add `.oh/skills/wiki/scripts/knowledge-impact.sh`, the single dependency-aware invalidation primitive: `--verified` for `/wiki lint`, `--changed` for the `/spec execute` knowledge gate. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Add ten tier-A probes covering the knowledge surface, the planning recall and reconciliation gates, the RUNNING contract, structured completion, and the retired vocabulary. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))
 - Add `.oh/logs/`, gitignored by default with a tracked README, for records that outlive the session that wrote them; `/escalate` appends every attempt to `escalations.jsonl`. ([#919](https://github.com/mifunedev/openharness/issues/919))
 - Add `escalate-contract.sh`, a tier-A probe: a no-op names its reason, is recorded, and `--dry-run` makes no network call. ([#919](https://github.com/mifunedev/openharness/issues/919))

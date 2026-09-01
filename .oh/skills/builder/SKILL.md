@@ -65,7 +65,7 @@ steps.
   `/wiki query <artifact-name-or-subsystem> --patterns` and read what it returns:
   each page records a failure mode, its root cause, and a workaround this harness
   already paid for. Cite the motivating `[[pattern-...]]` slugs in the report.
-- Read `.oh/skills/wiki/corpus/skill-impact.md` for prior proposals against the same
+- Read `.oh/evals/decisions/skill-impact.md` for prior proposals against the same
   target. Do not re-propose a change recorded there as `REJECTED` unless new evidence
   contradicts the recorded validation; when you do, cite the prior record id.
 
@@ -105,7 +105,7 @@ or create unsafe side effects. Otherwise use the request and repository evidence
 - Report the files created, updated, or removed; the resulting invocation or loading
   behavior; key design choices; and validation evidence. Never claim a check ran if
   it did not.
-- Append a `PROPOSED` record to `.oh/skills/wiki/corpus/skill-impact.md` when a skill
+- Append a `PROPOSED` record to `.oh/evals/decisions/skill-impact.md` when a skill
   or agent edit lands: the next `SI-nnnn` id, the one-sentence proposal, the single
   target artifact, the motivating pattern slugs, and the unified diff scoped to that
   target path. `motivating patterns: none (direct request)` is a legitimate value —

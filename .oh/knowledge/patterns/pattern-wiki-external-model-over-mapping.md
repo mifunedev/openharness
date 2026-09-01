@@ -6,7 +6,7 @@ tags: [wiki, ingest, architecture, external-sources, scope-creep, design-review]
 created: 2026-08-31
 updated: 2026-08-31
 sources:
-  - .oh/skills/wiki/corpus/wikiskill-experience-compilation.md@933f6741
+  - .oh/knowledge/source/wikiskill-experience-compilation.md@933f6741
   - .oh/skills/wiki/references/compile.md@c841e567
   - .oh/skills/wiki/references/schema.md@c841e567
 confidence: provisional
@@ -15,7 +15,7 @@ confidence: provisional
 # Mapping an external model onto the harness reimports a tier it deleted
 
 ## Relevant Source Files
-- `.oh/skills/wiki/corpus/wikiskill-experience-compilation.md@933f6741` — the ingested paper whose layer model was mapped onto the local corpus.
+- `.oh/knowledge/source/wikiskill-experience-compilation.md@933f6741` — the ingested paper whose layer model was mapped onto the local corpus.
 - `.oh/skills/wiki/references/compile.md@c841e567` — the resulting subcommand, and the explicit prohibition the mapping needed.
 - `.oh/skills/wiki/references/schema.md@c841e567` — the same prohibition stated in the schema.
 
@@ -30,7 +30,7 @@ where the original deletion rationale no longer matches the name.
 **Symptom.** A design derived from an ingested paper proposes a structure that a
 prior deliberate deletion forbids, and it does not read as a regression because it
 arrives under the source's terminology rather than the local one. Mapping the paper
-at `.oh/skills/wiki/corpus/wikiskill-experience-compilation.md@933f6741` onto the
+at `.oh/knowledge/source/wikiskill-experience-compilation.md@933f6741` onto the
 corpus proposed snapshotting session retrospective reports into the corpus's raw
 tier. Six of seven mapped structures transferred without objection; the seventh
 would have rebuilt the removed per-session journal tier — one dated entry per run,

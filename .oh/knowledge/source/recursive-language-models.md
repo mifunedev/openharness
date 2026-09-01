@@ -1,6 +1,7 @@
 ---
 title: "Recursive Language Models"
 slug: recursive-language-models
+kind: external
 tags: [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency]
 created: 2026-06-27
 updated: 2026-08-31

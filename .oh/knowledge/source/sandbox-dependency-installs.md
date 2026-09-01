@@ -1,6 +1,7 @@
 ---
 title: "Sandbox Dependency Installs"
 slug: sandbox-dependency-installs
+kind: repo
 tags: [sandbox, devcontainer, pnpm, dependencies, boot]
 created: 2026-07-01
 updated: 2026-08-31
@@ -8,6 +9,7 @@ sources:
   - .devcontainer/entrypoint.sh
   - .oh/scripts/__tests__/entrypoint-pnpm-install.test.ts
   - .oh/evals/probes/entrypoint-pnpm-manifest-fingerprint.sh
+verified_at: 1c5f37230822ec2bbc5ed316be92ad295722b693
 related: [compose-env-boundary, recursive-language-models]
 confidence: confirmed
 ---

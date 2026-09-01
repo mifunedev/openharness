@@ -1,6 +1,7 @@
 ---
 title: "Compose Environment Boundary"
 slug: compose-env-boundary
+kind: repo
 tags: [compose, devcontainer, oh-json, cli, entrypoint, boundary, provisioning, sandbox]
 created: 2026-08-31
 updated: 2026-08-31
@@ -11,6 +12,7 @@ sources:
   - .oh/cli/src/lib/config-render.ts
   - .oh/scripts/provision-defaults.sh
   - .oh/evals/probes/compose-env-boundary.sh
+verified_at: 1c5f37230822ec2bbc5ed316be92ad295722b693
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: confirmed
 ---

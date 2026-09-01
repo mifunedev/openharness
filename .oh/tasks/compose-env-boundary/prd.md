@@ -356,14 +356,14 @@ touches boot-critical UID logic, and a boot regression must bisect to one commit
 ## Wiki Alignment
 
 - **Impact**: REQUIRED
-- **Local entries**: `.oh/skills/wiki/corpus/compose-env-boundary.md` (new), `.oh/skills/wiki/corpus/sandbox-dependency-installs.md` (update — its `SKIP_PNPM_INSTALL` compose pass-through claims at `:29` become false)
+- **Local entries**: `.oh/knowledge/source/compose-env-boundary.md` (new), `.oh/knowledge/source/sandbox-dependency-installs.md` (update — its `SKIP_PNPM_INSTALL` compose pass-through claims at `:29` become false)
 - **Spec alignment**: The new entry states the boundary rule from this PRD verbatim, names the surviving compose keys and why each survives, records that catalogs are the sole source of install pins, and documents runtime flavor detection replacing `OH_IMAGE_ONLY`. It must reflect this PRD's non-goals — flavor B survives, `INSTALL_PYTHON_KERNEL` is out of scope — so a later reader does not treat them as oversights. The `sandbox-dependency-installs` update must replace the compose-flag description with the oh.json read and re-cite the moved lines.
 - **Acceptance criteria** (carried by US-009):
-  - [ ] `.oh/skills/wiki/corpus/compose-env-boundary.md` exists with valid frontmatter (`title`, `slug`, `tags`, `created`, `updated`, `sources`, `confidence`) and the body order H1 → `## Relevant Source Files` → `## Summary` → `## Detail` → `## System Relationships` → `## See Also`
+  - [ ] `.oh/knowledge/source/compose-env-boundary.md` exists with valid frontmatter (`title`, `slug`, `tags`, `created`, `updated`, `sources`, `confidence`) and the body order H1 → `## Relevant Source Files` → `## Summary` → `## Detail` → `## System Relationships` → `## See Also`
   - [ ] Every claim about repository behavior cites a source path with a line number; `## System Relationships` carries a Mermaid diagram of the oh.json → CLI → entrypoint path
   - [ ] The entry is ≤900 words (architecture allowance) and `## See Also` cross-links `[[sandbox-dependency-installs]]` and `[[oh-cli-portable-lifecycle]]`
-  - [ ] `.oh/skills/wiki/corpus/sandbox-dependency-installs.md` no longer claims compose passes `SKIP_PNPM_INSTALL` into the container, and its `updated` date is bumped
-  - [ ] `bash .oh/evals/probes/wiki-readme-index.sh` passes with the new entry indexed in `.oh/skills/wiki/corpus/README.md`
+  - [ ] `.oh/knowledge/source/sandbox-dependency-installs.md` no longer claims compose passes `SKIP_PNPM_INSTALL` into the container, and its `updated` date is bumped
+  - [ ] `bash .oh/evals/probes/wiki-readme-index.sh` passes with the new entry indexed in `.oh/knowledge/README.md`
 
 ## Open Questions
 

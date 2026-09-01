@@ -98,7 +98,7 @@ the squash may have bundled.
 
 **wiki/README.md** (expected conflict):
 ```bash
-git checkout --ours .oh/skills/wiki/corpus/README.md 2>/dev/null || \
+git checkout --ours .oh/knowledge/README.md 2>/dev/null || \
   git checkout --ours wiki/README.md 2>/dev/null || true
 ```
 Regenerate from frontmatter using the exact logic in

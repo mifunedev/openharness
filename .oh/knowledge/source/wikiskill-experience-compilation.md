@@ -1,6 +1,7 @@
 ---
 title: "WikiSkill: Compiling Agent Experience into Persistent Knowledge (arXiv 2608.27454)"
 slug: wikiskill-experience-compilation
+kind: external
 tags: [skill-evolution, persistent-knowledge, continual-learning, harness-evolution, self-improvement, wiki, ablation, skill-transfer]
 created: 2026-08-31
 updated: 2026-08-31
@@ -17,7 +18,7 @@ cs.AI/cs.CL. Source: <https://arxiv.org/abs/2608.27454>.
 
 ## Relevant Source Files
 - `.oh/skills/wiki/references/schema.md` — the local analogue of the paper's wiki layer schema.
-- `.oh/skills/wiki/corpus/raw/` — the local analogue of the paper's raw layer, holding source snapshots rather than agent traces.
+- `.oh/knowledge/raw/` — the local analogue of the paper's raw layer, holding source snapshots rather than agent traces.
 - `.oh/skills/builder/SKILL.md` — the local analogue of the paper's Skill Proposer.
 - `.oh/skills/retro/SKILL.md` — report-only lesson producer; the paper's maintainer role has no local owner.
 - `.oh/evals/capability/RESULTS.md` — the ceiling instrument the paper's ablation argues should move.

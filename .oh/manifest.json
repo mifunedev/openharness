@@ -5,6 +5,7 @@
     "install/**",
     "templates/**",
     "evals/**",
+    "knowledge/**",
     "skills/**",
     "agents/**",
     "hooks/**",

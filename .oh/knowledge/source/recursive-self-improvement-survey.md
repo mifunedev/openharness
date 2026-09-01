@@ -1,11 +1,12 @@
 ---
 title: "Recursive Self-Improvement in AI (survey, arXiv 2607.07663)"
 slug: recursive-self-improvement-survey
+kind: external
 tags: [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark]
 created: 2026-08-13
 updated: 2026-08-31
 sources:
-  - raw/2026-08-13-recursive-self-improvement-survey.md
+  - https://arxiv.org/abs/2607.07663
 related: [recursive-language-models, molt-agentic-reinforcement-learning, audit-architecture]
 confidence: provisional
 ---

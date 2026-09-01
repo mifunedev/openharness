@@ -1,6 +1,6 @@
 ---
 name: retro
-argument-hint: "[--dry-run] [--focus <subsystem>] [auto-approve]"
+argument-hint: "[--task <slug>] [--dry-run] [--focus <subsystem>] [auto-approve]"
 allowed-tools: Read, Grep, Bash, Edit
 description: |
   Scientific session-closing retrospective: scan the current conversation,
@@ -42,6 +42,29 @@ Key boundary: `/retro` is *session-scoped reflection*. The lint/audit skills abo
 ## Scope
 
 Current conversation only. `/retro` does not read prior sessions or the `~/.claude/projects/...` auto-memory store. It works from what is already in context.
+
+### `--task <slug>` — scope the pass to one build
+
+`--task <slug>` anchors the pass to a just-built `.oh/tasks/<slug>/` run instead of
+the whole ambient session. It changes **what counts as a signal**, and nothing
+else: the hypothesis engine, the qualify filter, the five-subsystem lens, the
+verdict/confidence rules, and the report-only contract are all unchanged.
+
+With `--task <slug>`, gather signals primarily from that unit's own artifacts:
+
+- `prd.md` — what the plan intended, and what its `## Plan Reconciliation` says
+  grounding changed;
+- `prd.json` — the task graph and which stories passed;
+- `progress.txt` — what actually shipped, in order, with the run's own notes;
+- `evidence.md` — the divergences and the gaps the Advisor recorded;
+- the `implementation ⇄ audit` history — how many FAIL→build cycles, and why.
+
+If `.oh/tasks/<slug>/` has no `prd.md`, there is no build to reflect on: say so
+and fall back to a plain session-scoped pass.
+
+`/spec retro <slug>` is a thin alias for this form
+(`.oh/skills/spec/references/retro.md`). There is one retro ontology and it is
+this skill's.
 
 ## Deterministic contract
 

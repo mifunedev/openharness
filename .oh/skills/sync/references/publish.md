@@ -69,9 +69,8 @@ upstream/development baseline. The goal: `git diff upstream/development HEAD
 # Private task artifacts — keep only README
 git checkout upstream/development -- .oh/tasks/
 git rm -r --cached --ignore-unmatch .oh/tasks/*/  # remove sub-dirs if any leaked
-# Research wiki corpus — keep README anchors only
-git checkout upstream/development -- .oh/skills/wiki/corpus/ 2>/dev/null || \
-  git checkout upstream/development -- .claude/skills/wiki/corpus/ 2>/dev/null || true
+# Durable repository knowledge — reset to the upstream baseline
+git checkout upstream/development -- .oh/knowledge/ 2>/dev/null || true
 # Agent folders (docs/agents/, .oh/tasks/archive/) if present
 git checkout upstream/development -- docs/agents/ 2>/dev/null || true
 # Codex plans / local promotion notes

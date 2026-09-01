@@ -9,3 +9,21 @@
   prd.md ## Knowledge Context. Wrote prd.md (new contract: Knowledge Context,
   Expected Knowledge Impact, Plan Reconciliation), prd.json (7 stories), this file.
   No generated prompt.md — the contract this task builds retires it.
+
+2026-09-01 implementation — US-001..US-007 landed in one atomic change.
+  Migration: git mv corpus -> .oh/knowledge/{source,patterns,raw}, skill-impact ->
+  .oh/evals/decisions/, new local/ scratch tier; 41 files path-rewritten; .gitignore,
+  .oh/manifest.json (knowledge/**), ci-harness.yml (both path lists).
+  Schema: kind repo|external|pattern, sources: as the single dependency declaration,
+  verified_at pins; new .oh/skills/wiki/scripts/knowledge-impact.sh (--verified | --changed
+  | --since). Rewrote schema/query/lint; updated compile/ingest/SKILL.
+  Spec: rewrote SKILL.md (3 nodes + approved-plan default), plan.md (recall->ground->plan),
+  execute.md (re-ground, RUNNING status file, Actual Knowledge Impact gate, new tail order),
+  retro.md -> /retro --task wrapper; deleted ship.md; task-prompt.md is render-time only.
+  /retro gained --task <slug>. Retired STATUS: COMPLETE and generated prompt.md.
+  Probes: 10 new tier-A + 8 existing updated (readme-index, kind-schema, query-isolation,
+  related-slugs, pattern-persistence, skill-impact-append-only, spec-family-contract,
+  retro-deterministic-contract). Repaired 3 pages with unresolvable provenance.
+  Delegated one bounded worker for the peripheral consumer sweep (.oh/README.md,
+  .oh/tasks/README.md, manifest, CI, cleanup cron, docs, RFC); reconciled and corrected
+  its glossary 'loop' entry. CHANGELOG entries added.

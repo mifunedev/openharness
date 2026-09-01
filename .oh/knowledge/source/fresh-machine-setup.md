@@ -1,6 +1,7 @@
 ---
 title: "Fresh-Machine Setup Flow"
 slug: fresh-machine-setup
+kind: repo
 tags: [setup, onboarding, installation, gateway, ssh, github, slack]
 created: 2026-07-02
 updated: 2026-08-27
@@ -13,6 +14,7 @@ sources:
   - docs/harnesses/hermes.md
   - .devcontainer/entrypoint.sh
   - .oh/scripts/gateway.sh
+verified_at: 0b292bf8662d11179132ad034b68181a29b0fe43
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: provisional
 ---

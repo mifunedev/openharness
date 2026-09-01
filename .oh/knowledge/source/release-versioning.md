@@ -1,11 +1,18 @@
 ---
 title: "Release Versioning"
 slug: release-versioning
+kind: repo
 tags: [release, versioning, semver, calver, github-actions, ghcr, tags, workflow, package-json]
 created: 2026-08-23
 updated: 2026-08-23
 sources:
   - raw/2026-08-23-release-versioning.md
+  - package.json
+  - .github/workflows/release.yml
+  - .oh/scripts/release-reservation.mjs
+  - .oh/scripts/reserve-github-release.mjs
+  - .oh/scripts/promote-release-latest.sh
+verified_at: 60f8c12d414b86389123c77229e15886df858208
 related: [oh-cli-portable-lifecycle]
 confidence: confirmed
 ---

@@ -1,11 +1,17 @@
 ---
 title: "Scaling Managed Agents: Decoupling the brain from the hands"
 slug: managed-agents
+kind: repo
 tags: [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution]
 created: 2026-08-08
 updated: 2026-08-27
 sources:
-  - raw/2026-08-08-managed-agents.md
+  - docs/rfcs/rfc-trace-ledger.md
+  - docs/rfcs/rfc-runtime-support.md
+  - docs/security-considerations.md
+  - docs/harnesses/overview.md
+  - .devcontainer/docker-compose.yml
+verified_at: af16fc85be4468a5681ba87b0d27b371cbd54db2
 related: [audit-architecture, runtime-isolation-landscape, recursive-language-models]
 confidence: provisional
 ---
@@ -13,7 +19,7 @@ confidence: provisional
 # Scaling Managed Agents: Decoupling the brain from the hands
 
 ## Relevant Source Files
-- `raw/2026-08-08-managed-agents.md` — immutable capture of Anthropic's article, published 2026-04-08.
+- *(external seed)* — the Anthropic article this page was seeded from (published 2026-04-08) was never snapshotted and its URL was never recorded, so it is unrecoverable from this repository and is not a declared source. Everything below is verifiable against the repository documents this page compares that article to.
 - `docs/rfcs/rfc-trace-ledger.md:33-101,125-155` — Open Harness's proposed append-only event ledger, session index, privacy rules, and replay/diagnosis minimums.
 - `.devcontainer/docker-compose.yml:30-104` — the current single sandbox service, bind-mounted checkout, persistent auth/tool volumes, optional credential environment, and restart policy.
 - `docs/security-considerations.md:34-43,121-134` — current secret-path hooks, named-volume state, and the Docker-socket isolation caveat.

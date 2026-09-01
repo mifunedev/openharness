@@ -9,7 +9,7 @@
       "title": ".oh/knowledge/ becomes the knowledge surface",
       "description": "As the orchestrator, I want durable repository knowledge to own .oh/knowledge/ so that the wiki skill holds procedure only and there is exactly one writable knowledge location.",
       "acceptanceCriteria": [
-        "Every tracked entry under .oh/skills/wiki/corpus/ is moved to .oh/knowledge/source/, .oh/knowledge/patterns/, or .oh/knowledge/raw/ with git mv",
+        "Every tracked entry under the retired corpus path is moved to .oh/knowledge/source/, .oh/knowledge/patterns/, or .oh/knowledge/raw/ with git mv",
         "No tracked file remains under the retired corpus path and no active tracked surface references it",
         ".oh/knowledge/README.md is the generated tracked index; raw/ and local/ each carry a tracked README anchor",
         ".gitignore tracks .oh/knowledge/source/ and .oh/knowledge/patterns/ and ignores raw/ and local/ contents except their README anchors",

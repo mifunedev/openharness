@@ -1,11 +1,18 @@
 ---
 title: "Audit Architecture"
 slug: audit-architecture
+kind: repo
 tags: [audit, pr, workflow, safety, observability]
 created: 2026-07-17
 updated: 2026-08-12
 sources:
   - raw/2026-07-17-audit-architecture.md
+  - .oh/skills/audit/SKILL.md
+  - .oh/skills/audit/scripts/audit-run.sh
+  - .oh/skills/audit/scripts/pr-classify.sh
+  - .oh/skills/audit/scripts/implementation-gates.sh
+  - .oh/skills/audit/references/full.md
+verified_at: 5b426f977b0e892786998638ba526796bfcd2b99
 related: [oh-cli-portable-lifecycle]
 confidence: confirmed
 ---

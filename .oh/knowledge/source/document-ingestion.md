@@ -1,6 +1,7 @@
 ---
 title: "Local Document Ingestion"
 slug: document-ingestion
+kind: repo
 tags: [wiki, ingestion, markitdown, documents, provenance, security]
 created: 2026-07-18
 updated: 2026-07-18
@@ -8,7 +9,8 @@ sources:
   - raw/2026-07-18-markitdown.md
   - .oh/skills/wiki/references/ingest.md
   - .oh/evals/probes/markitdown-wiki-ingest.sh
-  - .oh/tasks/markitdown-wiki-pilot/smoke-evidence.md
+  - .oh/tasks/markitdown-wiki-pilot/smoke-evidence.md@0fd2efcb
+verified_at: 0fd2efcbdb3db70c294b998fa9110676cafed691
 related: [sandbox-dependency-installs]
 confidence: provisional
 ---
@@ -16,7 +18,7 @@ confidence: provisional
 # Local Document Ingestion
 
 ## Relevant Source Files
-- `.oh/skills/wiki/corpus/raw/2026-07-18-markitdown.md` — immutable upstream README snapshot documenting supported formats, direct CLI usage, optional dependencies, and security guidance.
+- `.oh/knowledge/raw/2026-07-18-markitdown.md` — immutable upstream README snapshot documenting supported formats, direct CLI usage, optional dependencies, and security guidance.
 - `.oh/skills/wiki/references/ingest.md` — owns source classification, validation, conversion, review, provenance publication, and synthesis handoff.
 - `.oh/evals/probes/markitdown-wiki-ingest.sh` — guards the pinned/local-only contract and prevents wrapper or runtime-package drift.
 - `.oh/tasks/markitdown-wiki-pilot/smoke-evidence.md` — records real conversion, resource-limit, cleanup, and network-boundary evidence.

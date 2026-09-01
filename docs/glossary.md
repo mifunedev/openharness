@@ -29,7 +29,7 @@ These names describe separate layers, not interchangeable jobs:
 
 - **artifact** — Any inspectable file a workflow stage produces and a later stage
   or a human then consumes. The canonical example is the `.oh/tasks/<slug>/` task
-  folder and its four-file contract (`prd.md`, `prd.json`, `prompt.md`,
+  folder and its three-file contract (`prd.md`, `prd.json`,
   `progress.txt`), which the `/spec` pipeline reads and writes as
   they progress. Source: [`.oh/tasks/`](../.oh/tasks/).
 
@@ -56,9 +56,16 @@ These names describe separate layers, not interchangeable jobs:
   single repo-per-sandbox instance of it.
   Source: [`intro.md`](intro.md).
 
-- **loop** — A repeated implement → commit → check cycle driven until a
-  completion marker appears. `/spec execute` owns the implementation cycle and
-  records completion in `progress.txt` after every story passes.
+- **knowledge** — Durable repository knowledge kept under `.oh/knowledge/`: a
+  derived cache of understanding that the repository itself always outranks.
+  `source/` and `patterns/` entity pages are tracked and queryable; `local/` is
+  ignored per-machine scratch that nothing reads.
+  Source: [`.oh/knowledge/`](../.oh/knowledge/).
+
+- **loop** — A repeated implement → commit → check cycle driven until the task
+  graph is satisfied. `/spec execute` owns the implementation cycle; completion
+  is structured state in `prd.json` — every entry in `userStories` carrying
+  `"passes": true` — not a marker in prose.
   Source: [`.oh/skills/spec/references/execute.md`](../.oh/skills/spec/references/execute.md).
 
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and

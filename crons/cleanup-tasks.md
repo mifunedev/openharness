@@ -73,8 +73,9 @@ only — never a `.oh/tasks/` subfolder.
    uncommitted task dirs in the shared checkout are never archived. For
    each `.worktrees/archive/$TODAY/.oh/tasks/<taskdesc>/` (skipping
    `.oh/tasks/archive/`):
-   - If `.oh/tasks/<taskdesc>/progress.txt` ends with a line matching exactly
-     `STATUS: COMPLETE`:
+   - If every user story in `.oh/tasks/<taskdesc>/prd.json` passes —
+     `jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/<taskdesc>/prd.json`
+     exits 0 — the task is complete:
      - Kill the matching tmux session if one exists:
        `tmux kill-session -t agent-spec-<taskdesc> 2>/dev/null || true`.
      - Move the folder inside the worktree:
@@ -82,8 +83,15 @@ only — never a `.oh/tasks/` subfolder.
        (falls back to `mv` + `git -C .worktrees/archive/$TODAY add` if
        `git mv` rejects an untracked path).
    - Otherwise, leave the folder in place and append a one-line note to
-     the reply recording that `<taskdesc>` is still active
-     (include the last `progress.txt` modification time).
+     the reply recording that `<taskdesc>` is still active, how many user
+     stories remain unpassed
+     (`jq '[.userStories[] | select(.passes != true)] | length' .oh/tasks/<taskdesc>/prd.json`),
+     and the last `progress.txt` modification time.
+   - A task folder with **no readable `prd.json`** — the file is missing,
+     unparseable, or carries no `userStories` array, so the `jq` test above
+     fails rather than exits 0 — is **not** complete: leave the folder in
+     place and note it in the reply as `unreadable-prd`, counted with the
+     still-active skips.
 5. **Groom stale `.worktrees/` branch checkouts** from the shared repo
    root after the task scan. Initialize `W=0` plus a `GROOMED_WORKTREES`
    list. This pass is intentionally limited to harness branch worktrees

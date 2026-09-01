@@ -1,6 +1,7 @@
 ---
 title: "Crabbox — Remote-Exec Control Plane"
 slug: crabbox-remote-exec-control-plane
+kind: external
 tags: [runtime, sandbox, remote-execution, fan-out, control-plane, crabbox, cloudflare-workers, ssh, rsync]
 created: 2026-07-04
 updated: 2026-08-27

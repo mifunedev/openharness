@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-CORPUS_REL=".oh/skills/wiki/corpus"
+CORPUS_REL=".oh/knowledge"
 
 # WIKI_PERSISTENCE_BASE overrides the comparison point. It exists so the invariant
 # can actually be exercised against a real revert instead of only asserted: cut a
@@ -25,12 +25,14 @@ if [[ -z "$base" ]]; then
   exit 2
 fi
 
+# Pattern pages are keyed by BASENAME, not by path: the knowledge surface has
+# been relocated before, and a page that merely moved must not read as deleted.
 base_patterns=()
 while IFS= read -r rel; do
   [[ -n "$rel" ]] || continue
-  [[ "$(basename "$rel")" == pattern-* ]] || continue
   base_patterns+=("$rel")
-done < <(git -C "$ROOT" ls-tree -r --name-only "$base" -- "$CORPUS_REL" | grep '\.md$' || true)
+done < <(git -C "$ROOT" ls-tree -r --name-only "$base" -- '.oh' \
+           | grep -E '(^|/)pattern-[a-z0-9-]+\.md$' || true)
 
 if ((${#base_patterns[@]} == 0)); then
   echo "SKIPPED: no kind: pattern entries tracked at the merge-base — nothing to protect yet" >&2
@@ -38,23 +40,27 @@ if ((${#base_patterns[@]} == 0)); then
 fi
 
 
+count_sources() {
+  awk '/^---$/{f=!f; next} f{print}' \
+    | awk '/^sources:/{s=1; next} s && /^[a-z_-]+:/{s=0} s && /^[[:space:]]*- /{n++} END{print n+0}'
+}
+
 deleted=(); shrunk=()
 for rel in "${base_patterns[@]}"; do
-  if ! git -C "$ROOT" ls-files --error-unmatch "$rel" >/dev/null 2>&1; then
-    deleted+=("$rel")
+  head_rel="$CORPUS_REL/patterns/$(basename "$rel")"
+  if ! git -C "$ROOT" ls-files --error-unmatch "$head_rel" >/dev/null 2>&1; then
+    deleted+=("$(basename "$rel")")
     continue
   fi
-  before="$(git -C "$ROOT" show "$base:$rel" | awk '/^---$/{f=!f; next} f{print}' \
-            | awk '/^sources:/{s=1; next} s && /^[a-z_-]+:/{s=0} s && /^[[:space:]]*- /{n++} END{print n+0}')"
-  after="$(awk '/^---$/{f=!f; next} f{print}' "$ROOT/$rel" \
-            | awk '/^sources:/{s=1; next} s && /^[a-z_-]+:/{s=0} s && /^[[:space:]]*- /{n++} END{print n+0}')"
+  before="$(git -C "$ROOT" show "$base:$rel" | count_sources)"
+  after="$(count_sources < "$ROOT/$head_rel")"
   if (( after < before )); then
-    shrunk+=("$rel ($before -> $after)")
+    shrunk+=("$head_rel ($before -> $after)")
   fi
 done
 
 if ((${#deleted[@]})); then
-  printf 'REGRESSION: pattern page removed since the merge-base — see schema.md § 8, patterns are never rolled back: %s\n' "${deleted[@]}" >&2
+  printf 'REGRESSION: pattern page removed since the merge-base — see schema.md § 12, patterns are never rolled back: %s\n' "${deleted[@]}" >&2
   exit 1
 fi
 if ((${#shrunk[@]})); then

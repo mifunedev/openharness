@@ -1,11 +1,12 @@
 ---
 title: "Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning"
 slug: molt-agentic-reinforcement-learning
+kind: external
 tags: [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia]
 created: 2026-08-08
 updated: 2026-08-27
 sources:
-  - raw/2026-08-08-molt-agentic-reinforcement-learning.md
+  - https://arxiv.org/abs/2607.21653v1
 related: [managed-agents, audit-architecture, recursive-language-models, runtime-isolation-landscape]
 confidence: provisional
 ---
@@ -13,7 +14,7 @@ confidence: provisional
 # Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning
 
 ## Relevant Source Files
-- `raw/2026-08-08-molt-agentic-reinforcement-learning.md` — immutable capture of arXiv:2607.21653v1, published 2026-07-22.
+- `https://arxiv.org/abs/2607.21653v1` — the upstream source (fetched 2026-08; the snapshot was never committed, so this reference is the weakest provenance form, `schema.md` § 4). Originally captured as arXiv:2607.21653v1, published 2026-07-22.
 - `docs/rfcs/rfc-trace-ledger.md:33-155` — the proposed append-only run/session event model and replay, diagnosis, and scoring minimums.
 - `docs/artifact-contract-schema.md:3-49` — required-artifact and verification-command contracts enforced by audit.
 - `.oh/evals/README.md:3-49,90-124` — real-state probes, three-state outcomes, and regression gate behavior.

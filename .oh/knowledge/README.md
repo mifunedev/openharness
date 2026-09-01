@@ -60,6 +60,7 @@ Schema, frontmatter spec, provenance kinds, and every authoring rule:
 | pattern-wiki-ungated-check-drift | Report-only checks nothing gates on stop being run | [wiki, lint, evals, probes, report-only, drift, gating] | 2026-09-01 |
 | pattern-wiki-external-model-over-mapping | Mapping an external model onto the harness reimports a tier it deleted | [wiki, ingest, architecture, external-sources, scope-creep, design-review] | 2026-09-01 |
 | pattern-spec-self-staling-reuse-record | A commit-keyed reuse record goes stale the moment it is committed | [spec, evals, caching, provenance, freshness, build-cycle] | 2026-09-01 |
+| pattern-shared-runner-owns-teardown | A reusable runner's own EXIT trap destroys the subject its next caller needs | [scripts, bash, traps, teardown, reuse, docker, seams] | 2026-09-01 |
 | pattern-evals-prose-literal-pinning | Contract probes that pin multi-word prose break on reflow, not on drift | [evals, probes, contract-text, grep, false-failure, documentation] | 2026-09-01 |
 | pattern-evals-pipefail-early-exit | A short-circuiting reader turns a successful match into a failed pipeline | [evals, probes, bash, pipefail, sigpipe, false-failure, shell] | 2026-09-01 |
 | pattern-docs-prohibition-by-example | Documenting a forbidden literal by quoting it violates the rule | [docs, evals, probes, vocabulary, guards, self-reference] | 2026-09-01 |

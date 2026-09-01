@@ -208,6 +208,13 @@ pages `Expected Knowledge Impact` named:
 `SI-0004` appended to `.oh/evals/decisions/skill-impact.md` as `PROPOSED`, citing
 `[[pattern-wiki-ungated-check-drift]]` and `[[pattern-evals-unexercised-oracle]]`.
 
+**New pattern compiled from this run's retro:**
+`[[pattern-shared-runner-owns-teardown]]` — a reusable runner's own `EXIT` trap
+destroys the subject its next caller needs, and it fires on the *successful* exit
+too, which is why the plan read the trap as a benefit. Divergence 2 below is the
+instance; the page records the seam-based workaround and the two rules that make it
+honest (cover `INT`/`TERM`, and assert the leak).
+
 ## 3. Where it diverged from the plan, and why
 
 1. **A `/deploy-check` skill was added and CI was demoted to the second
@@ -247,13 +254,19 @@ pages `Expected Knowledge Impact` named:
   is the release after this merges; the `workflow_dispatch` path is the fallback
   if it does not. Manual dispatch also cannot be tested until the workflow file is
   on the default branch.
-- **The bind flavor was not booted locally.** Proving the flavor switch did not
-  regress `verify_bind_ownership` needs a full bind boot, which needs a locally
-  built image. The static half is proven — the probe drives the exact skip
-  condition red, and `BOOT_SMOKE_FLAVOR=bogus` shows the switch validates — but
-  **the live proof is `sandbox-boot-guard.yml`, which this PR's `.oh/**` path
-  filter triggers.** Read that job's result before merging; it is the
-  non-regression test.
+- ~~The bind flavor was not booted locally.~~ **Resolved by CI, not delegated.**
+  `CI: Sandbox Boot Guard` run
+  [33469542069](https://github.com/mifunedev/openharness/actions/runs/33469542069)
+  booted the bind flavor on this branch and printed both halves:
+
+  ```
+  sandbox boot smoke: sandbox user, bind mount, and sandbox-created files all resolve to 1001:1001
+  sandbox boot smoke ok [bind]: sandbox (e4d25c21ffa4…) passed …, Herdr runtime, bind-ownership,
+  and boot-provisioned harness and tool checks
+  ```
+
+  So `verify_bind_ownership` still runs on the default flavor, and the new success
+  line reports the flavor correctly on both paths.
 - **The skill was executed by hand, not re-invoked for a second live boot.** Its
   procedure — resolve the image, run the guard, read the result — is exactly the
   commands run above, and the skill adds no assertions of its own. Its cheap paths

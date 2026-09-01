@@ -6,7 +6,6 @@ enabled: false
 overlap: false
 catchup: false
 tmux: true
-worktree: true
 repo: mifunedev/openharness
 description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to the origin fork via /spec (opt-in, cap-gated)
 ---
@@ -14,9 +13,8 @@ description: Daily prompt-miner — mine 24h of session traces for prompt-qualit
 # prompt-miner
 
 You are running on a daily prompt-miner cycle, inside your own detached tmux
-session **in an isolated git worktree** (`$CRON_WORKTREE`, set by the cron runtime
-because this cron declares `worktree: true`). The shared root checkout is never
-touched for source/branch work. Your job is to mine the last 24h of session
+session. Create an isolated `/worktrees` checkout for any source or branch work so
+the shared root checkout stays clean. Your job is to mine the last 24h of session
 traces for a high-confidence prompt-quality marker and, when one clears the bar,
 ship it to the **origin fork** through `/spec` — never upstream, never
 auto-merged.
@@ -110,13 +108,12 @@ gh pr edit <PR> --repo mifunedev/openharness --add-label prompt-miner
 
 ### 4. Append the liveness line
 
-Append a `crons/.cron.log` liveness line, resolving the **shared root** under
-worktree mode (the worktree is reaped after the run; humans + heartbeat read the
-root checkout). Mirror the autopilot convention: honor `$CRON_LOG_ROOT` if
-set, else map `$CRON_WORKTREE` back to its shared root, else the current toplevel.
+Append a `crons/.cron.log` liveness line against the **shared root** (humans +
+heartbeat read the root checkout, never a build worktree). Honor `$CRON_LOG_ROOT`
+if set, else map the current checkout back to its shared root.
 
 ```bash
-ROOT="${CRON_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
+ROOT="${CRON_LOG_ROOT:-$(git worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
   | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/crons/.cron.log"

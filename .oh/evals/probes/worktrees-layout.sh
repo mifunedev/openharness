@@ -55,8 +55,8 @@ for sample in ".worktrees/feat/1-probe" "projects/an-owner/a-repo"; do
   fi
 done
 
-if ! grep -Fq 'const WORKTREES_DIR = ".worktrees";' .oh/scripts/cron-runtime.ts; then
-  echo "REGRESSION: cron-runtime.ts does not pin WORKTREES_DIR to the .worktrees constant" >&2
+if grep -Fq 'WORKTREES_DIR' .oh/scripts/cron-runtime.ts; then
+  echo "REGRESSION: cron-runtime.ts references a worktree root it no longer owns" >&2
   exit 1
 fi
 if ! grep -Fq 'const CRONS_DIR = path.resolve("crons");' .oh/scripts/cron-runtime.ts; then

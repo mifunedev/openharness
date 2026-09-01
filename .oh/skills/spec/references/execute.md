@@ -282,27 +282,15 @@ There is **no fallback runner because there is no handoff step**.
 **it does not create the agent that** executes it. The agent that reached this
 line implements the task itself and carries it through every gate below.
 
-**Render the task prompt now; do not persist it.** The template is
-`.oh/skills/spec/templates/task-prompt.md`. Substitute `<slug>`, `<branch>`, and
-`<issue>` from the task folder and `prd.json`'s `branchName`, and confirm no
-angle-bracket placeholder survives the render. The rendered text is read and
-discarded — a saved copy of a generated file is a second artifact that drifts
-from the template it came from, which is why the task folder no longer carries a
-generated prompt artifact at all.
-
-**Build worktree — reuse vs. create.** Isolation stays. When `$CRON_WORKTREE` is
-set (a `worktree: true` cron's default), this run is ALREADY inside an isolated
-worktree that step 2 put on the feature branch, so **reuse it** — do NOT create a
-second worktree (a second `git worktree add` for the same branch would nest under
-the cron worktree via the relative path, or fail with `branch already checked
-out`). Standalone (no `$CRON_WORKTREE`), create `.worktrees/<prefix>/<N>-<slug>`
-via `/worktrees` and work there:
+**Build worktree — reuse vs. create.** Isolation stays. When this run is ALREADY
+inside an isolated worktree that step 2 put on the feature branch, **reuse it** —
+do NOT create a second worktree (a second `git worktree add` for the same branch
+would nest under the current worktree via the relative path, or fail with `branch
+already checked out`). Otherwise create `.worktrees/<prefix>/<N>-<slug>` via
+`/worktrees` and work there:
 
 ```bash
-WT="${CRON_WORKTREE:-}"                       # set by the cron runtime in worktree mode
-if [ -n "$WT" ]; then
-  cd "$WT"                                    # already on <prefix>/<N>-<slug>
-else
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "<prefix>/<N>-<slug>" ]; then
   git worktree add ".worktrees/<prefix>/<N>-<slug>" "<prefix>/<N>-<slug>"
   cd ".worktrees/<prefix>/<N>-<slug>"
 fi

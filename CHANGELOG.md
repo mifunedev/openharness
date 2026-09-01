@@ -26,11 +26,12 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Removed
 - **BREAKING:** Retire the `/spec ship` node; an unrecognized first token is an approved plan path that runs `plan` then `execute`, so `/spec <plan-path>` is unchanged. ([#926](https://github.com/mifunedev/openharness/issues/926))
-- **BREAKING:** Retire the generated `.oh/tasks/<slug>/prompt.md`; the Advisor launch prompt is rendered at execution time from its template and never persisted. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire the generated `.oh/tasks/<slug>/prompt.md`; the task prompt is rendered at execution time from its template and never persisted. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Retire the `STATUS: COMPLETE` sentinel; task completion derives from `prd.json` story state, which the `cleanup-tasks` cron now reads. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Move the skill-impact ledger to `.oh/evals/decisions/skill-impact.md`; it is a decision record, not a knowledge page. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Retire orphan detection and the 90-day rule as `/wiki lint` health failures; age survives as informational `last-reviewed` telemetry only. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Finish retiring `.oh/memory` from current architecture docs; the surviving `.gitignore` rule is labelled a compatibility tombstone with a 0.7.0 removal horizon. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire cron worktree isolation — the `worktree:` frontmatter key, `.worktrees/cron/` per-fire worktrees, the `CRON_WORKTREE` export, and every `*_WORKTREE*` log state are gone; crons fire in the shared root under the id lock.
 - **BREAKING:** Retire the `OH_IMAGE_ONLY` flag; `entrypoint.sh` detects the sandbox flavor from whether `/home/sandbox/harness` is a bind mount holding `.oh/`, and logs the detected mode ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - **BREAKING:** Retire `docker-compose.hermes-dashboard.yml` and its published `127.0.0.1:9119`; the dashboard now binds container loopback, reachable over cloudflared or Tailscale ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Remove the duplicate agent-browser and Tailscale installers from `entrypoint.sh`; the tool catalog is the sole owner of both pins and Tailscale's two checksums ([#920](https://github.com/mifunedev/openharness/issues/920)).

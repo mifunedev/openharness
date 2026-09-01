@@ -120,11 +120,7 @@ if [[ -n ${AUDIT_RUN_ID:-} ]]; then
   [[ $resolved_root == "$AUDIT_ROOT" ]] || { echo 'audit: inherited root must be canonical' >&2; exit 64; }
   outer=false
 else
-  if [[ -n ${CRON_WORKTREE:-} ]] && git -C "$CRON_WORKTREE" rev-parse --show-toplevel >/dev/null 2>&1; then
-    resolved_root=$(git -C "$CRON_WORKTREE" rev-parse --show-toplevel)
-  else
-    resolved_root=$(git -C "$script_root" rev-parse --show-toplevel)
-  fi
+  resolved_root=$(git -C "$script_root" rev-parse --show-toplevel)
   resolved_root=$(cd "$resolved_root" && pwd -P)
   AUDIT_RUN_ID="audit-$(date -u +%Y%m%dT%H%M%SZ)-$BASHPID"
   AUDIT_ROOT=$resolved_root

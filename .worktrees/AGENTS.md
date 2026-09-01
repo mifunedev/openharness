@@ -10,7 +10,6 @@ its worktrees at its own root, so a project clone under `projects/` has a
 | --------- | --------------- |
 | `agent/` | Per-agent checkouts — either a `git worktree` of an `agent/<name>` branch in this repo, or a standalone clone of a repo that adopts the Open Harness shape (including a fork of an orchestrator). |
 | `feat/` `bug/` `task/` `audit/` `skill/` | Branch worktrees named after the branch prefix in `.oh/skills/git/SKILL.md`. |
-| `cron/` | `cron/<session>` — per-fire isolation worktrees created by `worktree: true` crons. The runtime prunes and reaps these; do not manage them by hand. |
 | `archive/` | `archive/<YYYY-MM-DD>` — weekly cleanup-tasks archive sweeps. |
 
 Lifecycle is `git worktree add` / `git worktree remove`. The root is always

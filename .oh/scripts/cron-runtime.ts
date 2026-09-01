@@ -11,7 +11,6 @@ export interface CronEntry {
   overlap: boolean;
   catchup: boolean;
   tmux: boolean;
-  worktree: boolean;
   agentBin?: string;
   preflight?: string;
   repo?: string;
@@ -20,7 +19,6 @@ export interface CronEntry {
 }
 
 const CRONS_DIR = path.resolve("crons");
-const WORKTREES_DIR = ".worktrees";
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN_FALLBACK = "claude";
@@ -108,7 +106,6 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     overlap: fm.overlap === "true",
     catchup: fm.catchup === "true",
     tmux: fm.tmux === "true",
-    worktree: fm.worktree === "true",
     agentBin: fm.agent || undefined,
     preflight: fm.preflight || undefined,
     repo: fm.repo || undefined,
@@ -221,7 +218,6 @@ const FIRE_RELOAD_FIELDS: (keyof CronEntry)[] = [
   "overlap",
   "catchup",
   "tmux",
-  "worktree",
   "agentBin",
   "preflight",
   "repo",
@@ -357,7 +353,6 @@ export function buildTmuxWrapper(opts: {
   agentBin: string;
   promptFile: string;
   pidFile?: string;
-  worktree?: string;
   repo?: string;
   remote?: string;
 }): string {
@@ -369,12 +364,11 @@ export function buildTmuxWrapper(opts: {
   const pidFile = opts.pidFile ?? `/tmp/cron-${id}.pid`;
   const quotedAgent = shellQuote(agentBin);
   const quotedPidFile = shellQuote(pidFile);
-  const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${shellQuote(opts.worktree)}` : "";
   const repoExport = opts.repo ? ` CRON_REPO=${shellQuote(opts.repo)}` : "";
   const remoteExport = opts.remote ? ` CRON_REMOTE=${shellQuote(opts.remote)}` : "";
   return (
     `echo $$ > ${quotedPidFile}; ` +
-    `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}${repoExport}${remoteExport}; ` +
+    `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${repoExport}${remoteExport}; ` +
     buildCronAgentCommand({
       id,
       agentBin,
@@ -487,8 +481,6 @@ export function buildCronAgentCommand(opts: {
   );
 }
 
-const WORKTREE_MAX_CONCURRENT = 6;
-
 function isProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -498,209 +490,23 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-export type OverlapDecision = "run" | "skip" | "worktree";
+export type OverlapDecision = "run" | "skip";
 
 export function decideOverlap(opts: {
   overlap: boolean;
-  worktree: boolean;
   pidfileExists: boolean;
   holderAlive: boolean;
 }): OverlapDecision {
-  if (opts.worktree) return "worktree";
   if (opts.overlap) return "run";
   if (!opts.pidfileExists || !opts.holderAlive) return "run";
   return "skip";
 }
 
-const FALLBACK_WORKTREE_DIR = path.join(WORKTREES_DIR, "cron");
-
-function detectBaseRef(remote = "origin"): string | null {
-  if (!isValidRemote(remote)) return null;
-  for (const ref of ["development", "main", "master"]) {
-    if (
-      spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/remotes/${remote}/${ref}`])
-        .status === 0
-    ) {
-      return `${remote}/${ref}`;
-    }
-  }
-  for (const ref of ["development", "main", "master"]) {
-    if (spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${ref}`]).status === 0) {
-      return ref;
-    }
-  }
-  return null;
-}
-
-function livePaneCwds(): string[] {
-  const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {
-    encoding: "utf-8",
-  });
-  if (r.status !== 0 || !r.stdout) return [];
-  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
-}
-
-function liveTmuxSessionNames(): string[] {
-  const r = spawnSync("tmux", ["ls", "-F", "#{session_name}"], { encoding: "utf-8" });
-  if (r.status !== 0 || !r.stdout) return [];
-  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
-}
-
-export function worktreeInUse(
-  wtPath: string,
-  cwds: string[],
-  sessionNames: string[] = liveTmuxSessionNames(),
-): boolean {
-  const abs = path.resolve(wtPath);
-  return (
-    cwds.some((p) => p === abs || p.startsWith(abs + path.sep)) ||
-    sessionNames.includes(path.basename(abs))
-  );
-}
-
-export interface FallbackWorktreeState {
-  dirty: boolean;
-  ref: string;
-  changes: string[];
-  reason?: string;
-  orphaned?: boolean;
-}
-
-function isOrphanedWorktree(wtPath: string): boolean {
-  const dotGit = path.join(wtPath, ".git");
-  let raw: string;
-  try {
-    const st = fs.statSync(dotGit);
-    if (!st.isFile()) return false;
-    raw = fs.readFileSync(dotGit, "utf-8");
-  } catch {
-    return false;
-  }
-  const match = /^gitdir:\s*(.+?)\s*$/m.exec(raw);
-  if (!match) return false;
-  const admin = path.resolve(path.dirname(dotGit), match[1]);
-  return !fs.existsSync(admin);
-}
-
-function worktreeRef(wtPath: string): string {
-  const branch = spawnSync("git", ["-C", wtPath, "rev-parse", "--abbrev-ref", "HEAD"], {
-    encoding: "utf-8",
-  });
-  const name = (branch.stdout || "").trim();
-  if (branch.status === 0 && name && name !== "HEAD") return name;
-
-  const head = spawnSync("git", ["-C", wtPath, "rev-parse", "--short", "HEAD"], {
-    encoding: "utf-8",
-  });
-  return head.status === 0 && head.stdout.trim() ? head.stdout.trim() : "unknown";
-}
-
-export function inspectFallbackWorktree(wtPath: string): FallbackWorktreeState {
-  const status = spawnSync("git", ["-C", wtPath, "status", "--porcelain"], {
-    encoding: "utf-8",
-  });
-  const ref = worktreeRef(wtPath);
-  if (status.status !== 0) {
-    const reason = (status.stderr || status.error?.message || "git status failed").trim();
-    if (isOrphanedWorktree(wtPath)) {
-      return { dirty: false, orphaned: true, ref, changes: [], reason };
-    }
-    return { dirty: true, ref, changes: [], reason };
-  }
-
-  const changes = (status.stdout || "").split("\n").map((s) => s.trim()).filter(Boolean);
-  return { dirty: changes.length > 0, ref, changes };
-}
-
-function formatWorktreeChanges(state: FallbackWorktreeState): string {
-  if (state.reason) return `status-unavailable=${state.reason.slice(0, 160)}`;
-  const shown = state.changes.slice(0, 20).join("; ");
-  const suffix = state.changes.length > 20 ? `; +${state.changes.length - 20} more` : "";
-  return shown + suffix;
-}
-
-export function pruneAndCountFallbackWorktrees(id: string): number {
-  const dir = path.resolve(FALLBACK_WORKTREE_DIR);
-  let names: string[];
-  try {
-    names = fs.readdirSync(dir);
-  } catch {
-    return 0;
-  }
-  const cwds = livePaneCwds();
-  const sessionNames = liveTmuxSessionNames();
-  let live = 0;
-  for (const name of names) {
-    if (!name.startsWith(`cron-${id}-`)) continue;
-    const wt = path.join(dir, name);
-    if (worktreeInUse(wt, cwds, sessionNames)) {
-      live++;
-      continue;
-    }
-
-    const state = inspectFallbackWorktree(wt);
-    if (state.orphaned) {
-      log(id, "WORKTREE_ORPHANED", `${wt} ref=${state.ref} reason=${(state.reason ?? "").slice(0, 160)}`);
-      try {
-        fs.rmSync(wt, { recursive: true, force: true });
-      } catch (err) {
-        log(id, "WORKTREE_ORPHAN_RM_FAILED", `${wt} ${String(err).slice(0, 160)}`);
-      }
-      continue;
-    }
-    if (state.dirty) {
-      log(id, "WORKTREE_DIRTY", `${wt} ref=${state.ref} changes=${formatWorktreeChanges(state)}`);
-      continue;
-    }
-
-    spawnSync("git", ["worktree", "remove", "--force", wt], { stdio: "ignore" });
-  }
-  spawnSync("git", ["worktree", "prune"], { stdio: "ignore" });
-  return live;
-}
-
-function createFallbackWorktree(entry: CronEntry, session: string): string | null {
-  const live = pruneAndCountFallbackWorktrees(entry.id);
-  if (live >= WORKTREE_MAX_CONCURRENT) {
-    log(
-      entry.id,
-      "ERR_WORKTREE_CAP",
-      `${live} live worktree runs >= cap ${WORKTREE_MAX_CONCURRENT}`,
-    );
-    return null;
-  }
-  const remote = entry.repo ? remoteForRepo(entry.repo) : undefined;
-  if (entry.repo && !remote) {
-    log(entry.id, "REPO_REMOTE_MISSING", `no local remote for ${entry.repo}`);
-    return null;
-  }
-  const base = detectBaseRef(remote || "origin");
-  if (!base) {
-    log(entry.id, "ERR_WORKTREE", "no base ref (development/main/master) found");
-    return null;
-  }
-  const dir = path.resolve(FALLBACK_WORKTREE_DIR);
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-  } catch {
-  }
-  const wtPath = path.join(dir, session);
-  const add = spawnSync("git", ["worktree", "add", "--detach", wtPath, base], {
-    encoding: "utf-8",
-  });
-  if (add.status !== 0) {
-    log(entry.id, "ERR_WORKTREE", `git worktree add failed: ${(add.stderr || "").trim().slice(0, 150)}`);
-    return null;
-  }
-  return wtPath;
-}
-
 function fireTmux(entry: CronEntry): void {
   const session = tmuxSessionName(entry.id, new Date());
   const idPidFile = `/tmp/cron-${entry.id}.pid`;
-  let cwd = process.cwd();
-  let pidFile = idPidFile;
-  let worktree: string | undefined;
+  const cwd = process.cwd();
+  const pidFile = idPidFile;
   const agentBin = entry.agentBin || resolveAgentBin();
   if (!isValidAgentBin(agentBin)) {
     log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
@@ -720,20 +526,12 @@ function fireTmux(entry: CronEntry): void {
   }
   const decision = decideOverlap({
     overlap: entry.overlap,
-    worktree: entry.worktree,
     pidfileExists,
     holderAlive,
   });
   if (decision === "skip") {
     log(entry.id, "SKIPPED_OVERLAP");
     return;
-  }
-  if (decision === "worktree") {
-    const wt = createFallbackWorktree(entry, session);
-    if (wt === null) return;
-    cwd = wt;
-    worktree = wt;
-    pidFile = `/tmp/${session}.pid`;
   }
 
   const promptFile = `/tmp/${session}.prompt`;
@@ -754,7 +552,6 @@ function fireTmux(entry: CronEntry): void {
         agentBin,
         promptFile,
         pidFile,
-        worktree,
         repo: entry.repo,
         remote: repoRemote,
       }),
@@ -762,11 +559,7 @@ function fireTmux(entry: CronEntry): void {
     { stdio: "ignore" },
   );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
-  if (worktree) {
-    log(entry.id, "SPAWNED_WORKTREE", `${session} ${worktree}`);
-  } else {
-    log(entry.id, "SPAWNED", session);
-  }
+  log(entry.id, "SPAWNED", session);
 }
 
 const PREFLIGHT_TIMEOUT_MS = 60_000;

@@ -511,6 +511,6 @@ which is the ordering the change exists to guarantee.
 |---|---|
 | Audit run id | `audit-20260901T022121Z-1697369` (post-merge; the pre-merge pass was `audit-20260901T014837Z-1436087`) |
 | Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 0` (gates: graph 7/7 · eval rc=0 131 probes · promotable true · ui n/a · slop no blocking finding) |
-| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T020036Z-1538941` (CI PASS · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`) |
+| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T024245Z-1853136` (CI PASS · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`). Two earlier passes preceded the development merges. |
 | Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
 | Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

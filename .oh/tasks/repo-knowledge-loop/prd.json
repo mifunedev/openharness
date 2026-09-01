@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/926-repo-knowledge-loop",
+  "description": "Make /spec a closed repo-knowledge learning loop: planning recalls and re-grounds tracked knowledge, execution derives knowledge invalidation from the actual diff, freshness is source-change aware, durable knowledge owns .oh/knowledge/, and the redundant /spec surfaces (ship, generated prompt.md, STATUS: COMPLETE, mandatory /compact, .oh/memory vocabulary) are retired atomically.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": ".oh/knowledge/ becomes the knowledge surface",
+      "description": "As the orchestrator, I want durable repository knowledge to own .oh/knowledge/ so that the wiki skill holds procedure only and there is exactly one writable knowledge location.",
+      "acceptanceCriteria": [
+        "Every tracked entry under .oh/skills/wiki/corpus/ is moved to .oh/knowledge/source/, .oh/knowledge/patterns/, or .oh/knowledge/raw/ with git mv",
+        "No tracked file remains under the retired corpus path and no active tracked surface references it",
+        ".oh/knowledge/README.md is the generated tracked index; raw/ and local/ each carry a tracked README anchor",
+        ".gitignore tracks .oh/knowledge/source/ and .oh/knowledge/patterns/ and ignores raw/ and local/ contents except their README anchors",
+        ".oh/manifest.json include lists knowledge/**",
+        ".github/workflows/ci-harness.yml push and pull_request paths both list .oh/knowledge/**",
+        ".oh/evals/decisions/skill-impact.md holds the prior ledger content unedited and builder/benchmark cite the new path"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Knowledge schema: kinds, provenance, source-change freshness",
+      "description": "As a knowledge consumer, I want repo/external/pattern provenance and commit-aware freshness so that a page's validity is a source-change fact rather than an age heuristic.",
+      "acceptanceCriteria": [
+        "schema.md defines kind: repo | external | pattern with sources: as the single dependency declaration and verified_at: as the freshness pin",
+        "A kind: repo page is never required to snapshot its own source into raw/",
+        "Every migrated page carries a valid kind; every kind: repo page carries verified_at and at least one repository-relative sources: entry",
+        ".oh/skills/wiki/scripts/knowledge-impact.sh exists, is executable, and passes shellcheck",
+        "knowledge-impact.sh --verified marks a page NEEDS-REVIEW when a declared repository source changed after its verified_at commit",
+        "knowledge-impact.sh --changed <paths> reports the pages a changed-path set invalidates",
+        "Dependency-aware invalidation is implemented once, in the knowledge primitive, and /spec calls it"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Tracked-only retrieval and the local scratch boundary",
+      "description": "As an agent on any machine, I want /wiki query and /spec to read only tracked shared knowledge so that a local scratch page on one machine can never silently inform a plan.",
+      "acceptanceCriteria": [
+        "/wiki query enumerates .oh/knowledge/source/*.md and .oh/knowledge/patterns/*.md only",
+        ".oh/knowledge/local/ is documented as ignored scratch that no normal query or /spec flow reads, with an explicit /wiki ingest promotion path",
+        "Default query mode returns kind: repo and kind: external pages; --patterns returns kind: pattern only",
+        "The planner/executor asymmetry is preserved and described as a default, not isolation"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "/spec plan = recall -> ground -> plan",
+      "description": "As an operator, I want planning to recall tracked knowledge and re-verify it against current sources before the PRD exists so that accumulated understanding informs the next plan.",
+      "acceptanceCriteria": [
+        "plan.md orders derive vocabulary -> query tracked source knowledge -> query patterns -> read matches -> re-ground against authoritative sources -> build the PRD",
+        "prd.md carries ## Knowledge Context, ## Expected Knowledge Impact, and ## Plan Reconciliation; ## Wiki Alignment is superseded",
+        "A material intent change discovered during grounding stops before execution and requires operator re-approval",
+        "The verified task contract is prd.md, prd.json, progress.txt with no generated prompt.md"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "/spec execute: re-ground, RUNNING, diff-derived knowledge impact",
+      "description": "As a reviewer, I want execution to re-ground its plan, report a real RUNNING state, and derive knowledge invalidation from the actual diff so that no stale assumption or missed page survives the build.",
+      "acceptanceCriteria": [
+        "Execute reads the task Knowledge Context and planning base commit and diffs it against current HEAD before implementing",
+        "Final knowledge impact combines Expected Knowledge Impact + actual changed paths + knowledge dependency metadata via knowledge-impact.sh --changed",
+        "Every impacted tracked page ends in exactly one of UPDATED, REVERIFIED, or NOT-AFFECTED (<reason>)",
+        "The lifecycle PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(<gate>) is explicit, with a status file, and launching the detached Advisor reports RUNNING rather than a synchronous READY",
+        "The tail order is implementation -> audit -> eval -> knowledge impact -> evidence.md -> retro -> compile -> optional compaction -> benchmark -> final PR audit",
+        "/compact is non-gating and occurs only after durable evidence and learning extraction",
+        "The single-Advisor executor ownership model and the human merge boundary are intact"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Retire ship, STATUS: COMPLETE, and the .oh/memory vocabulary",
+      "description": "As a maintainer, I want the redundant workflow surfaces gone so that the canonical public model is plan + execute with no duplicated state.",
+      "acceptanceCriteria": [
+        ".oh/skills/spec/references/ship.md is deleted and ship is no longer a conceptual workflow node",
+        "/spec <approved-plan-path> still runs plan then execute",
+        "Task completion derives from prd.json story state; crons/cleanup-tasks.md and .oh/tasks/README.md no longer key on a prose sentinel",
+        "/spec retro is an explicit compatibility wrapper around /retro --task <slug> and /retro stays report-only",
+        ".oh/README.md no longer lists memory/ as a current subsystem and the .gitignore rule is labelled a retired compatibility tombstone with a removal horizon",
+        "docs/oh-directory-layout.md, docs/glossary.md, and the affected RFCs match the new contract"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Lint simplification and the ten regression probes",
+      "description": "As the eval suite, I want the surviving lint signals to be real correctness checks with deterministic oracles so that a report-only check nobody gates on cannot rot.",
+      "acceptanceCriteria": [
+        "/wiki lint's checks are exactly schema validity, missing/broken source paths, source-change freshness, broken [[...]] links, broken related: slugs, and generated index consistency",
+        "Orphan detection is retired as a health failure and the 90-day check survives only as informational last-reviewed telemetry",
+        "All ten required probes exist under .oh/evals/probes/, are tier A, and pass on the branch",
+        "Every existing probe that pinned a moved or retired literal is updated in the same change",
+        "Each new probe is fault-injected at least once and the observed failing output is recorded in evidence.md",
+        "bash .oh/skills/eval/run.sh reports zero new green->red regressions",
+        "bash .oh/scripts/link-providers.sh --check passes and git diff --check is clean"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

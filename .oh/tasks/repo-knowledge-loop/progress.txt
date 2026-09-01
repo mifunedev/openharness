@@ -1,0 +1,11 @@
+# progress
+
+2026-09-01 plan — Read issue #926 body + pinned execution-requirement comment in full.
+  Grounded against .oh/skills/spec/**, .oh/skills/wiki/**, .oh/evals/probes/**,
+  .gitignore, .oh/README.md, .oh/tasks/README.md, .oh/manifest.json,
+  crons/cleanup-tasks.md, .github/workflows/ci-harness.yml, docs/**,
+  .claude/protected-paths.txt, .oh/scripts/link-providers.sh at base ecc49800.
+  Recalled 3 tracked source pages + 5 pattern pages; 4 conflicts recorded in
+  prd.md ## Knowledge Context. Wrote prd.md (new contract: Knowledge Context,
+  Expected Knowledge Impact, Plan Reconciliation), prd.json (7 stories), this file.
+  No generated prompt.md — the contract this task builds retires it.

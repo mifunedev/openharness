@@ -594,6 +594,6 @@ which is the ordering the change exists to guarantee.
 |---|---|
 | Audit run id | `audit-20260901T022121Z-1697369` (post-merge; the pre-merge pass was `audit-20260901T014837Z-1436087`) |
 | Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 0` (gates: graph 7/7 · eval rc=0 131 probes · promotable true · ui n/a · slop no blocking finding) |
-| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T030534Z-1976199` on head `4b1f67cd` (CI PASS on all four checks · MERGEABLE · CLEAN · evidenceComplete true · promotable true; advisory flag `size-convention`). Re-run on every head pushed after the undraft, which is the rule this build added to step 10. |
+| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T031737Z-2034186` on head `d3b1a5cd` (CI PASS on all four checks · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`). Re-run on every head pushed after the undraft, per the rule this build added to step 10. |
 | Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
 | Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

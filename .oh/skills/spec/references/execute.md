@@ -13,7 +13,7 @@ the run learned back into durable knowledge, and stops at the human merge gate.
 It contains the workflow's one adversarial loop — `implementation ⇄ audit`.
 
 **This file is the whole workflow.** Every mechanic it needs — the issue, the
-branch, the draft PR, the Advisor launch, the `/eval` gate, the knowledge-impact
+branch, the draft PR, the implementation step, the `/eval` gate, the knowledge-impact
 gate, the evidence gate, the promotable classification, and the undraft — is
 written out below, in order, with no deferral to another skill.
 
@@ -61,20 +61,24 @@ approved, and its `## Plan Reconciliation` says `Intent preserved: YES`.
 the folder is incomplete, or reconciliation says `NO`, refuse and route back to
 `/spec plan`.
 
-**There is one owner: the Advisor session this node launches.** That Advisor
-implements the approved task graph, validates each story, records progress, runs
-the audit / eval / knowledge / evidence gates, and finalizes the PR. `/delegate`
-is available only for bounded, disjoint worker tasks; a worker never becomes a
-second supervisor, a second PR owner, or a replacement workflow, and the Advisor
-reconciles and validates every result itself.
+`/spec execute` has exactly one implementation owner:
+**the agent that is running it**.
+That agent implements the approved task graph, validates each story, records
+progress, runs the audit / eval / knowledge / evidence gates, and finalizes the
+PR. Ownership is a **role**, not a terminal topology — it is not conferred by a
+session, a tab, or a pane, and this node creates none of those. `/delegate` is
+available only for bounded, disjoint worker tasks; a delegated worker never
+becomes a second supervisor, never owns the whole task, and never finalizes the
+PR, and the owner reconciles and validates every result itself.
 
 ---
 
 ## Lifecycle and the status file
 
-This node launches a **detached** Advisor and returns while the build continues.
-It therefore reports the state it actually reached, and never promises a ready PR
-it has not seen:
+This node can return while the task is still building — a cron run, a resume, or
+an interrupted build all reach a terminal line with stories still open — so it
+reports the state it actually reached and never promises a ready PR it has not
+seen:
 
 ```text
 PLANNED ──▶ RUNNING ──▶ READY
@@ -84,22 +88,32 @@ PLANNED ──▶ RUNNING ──▶ READY
 | State | Meaning | Written when |
 |---|---|---|
 | `PLANNED` | The folder exists and is approved; nothing GitHub-side yet | before step 1 |
-| `RUNNING <phase>` | The Advisor owns the build and is working | at every phase change, from step 3 onward |
+| `RUNNING <phase>` | The task is being built: its stories are not all `passes: true` | at every phase change, from step 3 onward |
 | `READY <pr-url>` | `gh pr ready` succeeded after a promotable classification | step 10 |
 | `DRAFT-BLOCKED(<gate>) <pr-url>` | A named gate held the undraft; the PR stays draft | step 10, or any halt |
 
-The state lives in one line at `/tmp/agent-spec-<slug>.state`:
+**`RUNNING` describes the task, never a process.** It is an approved folder whose
+stories are not all `passes: true` —
+never the existence of a named process, session, tab, or pane.
+The authority is `prd.json`:
 
 ```bash
-STATE_FILE="/tmp/agent-spec-<slug>.state"
+jq -e 'all(.userStories[]; .passes == true)' ".oh/tasks/<slug>/prd.json"   # 0 => not RUNNING
+```
+
+The owner mirrors the phase into one line at `/tmp/spec-<slug>.state` so a
+resume, the stale-draft watchdog, and an operator asking "what is it doing" have
+something to read without inspecting the task graph:
+
+```bash
+STATE_FILE="/tmp/spec-<slug>.state"
 printf 'RUNNING %s\n' "<phase>" > "$STATE_FILE"
 ```
 
-`RUNNING` is a real state, not decoration: attach, resume, the stale-draft
-watchdog, and an operator asking "what is it doing" all read this file, and it is
-the only thing that distinguishes a build in progress from a build that died.
-Update it at every phase change. Both terminal states are also reported on the PR
-itself, which remains the authority a later reader sees.
+The file is a convenience mirror, not the source of truth: if it disagrees with
+`prd.json`, the task graph wins. Update it at every phase change. Both terminal
+states are also reported on the PR itself, which remains the authority a later
+reader sees.
 
 ---
 
@@ -132,7 +146,7 @@ apart, or weeks. Before implementing anything:
    to the mechanism, stop, set the status file to `DRAFT-BLOCKED(reconciliation)`,
    and ask for re-approval. Do not implement a plan whose premise moved.
 
-The execution Advisor consumes the approved PRD's Knowledge Context and re-reads
+The owner consumes the approved PRD's Knowledge Context and re-reads
 the sources it names. It does **not** load the pattern set — patterns are the
 planner/proposer's input (`.oh/skills/wiki/references/schema.md` § 3). If the
 task turns into replanning, that is a `/spec plan` re-run, not a reason to widen
@@ -241,9 +255,9 @@ Closes #<N>.
 <numbered list from prd.json — title only>
 
 ## Next steps (automated)
-1. Launch the single expert `/worktrees` Advisor in tmux session `agent-spec-<slug>`; state moves to RUNNING.
-2. The Advisor implements the task directly, using `/delegate` only for bounded disjoint work; it validates the stories, runs the implementation-side audit loop, and updates every knowledge page the actual diff invalidates.
-3. The Advisor runs a fresh PR audit immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output is only a resume/investigation hint, never an undraft signal.
+1. The agent running `/spec execute` implements the task itself, in an isolated worktree; task state moves to RUNNING.
+2. It implements the stories directly, using `/delegate` only for bounded disjoint work; it validates the stories, runs the implementation-side audit loop, and updates every knowledge page the actual diff invalidates.
+3. It runs a fresh PR audit immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /spec execute
 EOF
@@ -253,71 +267,77 @@ EOF
 Capture the PR URL and PR number `<PR>`, then move the lifecycle forward:
 
 ```bash
-printf 'RUNNING implementation\n' > "/tmp/agent-spec-<slug>.state"
+printf 'RUNNING implementation\n' > "/tmp/spec-<slug>.state"
 ```
 
 This is an observability checkpoint, not the terminal state.
 
-### 4. Launch the single Advisor owner
+### 4. Implement — the running agent is the owner
 
-This node launches one **expert Advisor on `/worktrees`** in a detached tmux
-session, driven by a `/goal`-prefixed prompt. The Advisor is the only owner after
-the draft PR is created: it implements the task, coordinates bounded workers,
-validates the task graph, runs every quality gate, and finalizes the PR. No
-second implementation owner or nested supervisory session is created.
+**This node launches nothing.** No detached multiplexer session and no piped pane
+log, no Herdr workspace, tab, or pane created on the operator's behalf, no
+background-shell launch, and no runner selection.
+There is **no fallback runner because there is no handoff step**.
+`/spec` defines and verifies the execution contract;
+**it does not create the agent that** executes it. The agent that reached this
+line implements the task itself and carries it through every gate below.
 
-**Render the launch prompt now; do not persist it.** The template is
+**Render the task prompt now; do not persist it.** The template is
 `.oh/skills/spec/templates/task-prompt.md`. Substitute `<slug>`, `<branch>`, and
 `<issue>` from the task folder and `prd.json`'s `branchName`, and confirm no
-angle-bracket placeholder survives the render. The rendered text is passed to the
-Advisor and discarded — a saved copy of a generated file is a second artifact
-that drifts from the template it came from, which is why the task folder no
-longer carries a generated prompt artifact at all.
+angle-bracket placeholder survives the render. The rendered text is read and
+discarded — a saved copy of a generated file is a second artifact that drifts
+from the template it came from, which is why the task folder no longer carries a
+generated prompt artifact at all.
 
-**Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (a
-`worktree: true` cron's default), this run is ALREADY inside an isolated worktree
-that step 2 put on the feature branch, so the Advisor **reuses it** — it does NOT
-create a second worktree (a second `git worktree add` for the same branch would
-nest under the cron worktree via the relative path, or fail with
-`branch already checked out`). Standalone (no `$CRON_WORKTREE`) the Advisor
-creates `.worktrees/<prefix>/<N>-<slug>`. Start the Advisor session **in the
-build worktree** with `-c`, and bake the worktree path into the prompt — a new
-tmux session does not inherit `$CRON_WORKTREE` from the launching client:
+**Build worktree — reuse vs. create.** Isolation stays. When `$CRON_WORKTREE` is
+set (a `worktree: true` cron's default), this run is ALREADY inside an isolated
+worktree that step 2 put on the feature branch, so **reuse it** — do NOT create a
+second worktree (a second `git worktree add` for the same branch would nest under
+the cron worktree via the relative path, or fail with `branch already checked
+out`). Standalone (no `$CRON_WORKTREE`), create `.worktrees/<prefix>/<N>-<slug>`
+via `/worktrees` and work there:
 
 ```bash
-SESSION="agent-spec-<slug>"   # e.g. printf %s "<slug>" | tr '/:[:space:]' '-'
-WT="${CRON_WORKTREE:-}"       # set by the cron runtime in worktree mode; empty standalone
-tmux new-session -d -s "$SESSION" -c "${WT:-$PWD}" \
-  '<harness> "/goal <rendered-advisor-prompt>"'
-tmux pipe-pane -o -t "$SESSION" "cat >> /tmp/$SESSION.log"
-# <harness> = the active agent CLI (pi | claude | codex); pi matches the cron default
+WT="${CRON_WORKTREE:-}"                       # set by the cron runtime in worktree mode
+if [ -n "$WT" ]; then
+  cd "$WT"                                    # already on <prefix>/<N>-<slug>
+else
+  git worktree add ".worktrees/<prefix>/<N>-<slug>" "<prefix>/<N>-<slug>"
+  cd ".worktrees/<prefix>/<N>-<slug>"
+fi
 ```
 
-**Do not pipe or redirect the launched command.** The Advisor is an interactive,
-multi-turn session; a `2>&1 | tee <log>` on it replaces its stdout with a pipe,
-and the session exits after one turn instead of driving the build. `tmux
-pipe-pane` attaches to the pane *after* it exists, which captures the same output
-while leaving the pane a terminal.
+Then implement, in this same session:
 
-**Advisor `/goal` prompt** (one line; fill the placeholders — when
-`$CRON_WORKTREE` is set, substitute its actual path for `<worktree>` and use the
-"reuse" branch of step 1):
+1. Read the rendered task prompt, `prd.md` — including the `## Knowledge Context`
+   sources step 0 re-read — and `prd.json`'s story graph.
+2. Implement the dependency-ready stories directly. Use `/delegate` **only** for
+   bounded, disjoint worker tasks, and reconcile every worker result yourself. A
+   delegated worker **never becomes a second supervisor**, never owns the whole
+   task, and never finalizes the PR.
+3. Validate every acceptance criterion against the repository, flip each story's
+   `passes` to `true` only after that validation, and append a dated
+   `progress.txt` entry naming the files, the commit, the result, and the
+   learnings.
+4. Do not load the pattern set. Patterns are the planner's input
+   (`.oh/skills/wiki/references/schema.md` § 3); the owner re-reads the
+   authoritative sources the approved Knowledge Context names. If the task turns
+   into replanning, that is a `/spec plan` re-run, not a reason to widen what the
+   executor reads.
 
-> `/goal` As the **single expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Read `.oh/tasks/<slug>/prd.md` and `prd.json`, re-read the sources its `## Knowledge Context` names, implement the dependency-ready stories directly, and use `/delegate` only for bounded disjoint work. Reconcile worker results, validate every acceptance criterion, and set each story's `passes` to `true` only after validation — the task is complete when `jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/<slug>/prd.json` exits 0. (3) Continue in this same Advisor session with the implementation-side audit loop — including the gate-5 simplify sub-loop, where you delete the code each finding names and drive `netAdded` down until the round cap or a non-reducing round ends it — `/eval` once, the Actual Knowledge Impact gate, `evidence.md`, `/spec retro`, `/wiki compile`, `/benchmark`, and a fresh PR audit; run `gh pr ready <PR> --repo "$SPEC_REPO"` only if that audit is promotable (CI green + mergeable + clean). Otherwise comment the blocking gate and leave the PR draft. Keep `/tmp/agent-spec-<slug>.state` current at every phase. Never `gh pr merge`. Leave this single session alive for attach.
+Commit story changes on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer and
+keep worktree isolation intact. Completion is read from `prd.json`, never from
+prose: the task is done when
+`jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/<slug>/prd.json` exits 0.
+`RUNNING` describes the **task's** state — an approved folder whose stories are
+not all `passes: true` —
+never the existence of a named process, session, tab, or pane.
+If implementation is incomplete, leave the PR draft and resume `/spec execute`
+against the same task folder;
+**do not create a second implementation owner**.
 
-The Advisor owns implementation and all post-build gates inside the same session.
-**This node's turn ends after launching it: the terminal report is
-`RUNNING <phase>` plus the session name and the PR URL.** The ready-for-review PR
-is produced asynchronously, by the Advisor, and is reported by the Advisor.
-Reporting `READY` here would be a claim about work nobody has done yet. The
-Advisor commits story changes on `<prefix>/<N>-<slug>` with a `Submitted-by:`
-trailer and keeps worktree isolation intact. If `tmux` is unavailable, run the
-same Advisor workflow in the foreground; do not create a second implementation
-owner.
-
-Completion is read from `prd.json`, never from prose. If implementation is
-incomplete, leave the PR draft and continue the same Advisor session or resume it
-from the task folder.
+Then continue, in this same session, with steps 5 through 10 below.
 
 ### 5. `implementation ⇄ audit` — the adversarial loop
 
@@ -331,16 +351,16 @@ When implementation is complete, run the per-unit verdict gate:
 regression floor + the PR promotable classification (+ `/agent-browser` for UI
 stories, + the gate-5 slop check) into one verdict:
 
-- `AUDIT-FAIL` → loop back to implementation in the same Advisor session to
-  finish the unmet stories, then re-audit. This is the implementation-side
-  adversary — keep looping until the Advisor satisfies the task graph.
+- `AUDIT-FAIL` → loop back to implementation in this same session to finish the
+  unmet stories, then re-audit. This is the implementation-side adversary — keep
+  looping until the owner satisfies the task graph.
 - `AUDIT-PASS` → implementation is promotable; continue to the tail.
 
 **The simplify sub-loop — drive `netAdded` down.** Gate 5 asks whether the diff
 can be smaller and still satisfy every acceptance criterion. On an
-`AUDIT-FAIL (gate 5)` the Advisor removes the code the finding names — it does
-not argue with it — and re-audits. The Advisor owns the round record; the
-read-only audit route only reads it:
+`AUDIT-FAIL (gate 5)` the owner removes the code the finding names — it does not
+argue with it — and re-audits. The owner keeps the round record; the read-only
+audit route only reads it:
 
 ```bash
 COUNTER=".oh/tasks/<slug>/simplify-rounds.json"
@@ -354,8 +374,8 @@ git add -f "$COUNTER"
 ```
 
 Two things end this loop, and neither of them is agreement: the **cap** of 3
-rounds, and a round whose `netAdded` did not strictly fall below the previous
-round's. Either way the audit stops blocking and passes with
+rounds, and a **non-reducing round** — one whose `netAdded` did not strictly fall
+below the previous round's. Either way the audit stops blocking and passes with
 `SIMPLICITY-RESIDUAL`, and those residual findings go into `evidence.md` under
 *What remains unverified* for the operator to judge.
 
@@ -449,7 +469,7 @@ the union is unresolved, or the index probe fails, leave the PR draft, set
 it — this artifact carries the implementation's answer to the reviewer.
 
 The operator's understanding of this work stops at the plan they approved. The
-same Advisor session implements the stories and records the result.
+same session implements the stories and records the result.
 `evidence.md` answers back to the plan with the observed behavior, deviations,
 and remaining gaps.
 
@@ -542,7 +562,7 @@ says:
 ```bash
 if [ ! -f ".oh/tasks/<slug>/evidence.md" ]; then
   gh pr comment <PR> --repo "$SPEC_REPO" --body "spec execute: PR left draft — .oh/tasks/<slug>/evidence.md is missing. The merge gate requires the implementation's answer back to the approved plan (what was asked, what was built, where they diverged, what is unverified). Resume: write it, commit it on the branch, re-run the promotable gate."
-  printf 'DRAFT-BLOCKED(evidence) %s\n' "<pr-url>" > "/tmp/agent-spec-<slug>.state"
+  printf 'DRAFT-BLOCKED(evidence) %s\n' "<pr-url>" > "/tmp/spec-<slug>.state"
   exit 0
 fi
 git ls-files --error-unmatch ".oh/tasks/<slug>/evidence.md" >/dev/null 2>&1 \
@@ -555,7 +575,7 @@ The `git ls-files` half is not redundant: `.oh/tasks/` is gitignored, so an
 reviewer's seat.
 
 **Promote the implementation narrative into the PR body.** `progress.txt` holds
-the per-story record the Advisor wrote. Update the PR body from it and from
+the per-story record the owner wrote. Update the PR body from it and from
 `evidence.md` so the reviewer meets the work in the PR rather than by opening the
 task folder:
 
@@ -601,7 +621,7 @@ and that immediately preceding fresh PR audit classified it promotable:
 
 ```bash
 gh pr ready <PR> --repo "$SPEC_REPO"
-printf 'READY %s\n' "<pr-url>" > "/tmp/agent-spec-<slug>.state"
+printf 'READY %s\n' "<pr-url>" > "/tmp/spec-<slug>.state"
 ```
 
 Otherwise (not promotable: red/pending CI, conflicts, a new eval regression, an
@@ -610,13 +630,11 @@ and record it:
 
 ```bash
 gh pr comment <PR> --repo "$SPEC_REPO" --body "spec execute: PR left draft — <blocking gate>. Resume: <command>."
-printf 'DRAFT-BLOCKED(%s) %s\n' "<gate>" "<pr-url>" > "/tmp/agent-spec-<slug>.state"
+printf 'DRAFT-BLOCKED(%s) %s\n' "<gate>" "<pr-url>" > "/tmp/spec-<slug>.state"
 ```
 
 Then **stop**. The human owns the merge (`.oh/skills/spec/SKILL.md`: human merge
-is the final gate; no auto-merge). Never `gh pr merge`. The `agent-spec-<slug>`
-tmux session is left alive for attach/continue (per
-`.oh/skills/t3/references/sandbox-processes.md`). Print the PR URL and the
+is the final gate; no auto-merge). Never `gh pr merge`. Print the PR URL and the
 terminal status (`READY` or `DRAFT-BLOCKED(<gate>)`) as the final pipeline
 output.
 
@@ -631,7 +649,7 @@ output.
 | 1 | `gh issue create` fails (auth, label, repo perms) | Diagnose; create the issue manually; re-run with the issue located |
 | 2 | Pre-commit hook fails (lint, tests) | Fix the issue; re-run from step 2 |
 | 3 | `gh pr create` fails (no remote, branch missing on target remote) | Verify the push from step 2; re-run from step 3 |
-| 4 | The Advisor session stops, or leaves acceptance criteria incomplete | Leave the PR draft and comment the resume command (resume `/spec execute` for the task folder / attach `agent-spec-<slug>`). Do not start a second implementation owner. |
+| 4 | The run stops, or leaves acceptance criteria incomplete | Leave the PR draft and comment the resume command (`/spec execute <slug>` against the same task folder). Do not start a second implementation owner. |
 | 5 | `/eval` reports a NEW green→red regression or exits non-zero | Leave the PR draft; fix or document the regression, then re-run `/eval` |
 | 6 | A page in the impact union has no explicit final state, or the index probe fails | `DRAFT-BLOCKED(knowledge)`; resolve every page, regenerate the index, re-run the gate |
 | 7 | `evidence.md` cannot be written because a gate produced no observed output | Record the gap in the doc and leave the PR draft — a gate with no observed output is a gap, never a pass |
@@ -650,7 +668,7 @@ Every step checks for prior state and resumes rather than duplicating:
 | 1 | The issue named by `prd.json`'s `branchName` exists, or `--pr <N>` was passed | Reuse `<N>`; never create a duplicate |
 | 2 | Branch exists on the target remote | Checkout + commit on top |
 | 3 | Draft PR exists for this branch | Update the body; do not create a duplicate |
-| 4 | `jq -e 'all(.userStories[]; .passes == true)'` on `prd.json` exits 0; or the `agent-spec-<slug>` session is already running | Skip relaunch — attach to or resume the existing Advisor session; worktree present → reuse |
+| 4 | `jq -e 'all(.userStories[]; .passes == true)'` on `prd.json` exits 0 | Implementation is complete; continue to the tail. Worktree present → reuse |
 | 5 | `eval-result.json`'s `commit` equals HEAD and records no new regression | Continue; otherwise re-run `/eval` |
 | 6 | Every page in the impact union already carries a final state for the current HEAD | Continue |
 | 7 | `evidence.md` exists and correlates to the CURRENT audit run id | Reuse; a doc citing a stale run id is rewritten, not kept |
@@ -658,14 +676,14 @@ Every step checks for prior state and resumes rather than duplicating:
 | 10 | PR is already ready-for-review | Print the terminal status; do not mutate |
 
 The whole pipeline can be re-invoked safely. Failed step = fix + re-run; resume
-happens automatically. `/tmp/agent-spec-<slug>.state` tells a resuming session
+happens automatically. `/tmp/spec-<slug>.state` tells a resuming session
 which phase to re-enter.
 
 ## Finalization contract
 
 `execute` opens a draft PR early so reviewers can observe the scaffold, and it
-returns at `RUNNING` because the Advisor it launched is still working — but a
-successful run does not end there. The terminal successful state is a
+can return at `RUNNING` because the task is still building — but a successful run
+does not end there. The terminal successful state is a
 **ready-for-review** PR, reached only after implementation completes, the
 implementation audit returns AUDIT-PASS, `/eval` shows no new green→red
 regression, every page in the Actual Knowledge Impact union carries an explicit
@@ -684,6 +702,10 @@ work, but it never authorizes `gh pr ready`. Never auto-merge.
 
 ## What this node does NOT do
 
+- **Launch a coding agent.** No tmux session, no Herdr workspace/tab/pane, no
+  background shell, no runner selection, no fallback runner. The agent already
+  running `/spec execute` is the implementation owner, and `/spec` never creates
+  the agent that executes it.
 - **Merge.** The terminal state is a **ready** PR. Merge is the human's gate;
   reset/clean is the runner's job after merge.
 - **Select work.** Selection is the human's; `execute` builds the one folder it
@@ -692,7 +714,8 @@ work, but it never authorizes `gh pr ready`. Never auto-merge.
   `/spec plan`.
 - **Load the pattern corpus.** Patterns inform the planner. The executor consumes
   the approved Knowledge Context and re-reads the sources it names.
-- **Promise a PR it has not seen.** Launching the Advisor reports `RUNNING`.
+- **Promise a PR it has not seen.** A task whose stories are not all passing is
+  reported `RUNNING`.
 
 ---
 
@@ -709,10 +732,9 @@ work, but it never authorizes `gh pr ready`. Never auto-merge.
 
 | Primitive | Path | Role |
 |---|---|---|
-| Task prompt template | `.oh/skills/spec/templates/task-prompt.md` | Step 4 — rendered at launch time; never persisted |
+| Task prompt template | `.oh/skills/spec/templates/task-prompt.md` | Step 4 — rendered at execution time; never persisted |
 | `/worktrees` skill | `.oh/skills/worktrees/SKILL.md` | Step 4 — isolated `.worktrees/<branch>` for the implementation |
-| `/goal` (Pi extension) | `.pi/settings.json` (`@narumitw/pi-goal`) | Step 4 — persists the Advisor run to completion |
-| `/delegate` skill | `.oh/skills/delegate/SKILL.md` | Step 4 — optional bounded fan-out inside the Advisor's implementation session |
+| `/delegate` skill | `.oh/skills/delegate/SKILL.md` | Step 4 — optional bounded fan-out beneath the one owner |
 | `/audit implementation` | `.oh/skills/audit/SKILL.md` | Step 5 — the per-unit verdict gate |
 | `/eval` skill | `.oh/skills/eval/SKILL.md` | Step 5 — probe regression floor, run once |
 | Knowledge invalidation | `.oh/skills/wiki/scripts/knowledge-impact.sh` | Step 6 — the one dependency-aware impact implementation |
@@ -724,7 +746,6 @@ work, but it never authorizes `gh pr ready`. Never auto-merge.
 | `/benchmark` skill | `.oh/skills/benchmark/SKILL.md` | Step 9 — the progress-ceiling verdict |
 | `/audit pr` skill | `.oh/skills/audit/SKILL.md` | Step 10 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.oh/skills/ci-status/SKILL.md` | CI verification (subsumed by the PR audit's promotable check) |
-| sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |
 | Protected-paths list | `.claude/protected-paths.txt` | Load-bearing items a spec must not propose deleting |
 
 ## Pipeline position
@@ -736,7 +757,7 @@ resume implementation or fix the named gate.
 
 Report the terminal state as **`READY`** (the PR is ready for review) or
 **`DRAFT-BLOCKED(<gate>)`** naming the gate that held it, alongside the PR URL,
-and mirror it into `/tmp/agent-spec-<slug>.state`. The PR's own draft/ready state
+and mirror it into `/tmp/spec-<slug>.state`. The PR's own draft/ready state
 is the authority — it is what the next reader and the next run both look at.
 Never infer a promotable PR from silence: an incomplete implementation or unrun
 CI is `DRAFT-BLOCKED`, not ready.

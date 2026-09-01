@@ -59,7 +59,7 @@ grep -qF -- "$JQ_CHECK" "$TASKS_README" \
 grep -qF -- "$JQ_CHECK" "$EXECUTE" \
   || failures+=("execute.md does not derive completion from prd.json story state")
 grep -qF -- "$JQ_CHECK" "$PROMPT" \
-  || failures+=("the task prompt does not tell the Advisor how completion is decided")
+  || failures+=("the task prompt does not tell the owner how completion is decided")
 grep -qF 'Completion is structured state' "$SPEC" \
   || failures+=("the /spec dispatcher does not state that completion is structured state")
 

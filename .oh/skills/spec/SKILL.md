@@ -6,8 +6,8 @@ description: >-
   execute; an unrecognized first token is an approved plan path and runs plan
   then execute. `plan` recalls tracked knowledge from .oh/knowledge/, re-grounds
   it against current sources, and writes the .oh/tasks/<slug>/ folder;
-  `execute` re-grounds, implements under one persistent Advisor, and derives
-  knowledge invalidation from the actual diff. This skill owns the ONLY build
+  `execute` re-grounds, implements under one owner — the agent running it — and
+  derives knowledge invalidation from the actual diff. This skill owns the ONLY build
   path; there is no all-in-one composer beside it. Full per-subcommand
   procedures live in references/{plan,execute,retro}.md.
   TRIGGER when: an approved plan file should become a ready PR without further
@@ -35,7 +35,7 @@ builds it through to a ready-for-review pull request. Naming a node explicitly
 
 This is the **only** spec pipeline; there is no all-in-one composer beside it.
 `references/execute.md` holds the build mechanics in full — the issue, the
-branch, the draft PR, the Advisor launch, the `/eval` and knowledge gates, the
+branch, the draft PR, the implementation step, the `/eval` and knowledge gates, the
 promotable classification, and the undraft — so learning what the build does
 never sends a reader to a second skill.
 
@@ -112,7 +112,7 @@ The `.oh/tasks/<slug>/` folder is the interface between the subcommands:
 └── eval-result.json  the commit-keyed probe-suite result, when applicable
 ```
 
-There is **no generated `prompt.md`**. The Advisor launch prompt is rendered at
+There is **no generated `prompt.md`**. The task prompt is rendered at
 execution time from `templates/task-prompt.md` plus `prd.md` and `prd.json`; a
 persisted copy of a template only drifts from it.
 
@@ -123,18 +123,19 @@ completion is a second thing that can be wrong.
 
 ### Execution lifecycle
 
-`execute` launches a detached Advisor and returns before the build finishes, so
-it reports the state it actually reached:
+`execute` can return before the build finishes — a cron or a resumed run reaches
+this line with stories still open — so it reports the state it actually reached:
 
 ```text
 PLANNED ──▶ RUNNING ──▶ READY
                    └──▶ DRAFT-BLOCKED(<gate>)
 ```
 
-`RUNNING` is a real state, not ceremony: the Advisor writes
-`/tmp/agent-spec-<slug>.state` at every phase change, and attach, resume,
-watchdog, and operator visibility all read it. Launching the Advisor is never
-reported as `READY`.
+`RUNNING` is a real state, not ceremony — and it is a state of the **task**, not
+of a process: an approved folder whose stories are not all `passes: true`. The
+owner mirrors it into `/tmp/spec-<slug>.state` at every phase change so resume,
+watchdog, and operator visibility have something to read. `execute` returning
+before the build finishes is reported as `RUNNING`, never as `READY`.
 
 ## Subcommands
 
@@ -189,26 +190,30 @@ esac
   instructions.
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces
   it; `execute` and `retro` are each pointed at it. The `<slug>` is the universal
-  key (task directory, branch second segment, tmux session name, status file).
-- **One Advisor owns the build** — `execute` gives implementation and every
-  post-build gate to a single persistent Advisor session. `/delegate` is
+  key (task directory, branch second segment, status file). It is never a terminal
+  identifier: no session, tab, or pane name is derived from it, and none is read
+  back to decide task state.
+- **One owner builds it — the agent that is running `execute`** — implementation
+  and every post-build gate belong to that agent.
+  **`/spec` never launches another coding-agent process to do that work**:
+  no multiplexer session, no Herdr
+  workspace/tab/pane, no background shell, no runner selection. `/delegate` is
   available only for bounded, disjoint worker tasks; a worker never becomes a
-  second supervisor, executor, or PR owner, and the Advisor reconciles and
-  validates every result. Do not replace the Advisor with a chain of independent
-  sessions.
+  second supervisor, executor, or PR owner, and the owner reconciles and validates
+  every result.
 - **Compose, don't fork** — each node reuses existing skills rather than
   re-implementing them: `plan` composes `/wiki query` + `/prd` + `/ralph`;
   `execute` composes `/audit implementation` + `/eval` + `knowledge-impact.sh` +
   `/wiki compile` + `/benchmark` + `/audit pr`; `retro` composes `/retro`. The
   build **literals** — the `gh` invocations, the branch and PR shapes, the
-  Advisor launch, and the handoff-free implementation rules — live in
+  implementation step, and the handoff-free implementation rules — live in
   `references/execute.md`, which is the single source for them and is a
   protected path.
 - **Dependency-aware invalidation lives in the knowledge primitive** —
   `.oh/skills/wiki/scripts/knowledge-impact.sh`. `/spec` calls it; it does not
   carry a second copy of the logic.
 - **One adversarial loop** — `implementation ⇄ audit` inside `execute` vets the
-  implementation (`AUDIT-FAIL` routes back to the same Advisor session). The plan
+  implementation (`AUDIT-FAIL` routes back to the same owner). The plan
   itself is vetted by the operator who approves it, and re-approved if grounding
   materially changes it.
 - **Distil before you compress** — high-resolution execution evidence is turned
@@ -217,8 +222,8 @@ esac
   semantic stage of the build.
 - **Honest terminal reports** — each subcommand reports what it actually
   produced: `plan` the folder path and story count; `execute` `RUNNING` when it
-  launches the Advisor and `READY` or `DRAFT-BLOCKED(<gate>)` with the PR URL
-  when the build reaches a terminal state; `retro` the promotion counts. Never
+  returns with the task still building, and `READY` or `DRAFT-BLOCKED(<gate>)`
+  with the PR URL when the build reaches a terminal state; `retro` the promotion counts. Never
   infer success from silence. A missing artifact, a crashed build, or an
   undecided gate is reported as blocked, never as done.
 

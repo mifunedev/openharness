@@ -195,8 +195,38 @@ $ jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/repo-knowledge-loop/prd
 COMPLETE
 ```
 
-`/tmp/agent-spec-repo-knowledge-loop.state` was kept current at every phase, which
-is how the orchestrator observed `RUNNING` rather than inferring it.
+The status file was kept current at every phase, which is how the orchestrator
+observed `RUNNING` rather than inferring it. The shipped contract names it
+`/tmp/spec-<slug>.state` after the #930 reconciliation; this run also kept writing
+the pre-reconciliation path its orchestrator was already polling, so the observer
+never lost the signal mid-build.
+
+### The re-ground step fired on this build, against this build
+
+Step 0 of the new `execute.md` exists for exactly one situation, and it happened:
+
+```
+$ git log --oneline ecc49800..origin/development
+0f87d985 FROM task/928-retire-spec-agent-handoff TO development (#930)
+$ git diff --name-only ecc49800..origin/development | grep -c '^.oh/skills/spec/'
+5
+```
+
+`development` moved onto five of the files this change rewrites, retiring the
+execution mechanism #926's own pinned comment names. The merge surfaced nine
+conflicts; each was resolved toward the merged repository state, and the five
+probes #930 added — `spec-no-agent-handoff`, `spec-single-owner`,
+`spec-no-advisor-session-coupling`, `cleanup-no-agent-session-coupling`,
+`headless-tmux-preserved` — all pass alongside this change's ten:
+
+```
+$ bash .oh/skills/eval/run.sh
+ran 131 probe(s)   →   exit 0, zero green→red, 4 SKIPPED (same 4 as base)
+```
+
+This is the loop's own thesis demonstrated on itself: a plan written against
+`ecc49800` was re-grounded against a base that had moved underneath it, and the
+divergence was reconciled explicitly rather than discovered at merge time.
 
 ### The regression floor
 
@@ -311,6 +341,28 @@ Both planning probes were rewritten to assert the block by exact line
    of the retired contract in another task's folder. Retiring the artifact from
    the durable contract while leaving a tracked instance behind would not be
    atomic.
+
+9. **The execution base moved mid-build, and the reconciliation is the one call a
+   reviewer may want to overrule.** PR #930 (issue #928) merged into
+   `development` while this build was in its tail and retired the `/spec`
+   agent-handoff mechanism: no tmux launch, no `/goal` prompt, no
+   `agent-spec-<slug>` session naming, and `RUNNING` redefined as *task* state
+   rather than a process. #926's pinned comment asks for the opposite in
+   mechanism — "one persistent Herdr/tmux-backed session", `RUNNING` as "the
+   persistent Advisor doing the work". This build **adopted the merged state**,
+   because it is the newer operator decision and because it preserves every
+   invariant that comment actually protects: one implementation owner,
+   `/delegate` bounded beneath it, the
+   `PLANNED → RUNNING → READY | DRAFT-BLOCKED(<gate>)` lifecycle, and human merge
+   as the final boundary. What changed is *who* the owner is — the agent already
+   running `/spec execute`, not a session it spawns — and the status file name
+   (`/tmp/spec-<slug>.state`). Flagged on the PR so the operator rules on it.
+
+10. **`cleanup-no-agent-session-coupling.sh` was amended, not just satisfied.**
+    #930's probe pinned `STATUS: COMPLETE` as the archival key while its actual
+    subject is session decoupling — and #926 retires that sentinel. The probe now
+    asserts the same decoupling against `prd.json` structured state. Both
+    contracts hold; neither was weakened.
 
 ---
 

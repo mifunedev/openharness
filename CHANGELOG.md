@@ -13,7 +13,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Make `/spec plan` recall tracked knowledge and re-ground it before the PRD; `prd.md` carries Knowledge Context, Expected Knowledge Impact, and Plan Reconciliation. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Derive final knowledge impact in `/spec execute` from the actual diff plus page dependencies, resolving every impacted page to UPDATED, REVERIFIED, or NOT-AFFECTED. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Replace age-based wiki staleness with source-change freshness: a `kind: repo` page pins `verified_at` and goes needs-review when a declared source changed after it. ([#926](https://github.com/mifunedev/openharness/issues/926))
-- **BREAKING:** Model detached `/spec execute` as PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(gate) in `/tmp/agent-spec-<slug>.state`; launching the Advisor reports RUNNING. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Model `/spec execute` as PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(gate), with RUNNING derived from `prd.json` and mirrored into `/tmp/spec-<slug>.state`. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Reduce `/wiki lint` to six correctness checks and demote `/compact` to an optional non-gating step that runs only after evidence, retro, and pattern compilation. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Reduce `/spec retro` to an explicit wrapper around `/retro --task <slug>`, which `/retro` now accepts; `/retro` stays report-only and `/wiki compile` stays the durable pattern writer. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - **BREAKING:** Move eleven settings out of the compose `environment:` block into oh.json, read through the `oh` CLI; a hand-edited `.devcontainer/.env` no longer carries them ([#920](https://github.com/mifunedev/openharness/issues/920)).
@@ -43,6 +43,14 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Changed
 - `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
+- **BREAKING:** `/spec execute` no longer launches a coding agent; the agent that runs it is the single implementation owner through the final PR gates ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- Task identity and `RUNNING` state depend on `.oh/tasks/<slug>/` alone, never on a terminal session, tab, or pane ([#928](https://github.com/mifunedev/openharness/issues/928)).
+
+### Removed
+- **BREAKING:** Retire the automated `/spec` Advisor handoff — detached tmux launch, `agent-spec-*` sessions and their sweep kill, pane logging, runner fallbacks ([#928](https://github.com/mifunedev/openharness/issues/928)).
+
+### Added
+- Add `spec-no-agent-handoff`, `spec-no-advisor-session-coupling`, `cleanup-no-agent-session-coupling`, `headless-tmux-preserved`; rename `advisor-monitored-loop` to `spec-single-owner` ([#928](https://github.com/mifunedev/openharness/issues/928)).
 
 ### Added
 - Add `.oh/skills/wiki/scripts/knowledge-impact.sh`, the single dependency-aware invalidation primitive: `--verified` for `/wiki lint`, `--changed` for the `/spec execute` knowledge gate. ([#926](https://github.com/mifunedev/openharness/issues/926))

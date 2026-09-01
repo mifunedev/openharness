@@ -366,7 +366,7 @@ Only the two probes RESULTS.md records as persistently
 |--------|-------|-------|---------|
 | autopilot-preflight-gate                   | probe | 3      | CUT   |
 | next-dev-prod                              | probe | 3      | CUT   |
-| advisor-monitored-loop                     | probe | —      | KEEP  |
+| spec-single-owner                          | probe | —      | KEEP  |
 | … (73 more probes) …                       | probe | —      | KEEP  |
 | CB-001                                     | task  | —      | KEEP  |
 | CB-002                                     | task  | —      | KEEP  |

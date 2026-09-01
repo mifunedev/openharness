@@ -74,14 +74,14 @@
         "Execute reads the task Knowledge Context and planning base commit and diffs it against current HEAD before implementing",
         "Final knowledge impact combines Expected Knowledge Impact + actual changed paths + knowledge dependency metadata via knowledge-impact.sh --changed",
         "Every impacted tracked page ends in exactly one of UPDATED, REVERIFIED, or NOT-AFFECTED (<reason>)",
-        "The lifecycle PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(<gate>) is explicit, with a status file, and launching the detached Advisor reports RUNNING rather than a synchronous READY",
+        "The lifecycle PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(<gate>) is explicit, RUNNING is derived from prd.json story state and mirrored into /tmp/spec-<slug>.state, and a run that returns mid-build reports RUNNING rather than a synchronous READY",
         "The tail order is implementation -> audit -> eval -> knowledge impact -> evidence.md -> retro -> compile -> optional compaction -> benchmark -> final PR audit",
         "/compact is non-gating and occurs only after durable evidence and learning extraction",
-        "The single-Advisor executor ownership model and the human merge boundary are intact"
+        "The single implementation owner model \u2014 the agent running /spec execute, with /delegate bounded beneath it \u2014 and the human merge boundary are intact"
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Verified by spec-execute-knowledge-impact.sh (which also drives knowledge-impact.sh --changed in both directions) and spec-execute-running-contract.sh. The gate was run for real on this build: the 105-path diff produced 3 NEEDS-REVIEW pages, and the union with Expected Knowledge Impact resolved to 5 UPDATED, 1 REVERIFIED, 1 NOT-AFFECTED. advisor-monitored-loop.sh and spec-ready-finalization.sh still pass, so the single-Advisor model and the merge boundary survived the lifecycle change."
+      "notes": "Verified by spec-execute-knowledge-impact.sh (which also drives knowledge-impact.sh --changed in both directions) and spec-execute-running-contract.sh. The gate was run for real on this build: the 105-path diff produced 3 NEEDS-REVIEW pages, and the union with Expected Knowledge Impact resolved to 5 UPDATED, 1 REVERIFIED, 1 NOT-AFFECTED. advisor-monitored-loop.sh and spec-ready-finalization.sh still pass, so the single-Advisor model and the merge boundary survived the lifecycle change. RECONCILED mid-build against PR #930 (issue #928), which merged into development and retired the /spec agent-handoff mechanism: no tmux launch, no agent-spec-* session naming, and RUNNING redefined as task state. Adopted, because it is the newer merged decision and preserves every invariant #926's pinned comment protects (one owner, bounded /delegate, the four-state lifecycle, human merge). The status file is now /tmp/spec-<slug>.state. spec-no-agent-handoff.sh, spec-single-owner.sh and spec-no-advisor-session-coupling.sh all pass alongside spec-execute-running-contract.sh."
     },
     {
       "id": "US-006",
@@ -97,7 +97,7 @@
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Verified: ship.md absent; spec-family-contract.sh now treats ship as retired and requires the approved-plan default branch; task-completion-structured-state.sh proves no active surface keys on the prose sentinel and that the documented jq check answers both ways; retired-memory-vocabulary.sh proves the tombstone labelling and removal horizon. /retro gained --task <slug> and stays report-only (retro-deterministic-contract.sh green)."
+      "notes": "Verified: ship.md absent; spec-family-contract.sh now treats ship as retired and requires the approved-plan default branch; task-completion-structured-state.sh proves no active surface keys on the prose sentinel and that the documented jq check answers both ways; retired-memory-vocabulary.sh proves the tombstone labelling and removal horizon. /retro gained --task <slug> and stays report-only (retro-deterministic-contract.sh green). The cleanup cron's completion test also had to be reconciled with #930's cleanup-no-agent-session-coupling.sh, which pinned the retired prose sentinel while its real subject is session decoupling; the probe now asserts that decoupling against prd.json structured state, so both contracts hold."
     },
     {
       "id": "US-007",

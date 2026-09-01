@@ -102,7 +102,22 @@ Issue: [#926](https://github.com/mifunedev/openharness/issues/926) · slug
      and `managed-agents` is reclassified `kind: repo` against the repository
      documents it actually reasons over, with its unrecoverable external seed
      stated in the page.
-  7. **`.oh/manifest.json` must gain `knowledge/**`.** The corpus shipped to
+  7. **The execution base moved mid-build: #930 (issue #928) merged into
+     `development` and retired the `/spec` agent-handoff mechanism.** It deleted
+     the tmux Advisor launch, the `/goal` prompt, and the `agent-spec-<slug>`
+     session naming, and redefined `RUNNING` as *task* state — an approved folder
+     whose stories are not all passing — never a named process. That collides
+     with #926's pinned comment, which asks for "one persistent Herdr/tmux-backed
+     session" and says `RUNNING` "represents the persistent Advisor doing the
+     work". Reconciled toward the merged repository state, which is the newer
+     operator decision and which **preserves every invariant the pinned comment
+     actually protects**: one implementation owner, `/delegate` bounded beneath
+     it, the `PLANNED → RUNNING → READY | DRAFT-BLOCKED(<gate>)` lifecycle, and
+     human merge as the final boundary. What changed is the *mechanism* — the
+     owner is now the agent already running `/spec execute` rather than a session
+     it launches, and the status file is `/tmp/spec-<slug>.state`. Flagged for the
+     operator on the PR; this is the one place a reviewer may want to overrule.
+  8. **`.oh/manifest.json` must gain `knowledge/**`.** The corpus shipped to
      consumer repos today only because it sat under `skills/**`. Moving it out
      without the manifest entry would silently stop shipping durable knowledge.
 

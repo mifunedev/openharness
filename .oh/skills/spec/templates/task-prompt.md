@@ -1,24 +1,25 @@
 # `/spec execute` task — <slug>
 
 > This is a **template**, rendered at execution time by
-> `.oh/skills/spec/references/execute.md` step 4 and passed to the Advisor as its
-> launch prompt. It is never written into `.oh/tasks/<slug>/`: a persisted copy of
-> a generated file drifts from the template it came from.
+> `.oh/skills/spec/references/execute.md` step 4 and read by the agent that is already
+> running `/spec execute`. It is never written into `.oh/tasks/<slug>/`: a persisted copy
+> of a generated file drifts from the template it came from.
 
-You are the single implementation Advisor for the `<slug>` task. Read the approved
-plan in `.oh/tasks/<slug>/prd.md` and the ordered stories in
-`.oh/tasks/<slug>/prd.json`.
+You are the single implementation owner for the `<slug>` task. Read the approved plan in
+`.oh/tasks/<slug>/prd.md` and the ordered stories in `.oh/tasks/<slug>/prd.json`.
 
 - Branch: `<branch>` — never push to `development` or `main`.
 - Issue: #<issue>.
 - Task folder: `.oh/tasks/<slug>/` (`prd.md`, `prd.json`, `progress.txt`; you add
   `evidence.md` and `eval-result.json`).
-- Status file: `/tmp/agent-spec-<slug>.state` — keep it current at every phase.
+- Status file: `/tmp/spec-<slug>.state` — keep it current at every phase.
 
 ## Ownership
 
 You own this task from implementation through the final PR gate. Do not hand the task to a
-second implementation owner or a second supervisory session. Use `/delegate` only for bounded,
+second implementation owner or a second supervisory session, and do not launch another
+coding-agent process — through tmux, Herdr, a background shell, or any other runner — to do
+this work. Ownership is a role, not a terminal topology. Use `/delegate` only for bounded,
 disjoint work that can run in parallel. Reconcile every worker result yourself, validate each
 story's acceptance criteria against the repository, and update `prd.json` and `progress.txt`.
 
@@ -45,7 +46,7 @@ set — that is the planner's input.
 
 ## Tail
 
-After implementation completes, continue in the same Advisor session with the `/spec execute`
+After implementation completes, continue in this same session with the `/spec execute`
 procedure, in this order: the implementation-side audit loop; `/eval` once; the Actual
 Knowledge Impact gate (`knowledge-impact.sh --changed <actual diff>`, then resolve every
 impacted page to UPDATED / REVERIFIED / NOT-AFFECTED); write and commit `evidence.md`;

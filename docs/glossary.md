@@ -100,9 +100,12 @@ These names describe separate layers, not interchangeable jobs:
   `.devcontainer/`, so the agent works against your code without touching the
   host machine. Source: [`.devcontainer/`](../.devcontainer/).
 
-- **session** — A single named run of an agent, typically a tmux session in the
-  sandbox. `/spec execute` keeps implementation, validation, evidence, and PR
-  finalization in one Advisor-owned session.
+- **session** — A terminal-backend run of an agent: a tmux session, a Herdr pane, or a
+  plain shell. It is a *backend*, not an identity. Distinguish it from the
+  **implementation owner** — the logical role that owns one `/spec execute` task from the
+  isolated worktree through the final PR gates. `/spec execute` keeps implementation,
+  validation, evidence, and PR finalization with the single agent that invoked it, whatever
+  backend that agent happens to be running in, and launches no session of its own.
   Source: [`.oh/skills/spec/references/execute.md`](../.oh/skills/spec/references/execute.md) and
   [`sandbox-processes.md`](../.oh/skills/t3/references/sandbox-processes.md).
 

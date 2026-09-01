@@ -76,8 +76,6 @@ only — never a `.oh/tasks/` subfolder.
    - If every user story in `.oh/tasks/<taskdesc>/prd.json` passes —
      `jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/<taskdesc>/prd.json`
      exits 0 — the task is complete:
-     - Kill the matching tmux session if one exists:
-       `tmux kill-session -t agent-spec-<taskdesc> 2>/dev/null || true`.
      - Move the folder inside the worktree:
        `git -C .worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
        (falls back to `mv` + `git -C .worktrees/archive/$TODAY add` if
@@ -87,6 +85,9 @@ only — never a `.oh/tasks/` subfolder.
      stories remain unpassed
      (`jq '[.userStories[] | select(.passes != true)] | length' .oh/tasks/<taskdesc>/prd.json`),
      and the last `progress.txt` modification time.
+   - Task state is read from the task folder alone and is **never** tied to a
+     tied to a terminal session, tab, or pane: the sweep does not look for,
+     attach to, or kill any implementation-agent process.
    - A task folder with **no readable `prd.json`** — the file is missing,
      unparseable, or carries no `userStories` array, so the `jq` test above
      fails rather than exits 0 — is **not** complete: leave the folder in

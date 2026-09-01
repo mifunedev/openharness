@@ -52,8 +52,10 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
 
 Per the `/prd` skill's rules: lowercase kebab-case, `[a-z0-9-]+`, ≤5
 hyphen-words, not `archive`. The slug is the universal key — task directory,
-branch second segment, tmux session name, status file. Choose once; reject and
-ask for a shorter name if invalid. `--slug` overrides derivation.
+branch second segment, status file;
+it never names a terminal session, tab, or pane.
+Choose once; reject and ask for a shorter name if invalid. `--slug` overrides
+derivation.
 
 ### 2. Recall tracked knowledge
 

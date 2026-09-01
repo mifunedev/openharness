@@ -155,6 +155,7 @@ Union with `prd.md`'s `Expected Knowledge Impact`, and the state each page ended
 | `wikiskill-experience-compilation` | **UPDATED** | its "the harness lacks the pattern layer, the impact ledger, and any wiki read on the proposer path" is now wrong on all three counts |
 | `pattern-wiki-ungated-check-drift` | **UPDATED** | corroborating evidence appended per schema § 11a; this change applied its prescribed workaround to the whole check list |
 | `pattern-wiki-external-model-over-mapping` | **UPDATED** | corroborating evidence appended; two exclusions written down alongside the structures that transferred |
+| `plan-vs-built-reconciliation` | **UPDATED again after the merge** | `execute.md` moved a second time when #930 landed; all nine line anchors re-verified against the merged file and `verified_at` advanced |
 | `document-ingestion` | **REVERIFIED** | `ingest.md` moved under it, but only paths and kind guidance changed; its conversion claims still hold. `verified_at` advanced, body untouched |
 | `audit-architecture` | **NOT-AFFECTED** (no declared source is in the changed set; the audit subsystem is untouched by this change) | named in the prediction, not in the diff |
 

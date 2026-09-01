@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# the pane pty), with NO `| tee` pipe and NO `--mode rpc`. On a TTY pi resolves to
-# session no longer needs `--mode rpc` to avoid the idle exit.
 set -u
 
 BACKEND="${GATEWAY_BACKEND:-pi}"
@@ -76,7 +74,6 @@ while true; do
              pkill -f 'pi-messenger-bridge/dist/index.js'; } ) </dev/null >/dev/null 2>&1 &
     WD=$!
 
-    # flood, stays alive at idle), stderr -> $LOG. No pipe, no --mode rpc.
     pi --extension "$BRIDGE_ENTRY" --extension "$RECOVERY_ENTRY" --approve 2>>"$LOG"
     rc=$?
   else

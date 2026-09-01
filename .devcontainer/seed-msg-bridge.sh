@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#            (autoConnect, showWidget, …) but PRESERVE the operator's runtime
 set -u
 
 seed="${1:-}"

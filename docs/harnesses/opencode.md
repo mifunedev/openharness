@@ -27,7 +27,11 @@ install:
   opencode: true
 ```
 
-Or set `INSTALL_OPENCODE=true` in `.devcontainer/.env` (legacy).
+Or set it from the CLI:
+
+```bash
+oh config set install.opencode true
+```
 
 Either way the boot provisioner installs it on the next start — no rebuild:
 

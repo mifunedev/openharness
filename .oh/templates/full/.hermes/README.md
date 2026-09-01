@@ -1,6 +1,6 @@
 # Hermes runtime home
 
-OpenHarness sets `HERMES_HOME=<repo>/.hermes` when `INSTALL_HERMES=true`.
+OpenHarness sets `HERMES_HOME=<repo>/.hermes` whenever the `hermes` binary is installed.
 
 This directory holds Hermes project-local runtime state (config, memory, skills,
 sessions, scheduled-task metadata). **Only `config.yaml`, `SOUL.md`, and this

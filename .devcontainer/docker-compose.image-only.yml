@@ -1,26 +1,7 @@
-# Image-Only Sandbox Docker Compose Configuration (Flavor B, #609)
-# ===================================================================
-# Standalone recipe for running the PUBLISHED image with no repo checkout
-# and no local image build — there is no parent-directory bind mount and
-# no build stanza in this file. Everything the sandbox persists, workspace
-# and control plane included, lives in the single /home/sandbox mount: the
-# named volume ${SANDBOX_NAME}_workspace by default, or an absolute HOST
-# path when OH_HOME_MOUNT is set. The workspace at /home/sandbox/harness is
-# a directory inside that mount, seeded from the image's baked /opt/oh-seed
-# on first boot by entrypoint.sh (see OH_IMAGE_ONLY handling); the rest of
-# the home comes from /opt/home-seed via seed_home. Edits made inside the
-# running sandbox persist across image pulls and container recreation.
-#
-# Usage:
-#   docker compose -f .devcontainer/docker-compose.image-only.yml up -d
-#
-# See docs/deployment-prebuilt-image.md for the full Flavor B writeup.
-
 name: ${SANDBOX_NAME:-openharness}
 
 services:
   sandbox:
-    # Always runs the published image — never builds locally.
     image: ${OH_SANDBOX_IMAGE:-ghcr.io/mifunedev/openharness:latest}
     pull_policy: ${OH_PULL_POLICY:-always}
     container_name: ${SANDBOX_NAME:-openharness}
@@ -33,20 +14,11 @@ services:
       - SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}
       - TZ=${TZ:-America/Los_Angeles}
       - CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true
-      # cc-safety-net destructive-command guard modes (install-decision.md):
-      # STRICT closes the fail-open hole on unparseable shell; WORKTREE unblocks
-      # bare reset/clean/checkout inside linked worktrees. No PARANOID/DEBUG;
-      # CC_SAFETY_NET_OFF left unset (kill-switch, opt-in per session).
       - CC_SAFETY_NET_STRICT=1
       - CC_SAFETY_NET_WORKTREE=1
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
-      - XAI_API_KEY=${XAI_API_KEY:-}
-      - OH_IMAGE_ONLY=1
-      - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
-      - LANGFUSE_PRIVACY_PRESET=${LANGFUSE_PRIVACY_PRESET:-metadata-only}
     stdin_open: true
     tty: true
     init: true
@@ -57,11 +29,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # Boot installs the default harnesses AND the default tools (herdr,
-      # cloudflared) into the home mount instead of unpacking them from the
-      # image (entrypoint.sh, bounded by OH_PROVISION_DEFAULTS_TIMEOUT). A cold
-      # first boot on a fresh home mount therefore spends up to 240s downloading
-      # before the control plane is reachable; 600s leaves room for the rest.
       start_period: 600s
     restart: unless-stopped
 

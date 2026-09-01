@@ -43,7 +43,11 @@ has '".dockerignore"' "dockerignore path filter"
 has '".github/workflows/sandbox-boot-guard.yml"' "workflow self path filter"
 has 'persist-credentials: false' "checkout token persistence disabled"
 has 'bash .oh/scripts/docker-compose.sh config --quiet' "base compose config validation"
-has 'HERMES_DASHBOARD: "true"' "Hermes overlay validation env"
+has 'SANDBOX_SSH: "true"' "sshd overlay validation env"
+has "jq '.build.skipPnpmInstall = true' oh.json" "pre-seeded deps opt out through oh.json, not a compose env knob"
+if grep -Fq 'SKIP_PNPM_INSTALL' <<<"$text"; then
+  missing+=("the boot guard sets SKIP_PNPM_INSTALL — the opt-out lives in oh.json and entrypoint.sh reads it through the CLI")
+fi
 has 'docker build \' "local docker build step"
 has '--file .devcontainer/Dockerfile' "devcontainer Dockerfile build target"
 has '--tag openharness-sandbox-boot-guard:${{ github.sha }}' "local CI image tag"

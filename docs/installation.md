@@ -413,9 +413,9 @@ CLI's `~/.newtool`, say) and leaves everything you already have alone. It does
 not merge new files into a directory the mount already has, which is what the
 per-tool volumes did before.
 
-Hermes is split: when Hermes is enabled (`install.hermes: true` in `oh.json`),
-`HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/`
-directory. The entrypoint links `.hermes/skills/openharness` to the tracked
+Hermes is split: when the `hermes` binary is present (`install.hermes: true` in
+`oh.json`, or `oh harness install hermes`), `HERMES_HOME` is the project-local
+bind-mounted `~/harness/.hermes/` directory. The entrypoint links `.hermes/skills/openharness` to the tracked
 shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as
 Claude, Codex, and Pi without copying them into runtime state. Project-local
 runtime contents are gitignored except `.hermes/README.md`.

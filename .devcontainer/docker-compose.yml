@@ -1,38 +1,7 @@
-# Main Sandbox Docker Compose Configuration
-# ===========================================
-# The sandbox persists everything under the agent's home directory through a
-# single mount at /home/sandbox. Leave OH_HOME_MOUNT unset and Docker manages
-# it as the named volume ${SANDBOX_NAME}_workspace; set it (via
-# storage.homePath in oh.json) to an absolute HOST path and the same mount
-# becomes a bind. The image ships its home baked at /opt/home-seed, which
-# entrypoint.sh's seed_home restores into whichever mount lands there, so both
-# kinds behave identically.
-#
-# The repo checkout is bind-mounted at /home/sandbox/harness, nested inside
-# that mount; the daemon orders mounts by destination depth, so the checkout
-# always lands on top. Its location is fixed, not configurable.
-#
-# Downstream harness packs and Pi extensions can register additional
-# overlays by appending paths to composeOverrides[] in oh.json;
-# `oh sandbox` and `.oh/scripts/install.sh` pick those up via jq.
-#
-# The host Docker socket is NOT mounted here by default (socket access is
-# effectively host root). It is an opt-in overlay — docker-compose.docker-sock.yml
-# — applied by .oh/scripts/docker-compose.sh only when access.dockerSocket is
-# true in oh.json. The VS Code "Reopen in Container" path reads THIS file
-# directly and bypasses that wrapper, so it never gets the socket; add the
-# overlay to devcontainer.json to enable it there. See
-# docs/security-considerations.md.
-
 name: ${SANDBOX_NAME:-openharness}
 
 services:
   sandbox:
-    # Default is a LOCAL build tagged sandbox-<name>. Set image.ref
-    # in oh.json (e.g. ghcr.io/mifunedev/openharness:latest)
-    # to run the prebuilt image instead — the CLI path pairs this with
-    # `up -d --no-build` (`oh sandbox --image`); the VS Code "Reopen in
-    # Container" path relies on pull_policy since it can't pass --no-build.
     image: ${OH_SANDBOX_IMAGE:-sandbox-${SANDBOX_NAME:-openharness}}
     pull_policy: ${OH_PULL_POLICY:-missing}
     container_name: ${SANDBOX_NAME:-openharness}
@@ -49,26 +18,11 @@ services:
       - SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}
       - TZ=${TZ:-America/Los_Angeles}
       - CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true
-      # cc-safety-net destructive-command guard modes (install-decision.md):
-      # STRICT closes the fail-open hole on unparseable shell; WORKTREE unblocks
-      # bare reset/clean/checkout inside linked worktrees. No PARANOID/DEBUG;
-      # CC_SAFETY_NET_OFF left unset (kill-switch, opt-in per session).
       - CC_SAFETY_NET_STRICT=1
       - CC_SAFETY_NET_WORKTREE=1
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
-      - XAI_API_KEY=${XAI_API_KEY:-}
-      - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
-      - INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-false}
-      - SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}
-      - INSTALL_HERMES=${INSTALL_HERMES:-false}
-      - HERMES_HOME=/home/sandbox/harness/.hermes
-      - HERMES_DASHBOARD=${HERMES_DASHBOARD:-false}
-      - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
-      - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
-      - LANGFUSE_PRIVACY_PRESET=${LANGFUSE_PRIVACY_PRESET:-metadata-only}
     stdin_open: true
     tty: true
     init: true
@@ -79,11 +33,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # Boot installs the default harnesses AND the default tools (herdr,
-      # cloudflared) into the home mount instead of unpacking them from the
-      # image (entrypoint.sh, bounded by OH_PROVISION_DEFAULTS_TIMEOUT). A cold
-      # first boot on a fresh home mount therefore spends up to 240s downloading
-      # before the control plane is reachable; 600s leaves room for the rest.
       start_period: 600s
     restart: unless-stopped
 

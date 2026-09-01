@@ -153,19 +153,31 @@ Everything the sandbox persists — the workspace and control plane at
 declared in that file: the named volume `<sandbox-name>_workspace` by default,
 or an absolute host path when `OH_HOME_MOUNT` is set.
 
-### `OH_IMAGE_ONLY=1`
+### How the flavor is detected
 
-The compose file sets `OH_IMAGE_ONLY=1` in the container environment. This is
-the entrypoint flag that switches `entrypoint.sh` into **no-bind mode**:
+Nothing declares the flavor. `entrypoint.sh` asks whether
+`/home/sandbox/harness` is a bind mount **and** already holds a `.oh/` directory,
+and reads the answer from the kernel and the filesystem:
 
-- the host UID/GID sync block is skipped (there is no host directory to read
-  ownership from)
-- the workspace mount is `chown`'d to the sandbox user instead
-- the first-boot seed (below) runs before `link-providers`, the root
-  `pnpm install`, and cron tmux setup, so those steps see a populated `.oh/`
+- **checkout bind present** (Flavor A) — sync the sandbox UID/GID to the host
+  directory's owner, and never seed.
+- **anything else** (this flavor, and a runtime that mounts a fresh empty host
+  directory at the project root) — skip the UID/GID sync, since there is no host
+  directory to read ownership from; `chown` the workspace to the sandbox user;
+  and run the first-boot seed (below) before `link-providers`, the root
+  `pnpm install`, and cron tmux setup, so those steps see a populated `.oh/`.
 
-Prebuilt-image mode (Flavor A) never sets this flag — it always keeps the bind
-mount, so its host-UID-sync path is unchanged.
+The detected mode is logged on both paths, so a wrong detection is visible in
+`oh logs` rather than silent:
+
+```
+[entrypoint] checkout bind detected at /home/sandbox/harness — syncing host UID/GID
+[entrypoint] no checkout bind at /home/sandbox/harness — seeding from /opt/oh-seed
+```
+
+Three independent guards keep a misdetection from seeding over a real checkout:
+`mountpoint -q` is a kernel fact rather than a heuristic, `seed_workspace_volume`
+refuses when `.oh/` already exists, and `.oh/.image-seeded` is gitignored.
 
 ### Seed-to-volume persistence
 
@@ -213,7 +225,6 @@ docker volume rm "${NAME}_workspace" 2>/dev/null || true   # the whole sandbox h
 
 # ── 2. Fresh run (no bind mount, no build) ─────────────────────────
 docker run -d --name "$NAME" --restart unless-stopped --init \
-  -e OH_IMAGE_ONLY=1 \
   -e GIT_USER_NAME="ryaneggz" \
   -e GIT_USER_EMAIL="kre8mymedia@gmail.com" \
   -e GH_TOKEN="${GH_TOKEN:-}" \

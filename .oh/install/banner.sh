@@ -122,17 +122,23 @@ fi
 dashboard_status=""
 dashboard_detail=""
 if command -v hermes >/dev/null 2>&1; then
-  if echo "${HERMES_DASHBOARD:-}" | grep -qiE '^(true|1|yes|on)$'; then
+  dashboard_enabled=""
+  dashboard_port=9119
+  if command -v jq >/dev/null 2>&1 && [ -f "$project_dir/oh.json" ]; then
+    dashboard_enabled="$(jq -r '.hermesDashboard.enabled // false' "$project_dir/oh.json" 2>/dev/null)"
+    dashboard_port="$(jq -r '.hermesDashboard.port // 9119' "$project_dir/oh.json" 2>/dev/null)"
+  fi
+  if echo "${dashboard_enabled:-}" | grep -qiE '^(true|1|yes|on)$'; then
     if tmux has-session -t app-hermes-dashboard 2>/dev/null; then
       dashboard_status="$status_ok"
-      dashboard_detail="dashboard — http://127.0.0.1:${HERMES_DASHBOARD_PORT:-9119}"
+      dashboard_detail="dashboard — http://127.0.0.1:${dashboard_port}"
     else
       dashboard_status="$status_x"
       dashboard_detail="dashboard — enabled but not running (see /tmp/app-hermes-dashboard.log)"
     fi
   else
     dashboard_status="$status_empty"
-    dashboard_detail="dashboard — disabled (set hermes.dashboard: true)"
+    dashboard_detail="dashboard — disabled (oh config set hermesDashboard.enabled true)"
   fi
 fi
 

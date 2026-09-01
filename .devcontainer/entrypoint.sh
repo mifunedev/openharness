@@ -79,12 +79,31 @@ seed_workspace_volume() {
 }
 # <<< seed_workspace_volume <<<
 
+# >>> oh_config >>>
+OH_CONFIG_JSON=""
+oh_config() {
+  local filter="$1" fallback="${2-}" out
+  command -v jq >/dev/null 2>&1 || { printf '%s' "$fallback"; return 0; }
+  if [ -z "$OH_CONFIG_JSON" ]; then
+    OH_CONFIG_JSON="$(cd "$HARNESS" 2>/dev/null && gosu sandbox "${OH_BIN:-oh}" config show 2>/dev/null)" || OH_CONFIG_JSON=""
+    [ -n "$OH_CONFIG_JSON" ] || OH_CONFIG_JSON="{}"
+  fi
+  out="$(printf '%s' "$OH_CONFIG_JSON" | jq -r "$filter" 2>/dev/null)" || out=""
+  if [ -z "$out" ] || [ "$out" = "null" ]; then printf '%s' "$fallback"; else printf '%s' "$out"; fi
+}
+
+oh_config_truthy() {
+  case "$(printf '%s' "$(oh_config "$1" "${2:-false}")" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+# <<< oh_config <<<
+
 OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
 seed_home /home/sandbox || echo "[entrypoint] WARNING: home seed incomplete; some baked dotfiles may be missing" >&2
-
-# ─── Host UID reconciliation ────────────────────────────────────────
 
 uid_reconcile_step() {
   local description="$1"
@@ -99,16 +118,8 @@ uid_reconcile_step() {
 }
 
 HARNESS_DIR="$OH_PROJECT_ROOT"
-if [ "${OH_IMAGE_ONLY:-}" = "1" ]; then
-  echo "[entrypoint] OH_IMAGE_ONLY=1 — no-bind mode; skipping host UID/GID sync"
-  seed_workspace_volume "$OH_PROJECT_ROOT"
-  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
-    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
-    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
-  else
-    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
-  fi
-elif [ -d "$HARNESS_DIR" ]; then
+if mountpoint -q "$HARNESS_DIR" 2>/dev/null && [ -d "$HARNESS_DIR/.oh" ]; then
+  echo "[entrypoint] checkout bind detected at $HARNESS_DIR — syncing host UID/GID"
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
@@ -132,13 +143,21 @@ elif [ -d "$HARNESS_DIR" ]; then
       echo "[entrypoint] WARNING: sandbox UID/GID reconciliation incomplete; continuing with current ownership" >&2
     fi
   fi
+else
+  echo "[entrypoint] no checkout bind at $HARNESS_DIR — seeding from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+  seed_workspace_volume "$OH_PROJECT_ROOT"
+  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
+    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  else
+    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  fi
 fi
 
 PW="${SANDBOX_PASSWORD:-test1234}"
 echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox password" >&2
 unset PW
 
-# UID/GID reconciliation can change the numeric identity behind the sandbox
 repair_home_mount_ownership
 
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
@@ -165,9 +184,8 @@ if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
   fi
 fi
 
-# Hermes keeps all runtime state — including auth.json — inside the
-if [ "${INSTALL_HERMES:-false}" = "true" ]; then
-  HERMES_RUNTIME="${HERMES_HOME:-$HARNESS/.hermes}"
+if command -v hermes >/dev/null 2>&1; then
+  HERMES_RUNTIME="$HARNESS/.hermes"
   HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
 
   mkdir -p "$HERMES_RUNTIME"
@@ -202,23 +220,17 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     [ -d "$d" ] && chown -hR "$(sandbox_ownership)" "$d" 2>/dev/null || true
   done
 
-  if [ "${HERMES_DASHBOARD:-false}" = "true" ] && command -v hermes &>/dev/null \
-     && command -v tmux &>/dev/null; then
-    _dash_port="${HERMES_DASHBOARD_PORT:-9119}"
+  if oh_config_truthy '.hermesDashboard.enabled' && command -v tmux &>/dev/null; then
+    _dash_port="$(oh_config '.hermesDashboard.port' 9119)"
     case "$_dash_port" in
       *[!0-9]|"")
-        echo "[entrypoint] HERMES_DASHBOARD_PORT='${_dash_port}' is not numeric — skipping dashboard launch"
+        echo "[entrypoint] hermesDashboard.port='${_dash_port}' is not numeric — skipping dashboard launch"
         ;;
       *)
         if ! gosu sandbox tmux has-session -t app-hermes-dashboard 2>/dev/null; then
-          _dash_host="${HERMES_DASHBOARD_HOST:-127.0.0.1}"
-          _dash_insecure=""
-          case "${HERMES_DASHBOARD_INSECURE:-}" in
-            [Tt][Rr][Uu][Ee]|1|[Yy][Ee][Ss]|[Oo][Nn]) _dash_insecure=" --insecure" ;;
-          esac
           gosu sandbox tmux new-session -d -s app-hermes-dashboard \
-            "hermes dashboard --no-open --host \"${_dash_host}\" --port \"${_dash_port}\"${_dash_insecure} 2>&1 | tee /tmp/app-hermes-dashboard.log"
-          echo "[entrypoint] starting Hermes dashboard on ${_dash_host}:${_dash_port}"
+            "hermes dashboard --no-open --host 127.0.0.1 --port \"${_dash_port}\" 2>&1 | tee /tmp/app-hermes-dashboard.log"
+          echo "[entrypoint] starting Hermes dashboard on 127.0.0.1:${_dash_port}"
         else
           echo "[entrypoint] app-hermes-dashboard tmux session already running — skipping"
         fi
@@ -227,7 +239,7 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   fi
 fi
 
-if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
+if oh_config_truthy '.access.ssh' && [ -x /usr/sbin/sshd ]; then
   if pgrep -x sshd >/dev/null 2>&1; then
     echo "[entrypoint] sshd already running — skipping"
   else
@@ -236,9 +248,10 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
 
     _ssh_dir=/home/sandbox/.ssh
     _have_keys=0
-    if [ -n "${SANDBOX_SSH_AUTHORIZED_KEYS:-}" ]; then
+    _ssh_authorized_keys="$(oh_config '.access.sshAuthorizedKeys' '')"
+    if [ -n "$_ssh_authorized_keys" ]; then
       mkdir -p "$_ssh_dir"
-      _ssh_keys="${SANDBOX_SSH_AUTHORIZED_KEYS//\\n/$'\n'}"
+      _ssh_keys="${_ssh_authorized_keys//\\n/$'\n'}"
       printf '%s\n' "$_ssh_keys" > "$_ssh_dir/authorized_keys"
       unset _ssh_keys
       chmod 700 "$_ssh_dir"
@@ -250,9 +263,9 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
     fi
 
     _pw_auth=no
-    case "$(printf '%s' "${SANDBOX_SSH_PASSWORD_AUTH:-false}" | tr '[:upper:]' '[:lower:]')" in
-      1|true|yes|on) _pw_auth=yes ;;
-    esac
+    if oh_config_truthy '.access.sshPasswordAuth'; then
+      _pw_auth=yes
+    fi
 
     mkdir -p /etc/ssh/sshd_config.d
     cat > /etc/ssh/sshd_config.d/openharness.conf <<EOF
@@ -264,8 +277,8 @@ EOF
 
     if [ "$_pw_auth" = "no" ] && [ "$_have_keys" -eq 0 ]; then
       echo "[entrypoint] WARNING: sshd starting with NO authorized_keys and password auth OFF —" >&2
-      echo "[entrypoint]          no one can log in. Set SANDBOX_SSH_AUTHORIZED_KEYS in .devcontainer/.env" >&2
-      echo "[entrypoint]          or SANDBOX_SSH_PASSWORD_AUTH=true in .devcontainer/.env. See docs/integrations/sshd.md" >&2
+      echo "[entrypoint]          no one can log in. Run: oh config set access.sshAuthorizedKeys '<public key>'" >&2
+      echo "[entrypoint]          or: oh config set access.sshPasswordAuth true. See docs/integrations/sshd.md" >&2
     fi
 
     if /usr/sbin/sshd; then
@@ -345,7 +358,6 @@ if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh aut
   fi
 fi
 
-# from the marker stored alongside node_modules. Set SKIP_PNPM_INSTALL=1 to opt
 pnpm_workspace_package_patterns() {
   local workspace="$1/pnpm-workspace.yaml"
   [ -f "$workspace" ] || return 0
@@ -448,7 +460,7 @@ pnpm_manifest_fingerprint() {
   done | sha256sum | awk '{print $1}'
 }
 
-if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
+if [ -f "$HARNESS/package.json" ] && ! oh_config_truthy '.build.skipPnpmInstall'; then
   PNPM_INSTALL_MARKER_FILENAME=".openharness-root-pnpm-manifest.sha256"
   PNPM_INSTALL_MARKER="$HARNESS/node_modules/$PNPM_INSTALL_MARKER_FILENAME"
   PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
@@ -541,79 +553,12 @@ else
   echo "[entrypoint] Slack not configured (or pi missing) — skipping client-slack-pi"
 fi
 
-if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser &>/dev/null; then
-  echo "[entrypoint] Installing agent-browser (INSTALL_AGENT_BROWSER=true)..."
-  pnpm add -g agent-browser@0.8.5 \
-    && find "$PNPM_HOME" -name "agent-browser-linux-*" -exec chmod +x {} \; \
-    && agent-browser install --with-deps 2>&1 | tail -5 \
-    && echo "[entrypoint] agent-browser installed" \
-    || echo "[entrypoint] agent-browser install failed — skipping"
-fi
-
-# tailscaled defaults its control socket to /var/run/tailscale/tailscaled.sock,
-# and t3-code.sh calls a bare `tailscale status` that expects exactly that path.
-# Only root can create it, so the entrypoint must — unconditionally, not behind
-# the guard below: `oh tool install tailscale` promises the tool is usable in the
-# already-running container, and gating this on INSTALL_TAILSCALE would make an
-# install-now/use-now flow wait for a reboot. An empty directory costs nothing.
 install -d -o sandbox -g sandbox -m 0755 /var/run/tailscale 2>/dev/null || true
-
-if [ "${INSTALL_TAILSCALE:-false}" = "true" ]; then
-  install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.tailscale 2>/dev/null || true
-
-  if ! gosu sandbox bash -lc 'command -v tailscale' >/dev/null 2>&1; then
-    case "$(dpkg --print-architecture)" in
-      amd64)
-        ts_tarball=tailscale_1.102.3_amd64.tgz
-        ts_sha=36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5
-        ;;
-      arm64)
-        ts_tarball=tailscale_1.102.3_arm64.tgz
-        ts_sha=a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25
-        ;;
-      *)
-        ts_tarball=""
-        ts_sha=""
-        ;;
-    esac
-
-    if [ -z "$ts_tarball" ]; then
-      echo "[entrypoint] WARNING: no pinned Tailscale build for $(dpkg --print-architecture) — skipping" >&2
-    else
-      echo "[entrypoint] Installing ${ts_tarball%.tgz} (INSTALL_TAILSCALE=true)..."
-      # Install into the home mount as the sandbox user, matching the tool
-      # catalog. /usr/local/bin is an image-layer path: it is lost on every
-      # container recreate, so the old location re-downloaded Tailscale on every
-      # fresh container, and left a root-owned binary no running sandbox could
-      # upgrade in place.
-      ts_tmp="$(mktemp -d)"
-      chown sandbox:sandbox "$ts_tmp"
-      if gosu sandbox bash -lc "
-           set -e
-           prefix=\"\${NPM_USER_PREFIX:-\$HOME/.local}\"
-           curl -fsSL 'https://pkgs.tailscale.com/stable/${ts_tarball}' -o '$ts_tmp/$ts_tarball'
-           echo '${ts_sha}  $ts_tmp/$ts_tarball' | sha256sum -c -
-           tar -xzf '$ts_tmp/$ts_tarball' -C '$ts_tmp'
-           install -d \"\$prefix/bin\"
-           install -m 0755 '$ts_tmp/${ts_tarball%.tgz}/tailscale'  \"\$prefix/bin/tailscale\"
-           install -m 0755 '$ts_tmp/${ts_tarball%.tgz}/tailscaled' \"\$prefix/bin/tailscaled\"
-         "; then
-        echo "[entrypoint] ${ts_tarball%.tgz} installed into the home mount"
-      else
-        echo "[entrypoint] WARNING: Tailscale install failed — skipping" >&2
-      fi
-      rm -rf "$ts_tmp"
-      unset ts_tmp
-    fi
-    unset ts_tarball ts_sha
-  fi
-fi
 
 for hook in /usr/local/bin/*-entrypoint-hook.sh; do
   [ -x "$hook" ] && "$hook"
 done
 
-# First-boot message if onboarding not complete
 if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo ""
   echo "  ┌─────────────────────────────────────────────────┐"

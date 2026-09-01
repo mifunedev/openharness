@@ -85,5 +85,8 @@ packages/*/node_modules/
 # Per-session agent memory and cron runtime state — local scratch, like the
 # wiki corpus above. Nothing here is tracked on any branch; the operator
 # whitelists an entry with `git add -f` if one is ever worth keeping.
+# Written by entrypoint.sh's seed_workspace_volume when there is no checkout bind.
+# It must never land in a real checkout, so it is ignored on every branch.
+.oh/.image-seeded
 .oh/memory/
 .oh/crons/

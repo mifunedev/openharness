@@ -13,7 +13,7 @@ function readRepoFile(...parts: string[]): string {
 
 function firstBootBlock(entrypoint: string): string {
   const match = entrypoint.match(
-    /# First-boot message if onboarding not complete[\s\S]*?\nfi\n/,
+    /if \[ ! -f "\/home\/sandbox\/\.claude\/\.onboarded" \]; then[\s\S]*?\nfi\n/,
   );
   expect(match, "first-boot banner block should be present").not.toBeNull();
   return match?.[0] ?? "";

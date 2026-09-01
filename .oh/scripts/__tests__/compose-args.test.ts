@@ -28,7 +28,7 @@ beforeEach(() => {
   tmp = mkdtempSync(path.join(tmpdir(), "compose-args-"));
   mkdirSync(path.join(tmp, ".devcontainer"), { recursive: true });
   writeFileSync(path.join(tmp, ".devcontainer", "docker-compose.yml"), "services: {}\n");
-  writeFileSync(path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"), "services: {}\n");
+  writeFileSync(path.join(tmp, ".devcontainer", "docker-compose.ssh.yml"), "services: {}\n");
 });
 
 afterEach(() => {
@@ -107,7 +107,7 @@ describe("scripts/docker-compose.sh", () => {
     const hostile = `over rides/config ; touch ${sentinel}.yml`;
     const substitution = "local config/override $(printf hacked).yml";
 
-    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "HERMES_DASHBOARD=true\n");
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "SANDBOX_SSH=true\n");
     writeFileSync(
       path.join(tmp, "config.json"),
       JSON.stringify({ composeOverrides: [hostile, "overlays/config-two.yml", substitution] }),
@@ -122,7 +122,7 @@ describe("scripts/docker-compose.sh", () => {
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "-f",
-      path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"),
+      path.join(tmp, ".devcontainer", "docker-compose.ssh.yml"),
       "-f",
       path.join(tmp, hostile),
       "-f",
@@ -269,7 +269,7 @@ describe("scripts/docker-compose.sh --extra-env-file (issue #880)", () => {
   it("selects an overlay from the rendered file even when the dotenv is silent", () => {
     writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
     const file = path.join(tmp, "rendered.list");
-    writeFileSync(file, "HERMES_DASHBOARD=true\n");
+    writeFileSync(file, "SANDBOX_SSH=true\n");
 
     const result = spawnSync(
       "bash",
@@ -278,7 +278,7 @@ describe("scripts/docker-compose.sh --extra-env-file (issue #880)", () => {
     );
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"),
+      path.join(tmp, ".devcontainer", "docker-compose.ssh.yml"),
     );
   });
 

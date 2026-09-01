@@ -25,7 +25,6 @@ regress() {
 for asset in \
   Dockerfile \
   docker-compose.yml \
-  docker-compose.hermes-dashboard.yml \
   entrypoint.sh \
   client-slack-supervise.sh \
   seed-msg-bridge.sh; do
@@ -50,8 +49,8 @@ grep -Eq '^[[:space:]]*context: \.\.$' "$COMPOSE" \
 grep -Fq 'COPY .devcontainer/entrypoint.sh' "$DOCKERFILE" \
   || regress "Dockerfile does not COPY .devcontainer/entrypoint.sh"
 
-for asset in Dockerfile docker-compose.yml docker-compose.hermes-dashboard.yml \
-             entrypoint.sh client-slack-supervise.sh seed-msg-bridge.sh devcontainer.json; do
+for asset in Dockerfile docker-compose.yml entrypoint.sh \
+             client-slack-supervise.sh seed-msg-bridge.sh devcontainer.json; do
   if grep -Fq '.oh/devcontainer' "$DC/$asset" 2>/dev/null; then
     regress ".devcontainer/$asset still references the retired .oh/devcontainer/ path"
   fi

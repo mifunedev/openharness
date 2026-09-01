@@ -107,7 +107,7 @@ Two consequences that must not be forgotten when a second execution target lands
    about — a *second, nested* hands layer beneath the harness's own. The contract does not
    model it, and Phase-0 does not try to.
 2. Its brain-side surface is configured through an execution-shaped mechanism: the dashboard
-   is toggled by a **compose overlay** (`.devcontainer/docker-compose.hermes-dashboard.yml`),
+   was toggled by a compose overlay (retired in #920; `hermesDashboard.enabled` in `oh.json` now starts it on container loopback),
    so brain-side policy rides on substrate configuration.
 
 This is accepted for Phase-0 because Hermes is opt-in and off by default (`install.hermes`).

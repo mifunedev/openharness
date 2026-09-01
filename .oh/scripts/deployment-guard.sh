@@ -1,25 +1,4 @@
 #!/usr/bin/env bash
-# Live deployment guard for the image-only sandbox flavor.
-#
-# Pulls a published (or locally built) sandbox image, verifies the image
-# contract, boots it with no host checkout behind it, and asserts that resource
-# provisioning (container, volume, network) and internal provisioning (the
-# defaults installed into the home mount at boot) both actually happened.
-#
-# This is the mechanism behind the `/deploy-check` skill and behind
-# .github/workflows/deployment-guard.yml. Neither of them re-implements any of
-# the assertions below.
-#
-# Why a live run is needed at all: entrypoint.sh runs provision-defaults.sh under
-# `timeout` and, on failure, logs a WARNING and continues. The container becomes
-# healthy with the defaults missing, so health is not evidence that provisioning
-# worked, and nothing else in CI ever boots this flavor or runs a published ref.
-#
-# Host safety: every resource this creates is named from one unique run token, it
-# refuses to start if anything already carries that token, it removes only its
-# own resources, and it fails the run if anything it created survives teardown.
-# It never runs any `prune` verb and never touches a resource it did not create.
-#
 # Usage: deployment-guard.sh [--keep] [--run <token>] [<image-ref>]
 # Env:   OH_SANDBOX_IMAGE, OH_DEFAULT_SANDBOX_IMAGE, OH_DEPLOY_RUN, OH_DEPLOY_KEEP,
 #        OH_DEPLOY_TIMEOUT_SECONDS, OH_DEPLOY_DOCKER_CONFIG
@@ -37,9 +16,6 @@ DEFAULT_IMAGE=${OH_DEFAULT_SANDBOX_IMAGE:-ghcr.io/mifunedev/openharness:latest}
 PROJECT_ROOT=/home/sandbox/harness
 SEED_MARKER="$PROJECT_ROOT/.oh/.image-seeded"
 
-# Identity written into the container so the gitconfig assertion has a value it
-# put there itself. Deliberately not the operator's identity: this container is
-# destroyed at the end of the run and authors nothing.
 GUARD_GIT_NAME="openharness deployment guard"
 GUARD_GIT_EMAIL="deployment-guard@openharness.invalid"
 
@@ -64,9 +40,32 @@ done
 [ -n "$IMAGE" ] || IMAGE=${OH_SANDBOX_IMAGE:-$DEFAULT_IMAGE}
 RUN=${OH_DEPLOY_RUN:-oh-depguard-$(date +%s)-$$}
 
+RUN_CONTAINER="$RUN"
+RUN_VOLUME="${RUN}_workspace"
+RUN_NETWORK="${RUN}_default"
+SCOPES=("container:$RUN_CONTAINER" "volume:$RUN_VOLUME" "network:$RUN_NETWORK")
+
 failures=()
 fail() { failures+=("$1"); echo "FAIL: $1" >&2; }
 ok() { echo "ok: $1"; }
+
+docker_names() {
+  case "$1" in
+    container) docker ps -a --format '{{.Names}}' 2>/dev/null || true ;;
+    volume) docker volume ls --format '{{.Name}}' 2>/dev/null || true ;;
+    network) docker network ls --format '{{.Name}}' 2>/dev/null || true ;;
+  esac
+}
+
+names_matching_run() {
+  local scope name
+  for scope in "${SCOPES[@]}"; do
+    name=${scope#*:}
+    if grep -qxF "$name" <<<"$(docker_names "${scope%%:*}")"; then
+      printf '%s %s\n' "${scope%%:*}" "$name"
+    fi
+  done
+}
 
 compose() {
   SANDBOX_NAME="$RUN" \
@@ -75,12 +74,6 @@ compose() {
   OH_DEPLOY_DOCKER_CONFIG="$DOCKER_CONFIG_DIR" \
     bash "$COMPOSE_DRIVER" "$@"
 }
-
-# Resources compose derives from the project name. Named explicitly so teardown
-# and the leak check target exactly what this run created, and nothing else.
-run_container() { printf '%s' "$RUN"; }
-run_volume() { printf '%s_workspace' "$RUN"; }
-run_network() { printf '%s_default' "$RUN"; }
 
 TORN_DOWN=0
 TEARDOWN_FAILED=0
@@ -98,37 +91,26 @@ teardown() {
   fi
 
   compose down -v --remove-orphans --timeout 10 >/dev/null 2>&1 || true
-  docker rm -f "$(run_container)" >/dev/null 2>&1 || true
-  docker volume rm "$(run_volume)" >/dev/null 2>&1 || true
-  docker network rm "$(run_network)" >/dev/null 2>&1 || true
+  docker rm -f "$RUN_CONTAINER" >/dev/null 2>&1 || true
+  docker volume rm "$RUN_VOLUME" >/dev/null 2>&1 || true
+  docker network rm "$RUN_NETWORK" >/dev/null 2>&1 || true
 
-  local leaked=()
-  local after
-  after=$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)
-  if grep -qxF "$(run_container)" <<<"$after"; then leaked+=("container $(run_container)"); fi
-  after=$(docker volume ls --format '{{.Name}}' 2>/dev/null || true)
-  if grep -qxF "$(run_volume)" <<<"$after"; then leaked+=("volume $(run_volume)"); fi
-  after=$(docker network ls --format '{{.Name}}' 2>/dev/null || true)
-  if grep -qxF "$(run_network)" <<<"$after"; then leaked+=("network $(run_network)"); fi
-
-  if ((${#leaked[@]})); then
+  local leaked
+  leaked=$(names_matching_run)
+  if [ -n "$leaked" ]; then
     TEARDOWN_FAILED=1
-    printf 'FAIL: teardown left resources behind: %s\n' "${leaked[*]}" >&2
+    printf 'FAIL: teardown left resources behind: %s\n' "$(tr '\n' ';' <<<"$leaked")" >&2
   else
     ok "teardown removed every resource named for $RUN"
   fi
 
   if [ -n "${DOCKER_CONFIG_DIR:-}" ]; then rm -rf "$DOCKER_CONFIG_DIR"; fi
 
-  # A leak is a failure of the instrument, not a warning, even when every
-  # assertion above passed.
   if [ "$TEARDOWN_FAILED" = "1" ] && [ "$rc" = "0" ]; then
     exit 1
   fi
 }
 trap teardown EXIT INT TERM
-
-# ── Preflight — nothing above this line touches the daemon ──────────────────
 
 for tool in docker jq; do
   command -v "$tool" >/dev/null 2>&1 || {
@@ -140,30 +122,22 @@ for f in "$COMPOSE_DRIVER" "$IMAGE_VERIFIER" "$BOOT_SMOKE" "$COMPOSE_FILE"; do
   [ -f "$f" ] || { echo "error: missing ${f#"$REPO_DIR"/}" >&2; exit 1; }
 done
 
-collision=()
-existing=$(docker ps -a --format '{{.Names}}' 2>/dev/null || true)
-if grep -qxF "$(run_container)" <<<"$existing"; then collision+=("container $(run_container)"); fi
-existing=$(docker volume ls --format '{{.Name}}' 2>/dev/null || true)
-if grep -qxF "$(run_volume)" <<<"$existing"; then collision+=("volume $(run_volume)"); fi
-existing=$(docker network ls --format '{{.Name}}' 2>/dev/null || true)
-if grep -qxF "$(run_network)" <<<"$existing"; then collision+=("network $(run_network)"); fi
-if ((${#collision[@]})); then
-  TORN_DOWN=1 # nothing was created; teardown must not remove someone else's resources
-  printf 'error: run token %s already names existing resources: %s\n' "$RUN" "${collision[*]}" >&2
+collision=$(names_matching_run)
+if [ -n "$collision" ]; then
+  TORN_DOWN=1
+  printf 'error: run token %s already names existing resources: %s\n' "$RUN" "$(tr '\n' ';' <<<"$collision")" >&2
   echo "       choose another --run token; this guard never removes a resource it did not create" >&2
   exit 1
 fi
 
-CONTAINERS_BEFORE=$(docker ps -a --format '{{.Names}}' | sort)
-VOLUMES_BEFORE=$(docker volume ls --format '{{.Name}}' | sort)
-NETWORKS_BEFORE=$(docker network ls --format '{{.Name}}' | sort)
+declare -A BEFORE=()
+for scope in container volume network; do
+  BEFORE[$scope]=$(docker_names "$scope" | sort)
+done
 
 DOCKER_CONFIG_DIR=$(mktemp -d)
 printf '{}\n' >"$DOCKER_CONFIG_DIR/config.json"
 
-# The healthcheck's own unhealthy deadline is start_period + interval x retries.
-# Derive it rather than pinning a literal, so a start_period bump cannot silently
-# make this guard time out before the boot it measures has had its allowance.
 hc=$(awk '/^ *healthcheck:/ {inb=1} inb && /^ *(interval|retries|start_period):/ {print} inb && /^ *restart:/ {inb=0}' "$COMPOSE_FILE")
 hc_interval=$(grep -Eo 'interval: *[0-9]+' <<<"$hc" | grep -Eo '[0-9]+' | head -1)
 hc_retries=$(grep -Eo 'retries: *[0-9]+' <<<"$hc" | grep -Eo '[0-9]+' | head -1)
@@ -183,8 +157,6 @@ fi
 
 echo "deployment guard: image=$IMAGE run=$RUN timeout=${TIMEOUT}s (healthcheck deadline ${HC_DEADLINE}s)"
 
-# ── 1. Pull and verify the image itself ────────────────────────────────────
-
 if DOCKER_CONFIG="$DOCKER_CONFIG_DIR" docker pull "$IMAGE" >/dev/null; then
   ok "pulled $IMAGE"
 else
@@ -199,15 +171,6 @@ else
   fail "verify-sandbox-image.sh rejected $IMAGE"
 fi
 
-# ── 2. Boot the image-only flavor and run the shared provisioning oracle ────
-
-# The boot smoke owns the up, the health wait, and verify_default_catalog — the
-# oracle that asserts every kind:"default" harness and tool resolved to a real,
-# sandbox-owned binary under the home prefix. It is reused, never re-derived.
-#
-# BOOT_SMOKE_DOWN_ARGS points its own teardown at a read-only command because
-# this guard still needs the container afterwards for the assertions below, and
-# owns the real teardown in its trap.
 if SANDBOX_NAME="$RUN" \
    OH_SANDBOX_IMAGE="$IMAGE" \
    OH_PULL_POLICY=never \
@@ -231,11 +194,6 @@ if [ -z "$CID" ]; then
   exit 1
 fi
 
-# ── 3. Post-boot assertions the boot smoke does not cover ──────────────────
-
-# Capture first, then match: under `set -o pipefail` a `grep -q` that exits on
-# its first hit kills the producer with SIGPIPE and the pipeline reports the
-# producer's 141 — failing precisely because the match succeeded.
 logs=$(docker logs "$CID" 2>&1 || true)
 if grep -qF 'no checkout bind at' <<<"$logs"; then
   ok "entrypoint took the no-bind seed branch"
@@ -263,8 +221,6 @@ else
   fail "the sandbox gitconfig carries '$observed_name' <$observed_email>, not the identity the guard passed in"
 fi
 
-# Read each property with a narrow --format template. A bare `docker inspect`
-# returns the whole object, which includes Config.Env — never dump it.
 mount_count=$(docker inspect -f '{{len .Mounts}}' "$CID")
 mount_shape=$(docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Destination}} {{end}}' "$CID")
 mount_shape=${mount_shape% }
@@ -295,11 +251,6 @@ else
   fail "the container is privileged"
 fi
 
-# The persist-and-install contract: `oh harness install` must both record the
-# choice in the tracked oh.json (surfaced as `enabled`, which the CLI computes
-# from that file) and install into the running container (`installed`). Assert
-# the pre-state first, or a harness that was already installed would make this
-# pass without the install path running at all.
 catalog=$(docker exec -u sandbox "$CID" bash -lc 'oh harness list --json' 2>/dev/null || true)
 candidate=$(jq -r 'first(.[] | select(.kind == "optional" and .installed != true and .enabled != true) | .id) // empty' <<<"$catalog" 2>/dev/null || true)
 if [ -z "$candidate" ]; then
@@ -333,22 +284,15 @@ else
   fi
 fi
 
-# ── 4. Teardown (in the trap) and the inventory diff ───────────────────────
-
 teardown
 trap - EXIT INT TERM
 
 if [ "$KEEP" != "1" ]; then
-  for scope in containers volumes networks; do
-    case "$scope" in
-      containers) before="$CONTAINERS_BEFORE"; after=$(docker ps -a --format '{{.Names}}' | sort) ;;
-      volumes) before="$VOLUMES_BEFORE"; after=$(docker volume ls --format '{{.Name}}' | sort) ;;
-      networks) before="$NETWORKS_BEFORE"; after=$(docker network ls --format '{{.Name}}' | sort) ;;
-    esac
-    if [ "$before" = "$after" ]; then
+  for scope in container volume network; do
+    if [ "${BEFORE[$scope]}" = "$(docker_names "$scope" | sort)" ]; then
       ok "$scope inventory is unchanged by this run"
     else
-      fail "$scope inventory changed: $(diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | tr '\n' ' ')"
+      fail "$scope inventory changed across this run"
     fi
   done
 fi

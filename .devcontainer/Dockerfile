@@ -34,16 +34,6 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
-# PNPM_HOME lives in the home mount, beside NPM_USER_PREFIX. `pnpm add -g` writes
-# to PNPM_HOME and ignores NPM_USER_PREFIX, so a system path here means every
-# pnpm-installed tool is unreachable to the sandbox user: `oh tool install
-# agent-browser` (the one catalog entry that uses `pnpm add -g`) died with
-# `EACCES: permission denied, mkdir '/usr/local/share/pnpm'`, on every image, for
-# every non-root user. The `home` stage creates this directory sandbox-owned.
-# `pnpm setup` is deliberately not run: its only jobs are to write PNPM_HOME into
-# the shell rc files, which this Dockerfile does explicitly below, and to create
-# the directory, which now belongs to the `home` stage — and running it here, as
-# root before `useradd`, would create /home/sandbox root-owned.
 ENV PNPM_HOME="/home/sandbox/.local/share/pnpm"
 ENV NPM_USER_PREFIX="/home/sandbox/.local"
 ENV PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"

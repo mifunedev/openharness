@@ -14,12 +14,6 @@ esac
 
 log() { echo "[provision-defaults] $*"; }
 
-# entrypoint.sh downgrades a failure here to a WARNING and lets boot continue, so
-# a sandbox can come up `healthy` with a harness or tool the operator explicitly
-# asked for simply absent. This marker is how that reaches the healthcheck: it is
-# written when a requested install is missing and removed on a clean run, so
-# `bash .oh/scripts/provision-defaults.sh` is both the documented recovery and the
-# thing that clears the signal.
 PROVISION_MARKER="${OH_PROVISION_MARKER:-$HOME/.local/share/oh/provision-failed}"
 
 mark_failed() {

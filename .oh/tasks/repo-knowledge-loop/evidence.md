@@ -278,6 +278,31 @@ oracle was **not** widened to exempt `evidence.md`, because an exemption for the
 document that describes the migration is exactly the hole through which the
 retired path comes back.
 
+**The undraft ordering fault was found by review, and fixed in the contract.**
+`gh pr ready` ran at `d1aebc75` with its four checks green, but two commits
+followed and one was pushed while CI was still running — so the PR sat *ready* on
+a classification that no longer described its head. Every pushed head has since
+completed all four checks green (`d1aebc75`, `b0ee168a`, `b2b83e29`, `9e54a9dd`,
+`a6c2f1ed`), so the outcome held; the ordering did not.
+
+The procedure allowed it: `execute.md` said the promotable audit runs
+"immediately before any undraft" and said nothing about a push *after* one.
+Step 10 now (a) confirms the PR's `headRefOid` equals local HEAD before reading
+the classification, (b) states that the gate re-opens on every push after the
+undraft and that a no-longer-promotable head goes back to draft via
+`gh pr ready --undo`, and (c) says the cheap way to honor this is to finish the
+tail before undrafting at all. `spec-ready-finalization.sh` gained three
+assertions over that section; all three were fault-injected and fire
+(`REGRESSION: /spec execute does not confirm the PR head is the commit it is
+promoting`, `... no longer re-opens the promotable gate on a post-undraft push`,
+`... names no way back to draft when a pushed head stops being promotable`).
+
+**A stray `2` file was committed and is now removed.** A `&>2` typo in a `sed`
+invocation redirected a probe's PASS line into a file named `2` at the repository
+root, and a later `git add -A` tracked it. Deleted. It is the same class as the
+`pipefail` finding this run compiled — a shell redirect that silently did
+something other than what it read as.
+
 **The simplify gate deleted a mode nobody called.** `/audit implementation`
 gate 5 found `knowledge-impact.sh --since <ref>` with zero call sites, contradicting
 the script's own stated contract of two consumers. The Advisor deleted the branch
@@ -427,18 +452,6 @@ Both planning probes were rewritten to assert the block by exact line
   `/audit implementation` did exactly that on this build and was right to. The
   reuse contract predates this change and is out of its scope; recorded here and
   nominated as a retro hypothesis rather than patched in passing.
-- **The undraft ran against an earlier head than the final one.** `gh pr ready`
-  was called at `d1aebc75`, whose four checks were green, but two further commits
-  followed — the terminal-state `progress.txt` entry and this documentation-mirror
-  closeout — and the second was pushed while the compose/image build was still
-  running. Caught by orchestrator verification, not by this run. Every pushed head
-  on the branch has since completed **all four checks green**
-  (`d1aebc75`, `b0ee168a`, `b2b83e29`, `9e54a9dd`), and a fresh `/audit pr` on the
-  final head returned `PR-AUDIT-PROMOTABLE`. The outcome is correct; the
-  *ordering* was not, and the contract this PR ships says the promotable audit
-  runs "immediately before any undraft" — a post-undraft push re-opens that gate
-  and nothing in the procedure says so. Nominated as a follow-up rather than
-  patched here.
 - **The diff grew 384 lines after the last simplify round, and the loop ended on
   the monotone rule rather than on the diff getting smaller.** The post-merge
   audit flagged this, correctly. The growth is attributable, not unexamined work:

@@ -541,6 +541,16 @@ green from silence — a no-run CI status is not promotable. Do not treat heartb
 stale-draft watchdog output as promotable evidence; it is only a signal to
 investigate or resume the draft.
 
+**Classify the head you are about to promote.** A promotable verdict describes
+one commit. Confirm the PR's head is the commit you just pushed *before* reading
+the classification, or the audit is scoring a different tree than the one going
+to review:
+
+```bash
+[ "$(gh pr view <PR> --repo "$SPEC_REPO" --json headRefOid --jq .headRefOid)" = "$(git rev-parse HEAD)" ] \
+  || { echo "ERROR: PR head is not local HEAD — push, wait for CI, re-audit"; exit 1; }
+```
+
 **The evidence gate.** Before the undraft, `.oh/tasks/<slug>/evidence.md` must
 exist, be committed on the branch, and answer the five questions step 7 names.
 **Refuse the undraft without it** — a PR whose reviewer cannot see how the built
@@ -612,6 +622,30 @@ gh pr ready <PR> --repo "$SPEC_REPO"
 printf 'READY %s\n' "<pr-url>" > "/tmp/spec-<slug>.state"
 ```
 
+**The gate re-opens on every push after the undraft.** `READY` is a claim about
+the head that was classified, not a property the PR keeps. Any later commit —
+including a one-line `progress.txt` or `evidence.md` follow-up — moves the head
+past the verdict, and a push whose CI has not finished leaves a ready PR whose
+checks are still running. So a push to an already-ready PR re-enters this step:
+wait for CI on the new head, re-run `/audit pr` against it, and confirm it is
+still promotable.
+
+```bash
+git push "$SPEC_REMOTE" HEAD        # to a PR that is already ready-for-review
+# → re-enter step 10: wait for CI on the new head, re-audit, re-confirm promotable
+```
+
+If the new head is **not** promotable, the PR is not ready any more: return it to
+draft (`gh pr ready --undo <PR> --repo "$SPEC_REPO"`), comment the blocking gate,
+and record `DRAFT-BLOCKED(<gate>)`. Do not leave a ready PR standing on a
+classification that no longer describes its head — a reviewer reads *ready* as
+"the gates passed on what I am looking at".
+
+**The cheapest way to honor this is to finish the tail before undrafting.**
+Evidence, knowledge impact, retro, compile, and benchmark all write files; run
+them, push once, wait for CI, audit, then undraft. Every commit after `gh pr
+ready` costs another full CI cycle and another audit.
+
 Otherwise (not promotable: red/pending CI, conflicts, a new eval regression, an
 unresolved knowledge page, or missing evidence) keep the PR draft, name the gate,
 and record it:
@@ -644,6 +678,8 @@ output.
 | 9 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
 | 10 | `.oh/tasks/<slug>/evidence.md` is missing, or present but untracked (added without `-f`) | `DRAFT-BLOCKED(evidence)`; write and commit it, then re-run the promotable gate |
 | 10 | The PR audit cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
+| 10 | The PR's head is not the commit just pushed | Push, wait for CI on that head, re-audit; a verdict about another commit is not this commit's verdict |
+| 10 | A commit is pushed AFTER the undraft | Re-enter step 10 against the new head: wait for CI, re-audit, re-confirm promotable. Not promotable → `gh pr ready --undo`, comment the gate, `DRAFT-BLOCKED(<gate>)` |
 | 10 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
 
 ## Idempotency
@@ -661,7 +697,7 @@ Every step checks for prior state and resumes rather than duplicating:
 | 6 | Every page in the impact union already carries a final state for the current HEAD | Continue |
 | 7 | `evidence.md` exists and correlates to the CURRENT audit run id | Reuse; a doc citing a stale run id is rewritten, not kept |
 | 10 | The PR audit already classified this PR promotable | Continue to the undraft |
-| 10 | PR is already ready-for-review | Print the terminal status; do not mutate |
+| 10 | PR is already ready-for-review AND its head equals local HEAD with CI green | Print the terminal status; do not mutate. A head that has moved re-enters the gate |
 
 The whole pipeline can be re-invoked safely. Failed step = fix + re-run; resume
 happens automatically. `/tmp/spec-<slug>.state` tells a resuming session
@@ -679,9 +715,15 @@ final state, **`.oh/tasks/<slug>/evidence.md` is committed and answers back to
 the approved plan**, and a fresh PR audit immediately classifies the PR
 **promotable** (CI green + mergeable + clean) before `gh pr ready`.
 
+**That classification binds to one head.** A push after the undraft moves the PR
+past the verdict that promoted it, so the gate re-opens: re-audit the new head,
+and return the PR to draft if it no longer classifies promotable. `READY` is
+never a state the PR keeps while its head changes underneath it.
+
 Draft is reserved for blocked states: an incomplete build, a new eval regression,
 an unresolved knowledge page, **missing or untracked evidence**, a not-promotable
-PR (red/pending CI or conflicts), or an explicit user stop. Each is reported as
+PR (red/pending CI or conflicts), a head that moved past its promotable
+classification, or an explicit user stop. Each is reported as
 `DRAFT-BLOCKED(<gate>)` with the gate named — a silent stop is not a terminal
 state. Heartbeat stale-draft watchdog output may trigger investigation or resume
 work, but it never authorizes `gh pr ready`. Never auto-merge.

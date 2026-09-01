@@ -63,6 +63,23 @@ for section in 'diverged' 'unverified'; do
   fi
 done
 
+# A promotable verdict describes ONE head. Undrafting at a commit and then pushing
+# past it leaves a ready PR standing on a classification that no longer describes
+# what a reviewer sees, so the procedure must (a) confirm the PR head is the commit
+# being promoted and (b) re-open the gate on any later push.
+if ! grep -qF 'headRefOid' <<<"$final_section"; then
+  echo "REGRESSION: /spec execute does not confirm the PR head is the commit it is promoting" >&2
+  exit 1
+fi
+if ! grep -qF 'gate re-opens on every push after the undraft' <<<"$final_section"; then
+  echo "REGRESSION: /spec execute no longer re-opens the promotable gate on a post-undraft push" >&2
+  exit 1
+fi
+if ! grep -qF 'gh pr ready --undo' <<<"$final_section"; then
+  echo "REGRESSION: /spec execute names no way back to draft when a pushed head stops being promotable" >&2
+  exit 1
+fi
+
 execute_line=$(grep -E '^\| `execute` \|' "$SPEC" || true)
 if [[ -z "$execute_line" ]]; then
   echo "REGRESSION: /spec dispatcher missing execute row" >&2
@@ -84,5 +101,5 @@ if [[ -e "$PI_EXEC" ]] && ! grep -qF 'Finalization contract' "$PI_EXEC"; then
   exit 1
 fi
 
-echo "PASS: /spec execute treats the draft PR as a checkpoint, refuses the undraft without a tracked evidence.md, surfaces divergence + unverified in the PR body, and gates ready-for-review on the promotable classification" >&2
+echo "PASS: /spec execute treats the draft PR as a checkpoint, refuses the undraft without a tracked evidence.md, surfaces divergence + unverified in the PR body, gates ready-for-review on the promotable classification, and re-opens that gate when the head moves past it" >&2
 exit 0

@@ -51,3 +51,13 @@
   — .oh/memory as current architecture) and the one hit deliberately excluded
   (docs/integrations/pi-autoresearch.md:65 cites .auto/prompt.md, Pi's own file).
   Linked from evidence.md section 5 and the PR body. Criterion now met.
+
+2026-09-01 undraft-gate — Fixed the ordering gap in the contract rather than only
+  disclosing it. execute.md step 10 now confirms the PR headRefOid equals local
+  HEAD before reading the promotable classification, states that the gate re-opens
+  on every push after the undraft (with gh pr ready --undo as the way back to
+  draft), and notes that finishing the tail before undrafting avoids the extra CI
+  cycles. spec-ready-finalization.sh gained three assertions over that section;
+  all three fault-injected and fire. Also removed a stray root file named "2" — a
+  &>2 typo in a sed invocation had redirected a probe's PASS line into it and a
+  later git add -A tracked it.

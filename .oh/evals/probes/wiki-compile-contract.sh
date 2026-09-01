@@ -29,7 +29,7 @@ need "$SKILL" "\`compile\`'s pattern-page writes"
 
 need "$COMPILE" '/wiki compile [--from <path>] [--task <slug>] [--dry-run]'
 need "$COMPILE" 'MUST NOT write a `raw/` snapshot of a `/retro` report'
-need "$COMPILE" '§ 7 as amended by § 7a'
+need "$COMPILE" '§ 11 as amended by § 11a'
 need "$COMPILE" 'orchestrator-only'
 need "$COMPILE" 'One page per failure mode'
 need "$COMPILE" '## Contents'

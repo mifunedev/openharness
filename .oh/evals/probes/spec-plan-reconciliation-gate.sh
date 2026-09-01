@@ -17,9 +17,13 @@ done
 
 failures=()
 
-# The block itself, with every field a downstream gate reads.
+# EXACT-LINE: a heading that names the block must not satisfy the assertion that
+# the block itself is still specified.
+grep -qxF '## Plan Reconciliation' "$PLAN" \
+  || failures+=("plan.md no longer specifies the ## Plan Reconciliation block")
+
+# Every field a downstream gate reads.
 for lit in \
-  '## Plan Reconciliation' \
   '- **Source plan**: `<path>`' \
   '- **Intent preserved**: YES | NO' \
   '- **Material deviations**: `none` or list' \

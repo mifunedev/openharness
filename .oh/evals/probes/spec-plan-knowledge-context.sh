@@ -16,13 +16,17 @@ done
 
 failures=()
 need() { grep -qF -- "$1" "$PLAN" || failures+=("plan.md missing contract text: $1"); }
+# An EXACT-LINE pin: a heading that merely names the block must not satisfy the
+# assertion that the block itself is still specified.
+need_line() { grep -qxF -- "$1" "$PLAN" || failures+=("plan.md no longer specifies the block: $1"); }
 
 # The three-step recall contract, and the section that records it.
 need '### 2. Recall tracked knowledge'
 need '### 3. Ground the recalled claims against current sources'
 need '/wiki query <terms>'
 need '/wiki query <terms> --patterns'
-need '## Knowledge Context'
+need_line '## Knowledge Context'
+need_line '## Expected Knowledge Impact'
 need '- **Base commit**: `<sha>`'
 need '- **Queries**: `<queries used>`'
 need '- **Knowledge used**: `[[slug]]`, ... or `none`'

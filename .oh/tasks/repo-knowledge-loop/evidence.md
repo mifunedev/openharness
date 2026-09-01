@@ -376,6 +376,14 @@ Both planning probes were rewritten to assert the block by exact line
     and tripping `knowledge-path-single-owner`. Both exclusions were removed
     rather than the guard being widened.
 
+12. **`development` moved a third time: PR #934 retired cron worktree
+    isolation.** `execute.md`'s build-worktree step branched on `$CRON_WORKTREE`;
+    it now branches on the checked-out branch, matching the merged contract. Three
+    merges landed on this branch during the tail, on five, thirty-eight and eleven
+    files respectively. Each was reconciled explicitly rather than discovered at
+    merge time — which is the behavior step 0 of the contract this change ships
+    exists to produce.
+
 ---
 
 ## 5. What remains unverified
@@ -425,7 +433,8 @@ Both planning probes were rewritten to assert the block by exact line
   of the 733 lines added since the round-1 commit, **537 arrived with the
   `development` merge** — PR #930's four new probes and the `/spec`, `/delegate`,
   `/rlm`, `/ste`, `/t3`, `/audit`, capability, cron and docs surfaces it rewrote —
-  plus this run's two compiled pattern pages. Round 2 found **no blocking
+  plus this run's two compiled pattern pages. Two further merges (#931, #934)
+  landed after that measurement. Round 2 found **no blocking
   finding** and `SIMPLICITY-RESIDUAL: 0`; the two residuals round 1 disclosed were
   re-examined and cleared (`--format slugs` has real call sites in two probes, and
   extracting the probes' one-line `ROOT=` preamble would add a file rather than

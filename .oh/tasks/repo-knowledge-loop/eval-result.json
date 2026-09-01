@@ -1,7 +1,7 @@
 {
-  "commit": "44139d8fdda413a0f783cf0fd797ab51fba505e8",
+  "commit": "2765c683855ed919429c7db799287b7f652d9205",
   "runnerExit": 0,
-  "ranAt": "2026-09-01T02:29:36Z",
+  "ranAt": "2026-09-01T02:39:58Z",
   "probesRun": 136,
   "newRegressions": [],
   "preExistingReds": [],
@@ -11,5 +11,5 @@
     "next-dev-prod",
     "registry-portability"
   ],
-  "notes": "136 probes (127 from this change's branch, plus the five PR #930 added minus the one it renamed, plus the five PR #931 added), runner exit 0, zero green->red transitions. The four SKIPPED probes are the same four SKIPPED on base ecc49800. Three further probes (oh-compose-env-wiring, oh-destroy-guard, oh-init-headless-config) SKIP in a fresh worktree only because .oh/cli/dist is unbuilt; after 'npm install && node build.mjs' all three PASS, and they PASS here. Two probes (wiki-pattern-persistence, wiki-skill-impact-append-only) SKIP in CI's depth-1 checkout for lack of a merge-base; they SKIP identically on the scaffold commit dc8043da, before this change existed. The suite was run once per changed commit rather than once per cycle: every re-run followed a real change (a self-inflicted regression, the shallow-clone fix, /wiki compile, and the two development merges), which is what the once-per-cycle rule exists to prevent rather than what it forbids. Committing this record moves HEAD past the commit it names; see evidence.md and pattern-spec-self-staling-reuse-record."
+  "notes": "136 probes (127 from this change's branch, plus the five PR #930 added minus the one it renamed, plus the five PR #931 added), runner exit 0, zero green->red transitions. The four SKIPPED probes are the same four SKIPPED on base ecc49800. Three further probes (oh-compose-env-wiring, oh-destroy-guard, oh-init-headless-config) SKIP in a fresh worktree only because .oh/cli/dist is unbuilt; after 'npm install && node build.mjs' all three PASS, and they PASS here. Two probes (wiki-pattern-persistence, wiki-skill-impact-append-only) SKIP in CI's depth-1 checkout for lack of a merge-base; they SKIP identically on the scaffold commit dc8043da, before this change existed. The suite was run once per changed commit rather than once per cycle: every re-run followed a real change (a self-inflicted regression, the shallow-clone fix, /wiki compile, and the three development merges), which is what the once-per-cycle rule exists to prevent rather than what it forbids. Committing this record moves HEAD past the commit it names; see evidence.md and pattern-spec-self-staling-reuse-record."
 }

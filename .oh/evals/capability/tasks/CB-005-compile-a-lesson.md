@@ -14,7 +14,7 @@ Carry one supported lesson end-to-end, from observation to a recorded verdict:
 `/retro` produces a `supported` hypothesis at `medium`+ confidence → `/wiki compile`
 creates or patches exactly one `kind: pattern` page → `/builder` proposes one atomic
 edit to one artifact, **citing the motivating pattern slug it read** → `/benchmark`
-emits a verdict → `.oh/skills/wiki/corpus/skill-impact.md` holds a `PROPOSED` record
+emits a verdict → `.oh/evals/decisions/skill-impact.md` holds a `PROPOSED` record
 and its matching `-V` verdict record.
 
 The capability under test is whether the harness can turn an observation into a
@@ -28,7 +28,7 @@ that gap. `CB-003` scored the nearest capability and was retired when `/retro` b
 report-only, leaving the ceiling with no view of knowledge persistence at all.
 
 ## Success signal
-- A tracked `.oh/skills/wiki/corpus/pattern-*.md` whose `## Detail` names an
+- A tracked `.oh/knowledge/patterns/pattern-*.md` whose `## Detail` names an
   observable symptom and a `path:line` root cause, and whose `sources:` uses the
   pinned `<path>@<short-sha>` evidence form.
 - `/builder`'s report names the `[[pattern-...]]` slug it read, or records

@@ -16,15 +16,15 @@ failures=()
 need() { grep -qF -- "$1" "$SKILL" || failures+=("builder/SKILL.md missing contract text: $1"); }
 
 need '/wiki query <artifact-name-or-subsystem> --patterns'
-need '.oh/skills/wiki/corpus/skill-impact.md'
+need '.oh/evals/decisions/skill-impact.md'
 need 'Do not re-propose a change recorded there as `REJECTED`'
 need 'Append a `PROPOSED` record'
 need 'none (direct request)'
 need 'Never edit an existing record'
 
 # The ledger this skill is told to write must actually exist.
-[[ -f "$ROOT/.oh/skills/wiki/corpus/skill-impact.md" ]] \
-  || failures+=("builder cites .oh/skills/wiki/corpus/skill-impact.md but the ledger does not exist")
+[[ -f "$ROOT/.oh/evals/decisions/skill-impact.md" ]] \
+  || failures+=("builder cites .oh/evals/decisions/skill-impact.md but the ledger does not exist")
 
 # The reads builder is told to perform must be within its declared tool allowlist.
 grep -q '^allowed-tools: Read, Write, Edit, Glob, Grep, Bash$' "$SKILL" \

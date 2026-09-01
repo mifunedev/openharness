@@ -37,7 +37,7 @@ legacy_docs_hits="$(git -C "$ROOT" grep -nI -F '.oh/docs' -- \
   ':!docs/rfcs/preserved-changelog-rationale.md' \
   ':!docs/rfcs/rfc-trace-ledger.md' \
   ':!.oh/tasks/**' \
-  ':!.oh/skills/wiki/corpus/raw/**' \
+  ':!.oh/knowledge/raw/**' \
   ':!.oh/evals/RESULTS.md' \
   ':!.oh/evals/probes/docs-build-fast-path.sh')"
 legacy_docs_rc=$?

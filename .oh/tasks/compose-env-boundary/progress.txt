@@ -78,7 +78,7 @@
 
 2026-08-31 — US-009 Docs, templates, wiki, changelog — PASS
   Files: 14 docs, .oh/README.md, .oh/templates/full/.hermes/README.md, CHANGELOG.md,
-         .oh/skills/wiki/corpus/{compose-env-boundary.md,sandbox-dependency-installs.md,README.md}
+         .oh/knowledge/{compose-env-boundary.md,sandbox-dependency-installs.md,README.md}
   Commit: 4425329d
   Result: the configuration.md "Compose variable" column is `—` for every retired field,
   and the section above it now states the rule. New wiki entry at 596 words with

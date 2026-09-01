@@ -1,40 +1,68 @@
 # /wiki lint — reference
 
-> Full procedure for the `lint` subcommand of the `/wiki` dispatcher, lifted
-> from the former standalone `/wiki lint` skill during the wiki consolidation.
-> The dispatcher (`.oh/skills/wiki/SKILL.md`) routes here when the first
-> `$ARGUMENTS` token is `lint`. Canonical schema: `.oh/skills/wiki/references/schema.md`.
+> Full procedure for the `lint` subcommand of the `/wiki` dispatcher. The
+> dispatcher (`.oh/skills/wiki/SKILL.md`) routes here when the first
+> `$ARGUMENTS` token is `lint`. Canonical schema:
+> `.oh/skills/wiki/references/schema.md`.
 
-# Wiki Lint
+# Knowledge Lint
 
-Health-check the `.oh/skills/wiki/corpus/` corpus and regenerate `.oh/skills/wiki/corpus/README.md`. This is
-Karpathy's "Lint + Maintain" operation adapted for Open Harness: surface
-stale, deprecated, orphaned, and broken-link entries; regenerate the index
-atomically.
+Health-check `.oh/knowledge/` and regenerate `.oh/knowledge/README.md`.
 
-The canonical schema, frontmatter extraction command, cross-link convention,
-and confidence lifecycle all live in `.oh/skills/wiki/references/schema.md`. This skill
-defers to those rules — it does not redefine them.
+**Every check here is a correctness check.** A lint finding names something that
+is actually wrong: a page that violates the schema, a source path that does not
+resolve, a page whose declared dependencies moved under it, a link that goes
+nowhere, or an index that no longer matches its inputs. Nothing in this list is a
+matter of taste, and nothing reports a page for being unpopular or old.
 
-`.oh/skills/wiki/corpus/README.md` is generated state, not hand-authored inventory. The tier-A
-`.oh/evals/probes/wiki-readme-index.sh` probe reconstructs the expected Index from
-current `.oh/skills/wiki/corpus/*.md` frontmatter and fails when this skill's committed output
-falls out of sync.
+The canonical schema, extraction command, cross-link convention, provenance
+forms, and confidence lifecycle all live in
+`.oh/skills/wiki/references/schema.md`. This reference defers to those rules — it
+does not redefine them.
+
+## Why this list is short
+
+A health check nobody gates on converges on never being run
+(`[[pattern-wiki-ungated-check-drift]]`). Each surviving check below therefore
+has a deterministic oracle in `.oh/evals/probes/` that fails on the *finding*,
+not on the check having been run. This document is the procedure; the probes are
+the enforcement:
+
+| Check | Oracle |
+|---|---|
+| 1 · schema validity | `.oh/evals/probes/wiki-kind-schema-contract.sh` |
+| 2 · source/dependency paths resolve | `.oh/evals/probes/knowledge-source-freshness.sh` |
+| 3 · source-change freshness | `.oh/evals/probes/knowledge-source-freshness.sh` |
+| 4 · broken `[[...]]` links | `.oh/evals/probes/wiki-related-slugs.sh` |
+| 5 · broken `related:` slugs | `.oh/evals/probes/wiki-related-slugs.sh` |
+| 6 · generated index consistency | `.oh/evals/probes/wiki-readme-index.sh` |
+
+## What this check list deliberately dropped
+
+- **Orphan detection.** A queryable page with zero inbound `[[slug]]` references
+  is perfectly valid in a knowledge base this size. Reporting it as a health
+  finding produced a permanent non-zero count that readers learned to skip,
+  which cost the checks that mean something.
+- **The 90-day stale rule as a validity test.** Age does not decide validity: a
+  page updated today is wrong one commit later if a source it depends on moved,
+  and a page untouched for a year is correct if nothing it cites changed. Check 3
+  replaces it. Age survives only as the informational `last-reviewed` line.
+- **The contradiction-detection stub.** It printed a fixed "not yet implemented"
+  string for the whole of its life and detected nothing.
 
 ## When to Use
 
-- `/wiki lint` to regenerate `.oh/skills/wiki/corpus/README.md` and surface any health findings.
-- `/wiki lint --dry-run` to preview what would change without writing.
-- Periodically (manual cadence — no heartbeat cron in v1) to keep the corpus
-  healthy as entries accumulate.
+- `/wiki lint` to regenerate `.oh/knowledge/README.md` and surface findings.
+- `/wiki lint --dry-run` to preview without writing.
+- After `/wiki ingest` or `/wiki compile` lands a page, so the index matches.
 
 ## When NOT to Use
 
-- **`/wiki ingest`** — to add or update an entry. `/wiki lint` is read-only
-  except for `.oh/skills/wiki/corpus/README.md` regeneration.
-- **`/wiki query`** — to search for a topic and read entries into context.
-- **Direct `Edit` tool on `.oh/skills/wiki/corpus/README.md`** — `/wiki lint` owns this file;
-  hand-edits will be overwritten on the next run.
+- **`/wiki ingest`** — to add or update an entry. `lint` is read-only except for
+  `.oh/knowledge/README.md`.
+- **`/wiki query`** — to search and read entries into context.
+- **Direct `Edit` on `.oh/knowledge/README.md`** — `lint` owns that file; hand
+  edits are overwritten on the next run.
 
 ## Argument Interface (locked)
 
@@ -42,12 +70,8 @@ falls out of sync.
 /wiki lint [--dry-run]
 ```
 
-The argument interface is locked. Do not add flags or positional arguments
-without editing this SKILL.md.
-
-- **No arguments**: run all checks, atomically regenerate `.oh/skills/wiki/corpus/README.md`.
-- **`--dry-run`**: run all checks, print the proposed `.oh/skills/wiki/corpus/README.md` content
-  and any findings, but do NOT write `.oh/skills/wiki/corpus/README.md` or any other file.
+- **No arguments**: run all checks, atomically regenerate the index.
+- **`--dry-run`**: run all checks, print the proposed index, write nothing.
 
 ## Instructions
 
@@ -61,491 +85,343 @@ if echo "$ARGUMENTS" | grep -q -- '--dry-run'; then
 fi
 ```
 
-All subsequent write operations (including the atomic `.oh/skills/wiki/corpus/README.md`
-regeneration) are gated on `DRY_RUN=false`. In dry-run mode, print what
-would be written; never write it.
+Every write is gated on `DRY_RUN=false`.
 
-### 2. Collect all wiki entry paths
+### 2. Collect entry paths
 
 ```bash
-HARNESS="${AUDIT_ROOT:-$(git rev-parse --show-toplevel)}"
-HARNESS=$(cd "$HARNESS" && pwd -P)
-WIKI_ENTRIES=()
-for f in "$HARNESS"/.oh/skills/wiki/corpus/*.md; do
-  [ -f "$f" ] && WIKI_ENTRIES+=("$f")
+ROOT="${AUDIT_ROOT:-$(git rev-parse --show-toplevel)}"
+ROOT=$(cd "$ROOT" && pwd -P)
+KNOWLEDGE="$ROOT/.oh/knowledge"
+
+ENTRIES=()
+for f in "$KNOWLEDGE"/source/*.md "$KNOWLEDGE"/patterns/*.md; do
+  [ -f "$f" ] || continue
+  [ "$(basename "$f")" = "README.md" ] && continue
+  ENTRIES+=("$f")
 done
-ENTRIES_COUNT=${#WIKI_ENTRIES[@]}
+ENTRIES_COUNT=${#ENTRIES[@]}
 ```
 
-This enumerates `.oh/skills/wiki/corpus/*.md` directly — NOT via `.oh/skills/wiki/corpus/README.md` (the README is
-the output of this skill, not its input). Sub-article files at
-`.oh/skills/wiki/corpus/<parent>/<child>.md` are not matched by this glob; they are scoped for
-a future iteration. `kind: pattern` entries are flat `corpus/<slug>.md` files by the
-`.oh/skills/wiki/references/schema.md` § 2 placement rule, precisely because this glob does
-not descend.
+**One entry set.** `.oh/knowledge/source/` and `.oh/knowledge/patterns/` are
+tracked by default (`schema.md` § 2), so the working tree and the git-tracked set
+are the same set. The dual-set split that older versions of this procedure
+carried — health checks over the working tree, index over the tracked set —
+existed only because entries were gitignored-by-default, and it went away with
+that rule. `.oh/knowledge/local/` is never enumerated.
 
-**Two entry sets, deliberately.** The health checks (§§ 4-7a) run over this
-**working-tree** set, so a local scratch entry is still lintable. The README
-regeneration (§ 9) runs over the **git-tracked** set instead — see § 9a. Building
-the index from the working tree makes an untracked scratch entry a CI regression,
-because `.oh/evals/probes/wiki-readme-index.sh` reconstructs the expected table
-from git-tracked files only.
+If `$ENTRIES_COUNT = 0`, skip to § 9 (index regeneration with an empty base).
 
-If `$ENTRIES_COUNT = 0`, skip all check steps and proceed directly to
-§ 9 (README regeneration with an empty corpus).
+### 3. Extract frontmatter
 
-### 3. Extract frontmatter for each entry
-
-For every entry path, extract its YAML frontmatter using the canonical command
-locked in `.oh/skills/wiki/references/schema.md` § 6:
+For every entry, extract frontmatter with the canonical command in
+`schema.md` § 9:
 
 ```bash
-awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/<slug>.md
+awk '/^---$/{f=!f; next} f{print}' <entry>
 ```
 
-Build a lookup table of slug → frontmatter fields:
+Build a lookup table of slug → fields:
 
 ```bash
-declare -A ENTRY_SLUGS         # slug → file path
-declare -A ENTRY_TITLES        # slug → title
-declare -A ENTRY_TAGS          # slug → tags string
-declare -A ENTRY_UPDATED       # slug → updated date
-declare -A ENTRY_CONFIDENCE    # slug → confidence value
-declare -A ENTRY_PATH          # slug → full path
+declare -A ENTRY_PATH ENTRY_TITLE ENTRY_TAGS ENTRY_UPDATED ENTRY_KIND
+declare -A ENTRY_CONFIDENCE ENTRY_VERIFIED
 
-for entry in "${WIKI_ENTRIES[@]}"; do
-  frontmatter=$(awk '/^---$/{f=!f; next} f{print}' "$entry")
-  slug=$(echo "$frontmatter" | grep '^slug:' | awk '{print $2}')
-  title=$(echo "$frontmatter" | grep '^title:' | sed 's/^title: *//' | tr -d '"')
-  tags=$(echo "$frontmatter" | grep '^tags:' | sed 's/^tags: *//')
-  updated=$(echo "$frontmatter" | grep '^updated:' | awk '{print $2}')
-  confidence=$(echo "$frontmatter" | grep '^confidence:' | awk '{print $2}')
-
-  [ -z "$slug" ] && continue   # skip malformed entries (no slug)
-
-  ENTRY_SLUGS["$slug"]="$entry"
-  ENTRY_TITLES["$slug"]="$title"
-  ENTRY_TAGS["$slug"]="$tags"
-  ENTRY_UPDATED["$slug"]="$updated"
-  ENTRY_CONFIDENCE["$slug"]="$confidence"
+for entry in "${ENTRIES[@]}"; do
+  fm=$(awk '/^---$/{f=!f; next} f{print}' "$entry")
+  slug=$(grep '^slug:' <<<"$fm" | awk '{print $2}' | head -1)
+  [ -z "$slug" ] && continue        # § 4 reports it as a schema failure
   ENTRY_PATH["$slug"]="$entry"
+  ENTRY_TITLE["$slug"]=$(grep '^title:' <<<"$fm" | sed 's/^title: *//' | tr -d '"')
+  ENTRY_TAGS["$slug"]=$(grep '^tags:' <<<"$fm" | sed 's/^tags: *//')
+  ENTRY_UPDATED["$slug"]=$(grep '^updated:' <<<"$fm" | awk '{print $2}')
+  ENTRY_KIND["$slug"]=$(grep '^kind:' <<<"$fm" | awk '{print $2}' | head -1)
+  ENTRY_CONFIDENCE["$slug"]=$(grep '^confidence:' <<<"$fm" | awk '{print $2}')
+  ENTRY_VERIFIED["$slug"]=$(grep '^verified_at:' <<<"$fm" | awk '{print $2}' | head -1)
 done
 ```
 
-This extraction MUST use the exact `awk '/^---$/{f=!f; next} f{print}'` command.
-Deviation from the § 6 canonical command is forbidden — both `/wiki query` and
-`/wiki lint` must use identical extraction to prevent silent divergence (a match
-that works in one skill must work in the other).
+Deviation from the § 9 command is forbidden — `query`, `lint`, and
+`knowledge-impact.sh` must extract identically.
 
-### 4. Stale-90d check
+### 4. Check 1 — schema validity
 
-Enumerate entries where frontmatter `updated:` is more than 90 days older than
-today's UTC date. These are reported as a separate finding type with the
-recommendation "consider review".
+For every entry file, report a finding when any of these holds:
+
+- a required field is missing: `title`, `slug`, `tags`, `created`, `updated`,
+  `sources`, `confidence`;
+- `slug` does not match the filename without `.md`, or does not match
+  `[a-z0-9-]+`;
+- `kind` is absent or is not one of `repo`, `external`, `pattern`;
+- `kind` disagrees with the directory: a `patterns/` file whose `kind` is not
+  `pattern`, or a `source/` file whose `kind` is not `repo` or `external`;
+- a `patterns/` filename lacks the `pattern-` prefix, or a `source/` filename
+  carries it;
+- `confidence` is not one of `provisional`, `confirmed`, `deprecated`;
+- `kind: repo` with no `verified_at:`;
+- `kind: repo` or `kind: pattern` with no `## Relevant Source Files` section.
+
+```
+=== Schema findings (<n>) — the entry violates schema.md ===
+  - <path>: <what is wrong>
+```
+
+Report-only. `lint` never edits frontmatter and never sets `confidence`
+(`schema.md` § 8).
+
+### 5. Check 2 — source and dependency paths resolve
+
+Every `sources:` entry must resolve to something real, in the form
+`schema.md` § 4 defines for it:
+
+| Form | Resolves when |
+|---|---|
+| `raw/<yyyy-mm-dd>-<slug>.md` | `.oh/knowledge/raw/<...>` exists (resolved from `.oh/knowledge/`, not the page's directory) |
+| `<repo-relative-path>` or glob | at least one path in the working tree matches |
+| `<repo-relative-path>@<short-sha>` | the content exists at that revision — see the rename note below |
+| `https://<...>` | never checked locally; the weakest form (`schema.md` § 4) |
+
+A pin names a revision of the file's **content**, so a path that has moved since
+`<sha>` must not read as broken. Try the exact path first, then fall back to the
+basename in that commit's tree:
 
 ```bash
-TODAY=$(date -u +%Y-%m-%d)
-STALE_90D=()
-
-for slug in "${!ENTRY_UPDATED[@]}"; do
-  updated="${ENTRY_UPDATED[$slug]}"
-  [ -z "$updated" ] && continue
-
-  # Compute age in days (compatible with GNU date)
-  today_epoch=$(date -u -d "$TODAY" +%s 2>/dev/null \
-    || date -u -j -f "%Y-%m-%d" "$TODAY" +%s)
-  updated_epoch=$(date -u -d "$updated" +%s 2>/dev/null \
-    || date -u -j -f "%Y-%m-%d" "$updated" +%s)
-  age_days=$(( (today_epoch - updated_epoch) / 86400 ))
-
-  if [ "$age_days" -gt 90 ]; then
-    STALE_90D+=("$slug (updated: $updated, age: ${age_days}d)")
-  fi
-done
+if ! git cat-file -e "${sha}:${path}" 2>/dev/null; then
+  tree="$(git ls-tree -r --name-only "$sha" 2>/dev/null || true)"
+  hits=$(grep -cE "(^|/)$(basename "$path")\$" <<<"$tree")
+  [ "$hits" = 1 ] || echo "  - $slug: pinned source $path@$sha does not resolve ($hits basename hits)"
+fi
 ```
 
-Print findings:
+A basename matching **more than one** path at that revision proves nothing about
+which file the pin meant, so an ambiguous fallback is a finding, not a hit. A pin
+whose path predates a rename and whose basename is ambiguous is repaired by
+re-pinning to a revision where the cited path is real.
+
+A pin whose **commit is not in this clone at all** — CI checks out shallow — is
+unverifiable here, not broken. Check `git cat-file -e "<sha>^{commit}"` first and
+count that pin as unverifiable rather than failing it; every pin whose commit is
+present is still checked. A depth-dependent finding would make the check report
+the clone rather than the knowledge base.
+
+Capture the tree before matching. A `git ls-tree | grep -q` pipeline SIGPIPEs
+`git` the moment `grep` finds its match, and under `pipefail` that turns a
+successful match into a failed pipeline.
+
+A page whose only unresolved source is a path that has since been deleted is
+repaired by pinning it (`<path>@<sha>`), not by deleting the citation — the
+evidence still exists in history.
+
+Also report `kind: repo` pages whose `sources:` list holds **no** live
+repository path: there is nothing for check 3 to verify them against.
 
 ```
-=== Stale-90d findings (${#STALE_90D[@]}) — consider review ===
+=== Source-path findings (<n>) — a declared source does not resolve ===
 ```
 
-For each entry in `STALE_90D`, print one line: `  - <slug> (updated: <date>, age: <N>d)`.
+### 6. Check 3 — source-change freshness (`needs-review`)
 
-If `${#STALE_90D[@]} = 0`, print `  (none)`.
-
-**Important**: this check only REPORTS. `/wiki lint` does NOT modify the
-`updated:` field or any other frontmatter field on any entry.
-
-### 5. Deprecated check
-
-Enumerate entries where frontmatter `confidence: deprecated`. These are reported
-as a separate finding type with the recommendation "consider archive or delete".
+Do not reimplement this. Call the one implementation:
 
 ```bash
-DEPRECATED=()
-
-for slug in "${!ENTRY_CONFIDENCE[@]}"; do
-  if [ "${ENTRY_CONFIDENCE[$slug]}" = "deprecated" ]; then
-    DEPRECATED+=("$slug")
-  fi
-done
+bash .oh/skills/wiki/scripts/knowledge-impact.sh --verified
 ```
 
-Print findings:
+Every `NEEDS-REVIEW` row is a finding: a `kind: repo` page whose declared
+dependencies changed after its `verified_at` commit. Print the rows verbatim —
+each names the page and the specific sources that moved.
 
 ```
-=== Deprecated findings (${#DEPRECATED[@]}) — consider archive or delete ===
+=== Freshness findings (<n>) — declared sources changed since verified_at ===
+  - <slug>: <sources that moved> (verified_at <short-sha>)
 ```
 
-For each entry in `DEPRECATED`, print one line: `  - <slug>`.
+Remediation is to re-read the page against those sources and then either correct
+it or, if it is still accurate, advance `verified_at:` to the current commit.
+Advancing the pin without re-reading is the one thing this check cannot detect,
+and the reason it is a report rather than an automatic bump.
 
-If `${#DEPRECATED[@]} = 0`, print `  (none)`.
+`kind: external` and `kind: pattern` pages report `NOT-APPLICABLE` — their
+provenance is immutable, so freshness does not apply.
 
-**Critical constraint**: `/wiki lint` ONLY REPORTS deprecated entries — it NEVER
-autonomously SETS `confidence: deprecated`. The `deprecated` value is set
-MANUALLY by the orchestrator only, per the lifecycle defined in
-`.oh/skills/wiki/references/schema.md` § 5. This constraint is non-negotiable.
+### 7. Check 4 — broken outbound `[[...]]` links
 
-Stale-90d (§ 4) and Deprecated (§ 5) are always reported separately. They are
-distinct finding types and MUST NOT be conflated — an entry can be stale-90d
-and NOT deprecated, or deprecated and NOT stale-90d.
+A broken outbound link is a `[[slug]]` reference in any entry body whose slug
+matches no entry's frontmatter `slug` in either directory. The slug namespace is
+flat and links cross `source/` and `patterns/` freely.
 
-### 6. Orphan check (two-pass)
-
-An orphaned entry has zero inbound `[[slug]]` references from any other entry
-body. A single-entry corpus is always an orphan — this is a **true positive**,
-not a false positive. The orphan check does not distinguish corpus size.
-
-#### Pass 1: enumerate all known slugs
-
-```bash
-ALL_SLUGS=("${!ENTRY_SLUGS[@]}")
-```
-
-This is already populated from § 3.
-
-#### Pass 2: count inbound references per slug
-
-```bash
-declare -A INBOUND_COUNT
-for slug in "${ALL_SLUGS[@]}"; do
-  INBOUND_COUNT["$slug"]=0
-done
-
-for entry in "${WIKI_ENTRIES[@]}"; do
-  entry_slug=$(basename "$entry" .md)
-
-  # Extract body (everything after the closing frontmatter ---)
-  body=$(awk '/^---$/{n++; if(n==2){p=1; next}} p{print}' "$entry")
-
-  # Find all [[slug]] references in this entry's body
-  while IFS= read -r link_slug; do
-    [ -z "$link_slug" ] && continue
-    # Count this as an inbound reference for link_slug (from entry_slug)
-    # Only count if link_slug is different from the entry itself
-    if [ "$link_slug" != "$entry_slug" ] && [ -n "${INBOUND_COUNT[$link_slug]+_}" ]; then
-      INBOUND_COUNT["$link_slug"]=$(( INBOUND_COUNT["$link_slug"] + 1 ))
-    fi
-  done < <(echo "$body" | grep -oE '\[\[[a-z0-9-]+\]\]' | sed 's/\[\[\(.*\)\]\]/\1/')
-done
-```
-
-Build the orphan list (zero inbound references):
-
-```bash
-ORPHANS=()
-for slug in "${ALL_SLUGS[@]}"; do
-  if [ "${INBOUND_COUNT[$slug]}" -eq 0 ]; then
-    ORPHANS+=("$slug")
-  fi
-done
-```
-
-Print findings:
-
-```
-=== Orphan findings (${#ORPHANS[@]}) — entries with zero inbound [[links]] ===
-```
-
-For each entry in `ORPHANS`, print one line: `  - <slug>`.
-
-If `${#ORPHANS[@]} = 0`, print `  (none)`.
-
-**Single-entry corpus note**: a corpus with exactly one entry always produces
-one orphan (the only entry cannot link to itself). This is a true positive.
-Document it in the log `Observation` field when it occurs.
-
-### 7. Broken outbound link check
-
-A broken outbound link is a `[[slug]]` reference in any entry's body where
-`slug` does NOT match any existing entry's frontmatter `slug` field. This
-finding type is separate from orphans — orphans have no INBOUND links; broken
-outbound links reference slugs that DO NOT EXIST.
+A `[[slug]]` inside a code span or a fenced block is a **mention**, not a link —
+schema prose and pattern pages both show the syntax literally. Strip fences and
+inline code spans before extracting, or every document that explains the
+convention becomes a finding.
 
 ```bash
 BROKEN_LINKS=()
-
-for entry in "${WIKI_ENTRIES[@]}"; do
+for entry in "${ENTRIES[@]}"; do
   entry_slug=$(basename "$entry" .md)
-  body=$(awk '/^---$/{n++; if(n==2){p=1; next}} p{print}' "$entry")
-
+  body=$(awk '/^---$/{n++; if(n==2){p=1; next}} p{print}' "$entry" \
+         | awk '/^```/{f=!f; next} !f' \
+         | sed 's/`[^`]*`//g')
   while IFS= read -r link_slug; do
     [ -z "$link_slug" ] && continue
-    # Check if link_slug matches any known entry slug
-    if [ -z "${ENTRY_SLUGS[$link_slug]+_}" ]; then
+    if [ -z "${ENTRY_PATH[$link_slug]+_}" ]; then
       BROKEN_LINKS+=("$entry_slug → [[$link_slug]] (no such entry)")
     fi
-  done < <(echo "$body" | grep -oE '\[\[[a-z0-9-]+\]\]' | sed 's/\[\[\(.*\)\]\]/\1/')
+  done < <(grep -oE '\[\[[a-z0-9-]+\]\]' <<<"$body" | sed 's/\[\[\(.*\)\]\]/\1/')
 done
 ```
 
-Print findings:
-
 ```
-=== Broken outbound link findings (${#BROKEN_LINKS[@]}) ===
+=== Broken outbound link findings (<n>) ===
 ```
 
-For each finding in `BROKEN_LINKS`, print one line: `  - <source-slug> → [[<missing-slug>]] (no such entry)`.
+### 8. Check 5 — broken `related:` slugs
 
-If `${#BROKEN_LINKS[@]} = 0`, print `  (none)`.
-
-See `.oh/skills/wiki/references/schema.md` § 4 for the cross-link convention and grep
-patterns that govern outbound link syntax (`\[\[[a-z0-9-]+\]\]`).
-
-### 7a. Broken related-slug check
-
-A broken related-slug is an entry whose `related:` frontmatter list names a slug
-with no matching entry. This is distinct from § 7: a `[[slug]]` body link is a
+A broken related-slug is an entry whose `related:` frontmatter names a slug with
+no matching entry. This is distinct from check 4: a `[[slug]]` body link is a
 navigational claim, a `related:` slug is a frontmatter adjacency claim. They fail
 for different reasons and are remediated differently, so they are counted
 separately.
 
 ```bash
 RELATED_BROKEN=()
-
-for slug in "${!ENTRY_SLUGS[@]}"; do
-  frontmatter=$(awk '/^---$/{f=!f; next} f{print}' "${ENTRY_PATH[$slug]}")
-  rel=$(echo "$frontmatter" | grep '^related:' | sed 's/^related: *//; s/[][]//g; s/,/ /g')
+for slug in "${!ENTRY_PATH[@]}"; do
+  fm=$(awk '/^---$/{f=!f; next} f{print}' "${ENTRY_PATH[$slug]}")
+  rel=$(grep '^related:' <<<"$fm" | sed 's/^related: *//; s/[][]//g; s/,/ /g')
   for r in $rel; do
     [ -z "$r" ] && continue
-    if [ -z "${ENTRY_SLUGS[$r]+_}" ]; then
-      RELATED_BROKEN+=("$slug → related: $r (no such entry)")
-    fi
+    [ -z "${ENTRY_PATH[$r]+_}" ] && RELATED_BROKEN+=("$slug → related: $r (no such entry)")
   done
 done
 ```
 
-Print findings:
-
 ```
-=== Broken related-slug findings (${#RELATED_BROKEN[@]}) ===
+=== Broken related-slug findings (<n>) ===
 ```
 
-For each finding, print one line: `  - <source-slug> → related: <missing-slug> (no such entry)`.
-If `${#RELATED_BROKEN[@]} = 0`, print `  (none)`.
+Report-only. The orchestrator decides whether to repoint the slug or author the
+missing entry.
 
-Report-only. This check never edits frontmatter and never removes a slug — the
-orchestrator decides whether to repoint the slug or author the missing entry.
+### 9. Check 6 — regenerate the index
 
-### 8. Contradiction detection (stub)
+`.oh/knowledge/README.md` is generated state owned by this subcommand.
 
-Contradiction detection is explicitly **descoped** for v1. The function prints
-the following exact text and returns:
-
-```
-contradiction detection: not yet implemented — see wiki lint follow-up tracking
-```
-
-A follow-up tracking issue may be filed post-merge but is not a pre-merge
-blocker. Do not attempt any heuristic approximation of contradiction detection;
-the stub text above is the complete implementation for v1.
-
-### 9. README regeneration
-
-Build the `.oh/skills/wiki/corpus/README.md` entries table. Sort all entries by `updated:`
-descending (most recently updated first).
-
-#### 9a. Select the git-tracked entry set, then sort by updated date descending
-
-The index domain is the **git-tracked** entry set, not the working tree. The
-pathspec below is byte-identical to the one in
-`.oh/evals/probes/wiki-readme-index.sh`; the two must never diverge, or a local
-scratch entry becomes a CI regression. The `corpus/*/*` exclusion keeps a future
-subdirectory from silently splitting the two sets — git's pathspec `*` is not
-path-aware and descends, while § 2's shell glob does not.
+#### 9a. Sort by `updated:` descending
 
 ```bash
-TRACKED_SLUGS=()
-while IFS= read -r rel; do
-  [ "$(basename "$rel")" = "README.md" ] && continue
-  [ "$(basename "$rel")" = "skill-impact.md" ] && continue
-  abs="$HARNESS/$rel"
-  [ -f "$abs" ] || continue
-  slug=$(awk '/^---$/{f=!f; next} f{print}' "$abs" | grep '^slug:' | awk '{print $2}' | head -1)
-  [ -z "$slug" ] && continue
-  TRACKED_SLUGS+=("$slug")
-done < <(git -C "$HARNESS" ls-files -- \
-           '.oh/skills/wiki/corpus/*.md' \
-           ':!:.oh/skills/wiki/corpus/raw/*' \
-           ':!:.oh/skills/wiki/corpus/*/*')
-```
-
-```bash
-SORTED_SLUGS=()
 RANK_LINES=()
-for slug in "${TRACKED_SLUGS[@]}"; do
-  updated="${ENTRY_UPDATED[$slug]:-0000-00-00}"
-  RANK_LINES+=("$updated $slug")
+for slug in "${!ENTRY_PATH[@]}"; do
+  RANK_LINES+=("${ENTRY_UPDATED[$slug]:-0000-00-00} $slug")
 done
-
+SORTED_SLUGS=()
 while IFS= read -r line; do
   SORTED_SLUGS+=("${line#* }")
 done < <(printf '%s\n' "${RANK_LINES[@]}" | sort -r)
 ```
 
-#### 9b. Build the README content
+The domain is every entry in `source/` and `patterns/`. It matches
+`.oh/evals/probes/wiki-readme-index.sh` exactly; the two must never diverge.
 
-The README file is owned and regenerated by `/wiki lint`. The table header is
-literal — the exact byte sequence matters for validation.
+#### 9b. Build the content
+
+The table header is literal — the exact byte sequence matters for validation.
 
 ```bash
-# Preserve the static preamble of .oh/skills/wiki/corpus/README.md (lines before the Index table)
-# The Index section starts at "## Index"
-PREAMBLE=$(awk '/^## Index$/{exit} {print}' "$HARNESS/.oh/skills/wiki/corpus/README.md")
+PREAMBLE=$(awk '/^## Index$/{exit} {print}' "$KNOWLEDGE/README.md")
 
 NEW_README="$PREAMBLE"$'\n'
 NEW_README+="## Index"$'\n\n'
 NEW_README+="| Slug | Title | Tags | Updated |"$'\n'
 NEW_README+="| --- | --- | --- | --- |"$'\n'
-
 for slug in "${SORTED_SLUGS[@]}"; do
-  title="${ENTRY_TITLES[$slug]:-}"
-  tags="${ENTRY_TAGS[$slug]:-}"
-  updated="${ENTRY_UPDATED[$slug]:-}"
-  NEW_README+="| $slug | $title | $tags | $updated |"$'\n'
+  NEW_README+="| $slug | ${ENTRY_TITLE[$slug]:-} | ${ENTRY_TAGS[$slug]:-} | ${ENTRY_UPDATED[$slug]:-} |"$'\n'
 done
 ```
 
-**Empty corpus**: if `$ENTRIES_COUNT = 0`, the table contains only the two
-header lines and no data rows. This is NOT an error condition.
+**Empty base**: the table contains only the two header lines. Not an error.
 
 #### 9c. Atomic write or dry-run
 
-In `--dry-run` mode, print the proposed content:
+In `--dry-run`, print the proposed content between
+`--- Proposed .oh/knowledge/README.md (dry-run, not written) ---` and
+`--- end proposed .oh/knowledge/README.md ---`.
 
-```
---- Proposed .oh/skills/wiki/corpus/README.md (dry-run, not written) ---
-<content>
---- end proposed .oh/skills/wiki/corpus/README.md ---
-```
-
-In default (non-dry-run) mode, perform the **atomic write**:
+Otherwise write atomically:
 
 ```bash
-TMP="$HARNESS/.oh/skills/wiki/corpus/README.md.tmp"
-FINAL="$HARNESS/.oh/skills/wiki/corpus/README.md"
-
-# Write to tmp
+TMP="$KNOWLEDGE/README.md.tmp"
+FINAL="$KNOWLEDGE/README.md"
 printf '%s' "$NEW_README" > "$TMP"
-
-# Validate: non-empty AND contains the exact header line
-if [ ! -s "$TMP" ]; then
-  echo "ERROR: .oh/skills/wiki/corpus/README.md.tmp is empty — aborting regeneration"
-  rm -f "$TMP"
-  exit 1
-fi
-
-if ! grep -qF '| Slug | Title | Tags | Updated |' "$TMP"; then
-  echo "ERROR: .oh/skills/wiki/corpus/README.md.tmp is missing the required header line — aborting regeneration"
-  rm -f "$TMP"
-  exit 1
-fi
-
-# Atomic rename on validation success
+[ -s "$TMP" ] || { echo "ERROR: proposed index is empty — aborting"; rm -f "$TMP"; exit 1; }
+grep -qF '| Slug | Title | Tags | Updated |' "$TMP" \
+  || { echo "ERROR: proposed index is missing the header line — aborting"; rm -f "$TMP"; exit 1; }
 mv "$TMP" "$FINAL"
-echo ".oh/skills/wiki/corpus/README.md regenerated (${ENTRIES_COUNT} entries)"
+echo ".oh/knowledge/README.md regenerated (${ENTRIES_COUNT} entries)"
 ```
 
-**Atomic write protocol** (Critic-B mitigation):
+Write to tmp → validate non-empty and header present → atomic rename. On
+validation failure the original stays intact, the reason is printed, and the tmp
+file is removed. A partial write never leaves the index corrupt.
 
-1. Write to `.oh/skills/wiki/corpus/README.md.tmp` first.
-2. Validate the tmp file: it must be non-empty AND contain the exact header line
-   `| Slug | Title | Tags | Updated |`.
-3. On validation success: atomically rename `.oh/skills/wiki/corpus/README.md.tmp` → `.oh/skills/wiki/corpus/README.md`.
-4. On validation failure: exit non-zero, leave the original `.oh/skills/wiki/corpus/README.md`
-   intact, print the failure reason, and remove the tmp file.
-
-This protocol ensures that a partial write or generation failure never leaves
-`.oh/skills/wiki/corpus/README.md` in a corrupt or empty state.
-
-## Extraction Command Reference
-
-The canonical frontmatter extraction command, per `.oh/skills/wiki/references/schema.md` § 6:
+Verify:
 
 ```bash
-awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/<slug>.md
+bash .oh/evals/probes/wiki-readme-index.sh
 ```
 
-This MUST be the extraction method used in this skill. Deviation from the § 6
-command is forbidden — both `/wiki query` and `/wiki lint` must use identical
-extraction to prevent silent divergence (a match that works in one skill must
-work in the other). Any future change to this extraction method requires
-updating both skills atomically.
+### 10. Informational telemetry (decides nothing)
 
-## Six Check Types — Summary
+After the findings, print one line of context. It is not a check and no gate
+reads it:
 
-| # | Type | Finding trigger | Recommendation | Autonomously sets flag? |
-|---|------|-----------------|---------------|------------------------|
-| 1 | Stale-90d | `updated:` > 90 days older than today UTC | consider review | No |
-| 2 | Deprecated | `confidence: deprecated` | consider archive or delete | No — report only |
-| 3 | Orphan | zero inbound `[[slug]]` references | (informational; true positive even for single-entry corpus) | No |
-| 4 | Broken outbound | `[[slug]]` in body where `slug` has no matching entry | (informational; fix by adding the entry or correcting the link) | No |
-| 4a | Broken related-slug | `related:` frontmatter slug with no matching entry | repoint the slug or author the missing entry | No |
-| 5 | Contradiction | descoped | n/a — stub only | n/a |
+```
+last-reviewed: <n> entries, oldest <slug> (<updated>, <N>d), <k> deprecated
+```
 
-These six types are always reported separately. Types 1 and 2 (both related to
-"staleness" in a loose sense) MUST NOT be conflated — they have distinct triggers
-and distinct recommendations.
+Age answers "when did a human last look at this", which is worth knowing and is
+not a validity claim. Validity is check 3.
+
+## Six checks — summary
+
+| # | Check | Finding trigger | Sets anything? |
+|---|-------|-----------------|----------------|
+| 1 | Schema validity | missing/invalid field, kind-directory disagreement, filename mismatch | No |
+| 2 | Source paths resolve | a `sources:` entry names nothing that exists at the form it declares | No |
+| 3 | Source-change freshness | a declared repository source changed after `verified_at` | No |
+| 4 | Broken outbound link | `[[slug]]` with no matching entry | No |
+| 5 | Broken `related:` slug | `related:` slug with no matching entry | No |
+| 6 | Index consistency | the generated table does not match current frontmatter | Yes — rewrites the index |
+
+Check 6 is the only writer. Everything else reports.
 
 ## Anti-Patterns
 
-- **Conflating stale-90d with deprecated** — stale-90d triggers on age of `updated:`;
-  deprecated triggers on the value of `confidence:`. An entry may be one, both, or
-  neither. Always report them under separate headings.
-- **Setting `confidence: deprecated` autonomously** — `/wiki lint` is a reporter,
-  not a writer. The `deprecated` flag is set MANUALLY by the orchestrator per
-  `.oh/skills/wiki/references/schema.md` § 5. If `/wiki lint` sets this flag, it violates the
-  confidence lifecycle.
-- **Treating a single-entry orphan as a false positive** — a corpus with one entry
-  always produces one orphan finding. This is correct behavior. Document it in the
-  log Observation.
-- **Conflating orphans with broken outbound links** — orphans have no INBOUND links
-  (other entries don't reference them); broken outbound links reference slugs that
-  DO NOT EXIST. They are separate checks with different remediation paths.
-- **Conflating broken `related:` slugs with broken `[[slug]]` body links** — the
-  first is a frontmatter adjacency claim, the second is a navigational link. They are
-  distinct checks with distinct remediation, reported under separate headings.
-- **Regenerating the index from the working tree** — § 9a builds the Index from the
-  git-tracked entry set, matching `.oh/evals/probes/wiki-readme-index.sh` byte for
-  byte. Using the § 2 working-tree glob makes an untracked local scratch entry a CI
-  regression.
-- **Non-atomic README write** — writing directly to `.oh/skills/wiki/corpus/README.md` without the
-  tmp → validate → rename protocol risks corruption. Always use the three-step
-  atomic write in § 9c.
-- **Grepping `.oh/skills/wiki/corpus/README.md` for entries** — the README is the output of this
-  skill, not its input. Always enumerate `.oh/skills/wiki/corpus/*.md` directly.
-- **Writing a run log** — there is no log tier. Report OP / DRY-RUN / FAIL and the
-  findings to the terminal. Audit-child mode returns its observation to the outer
-  dispatcher instead.
-- **Hardcoding today's date** — always compute UTC date at runtime with
-  `date -u +%Y-%m-%d`.
+- **Reintroducing orphan detection as a failure** — inbound-link count is not a
+  health signal (`schema.md` § 7). If a page is genuinely unreachable, the fix is
+  a link from a page that should have had one, not a report row.
+- **Deciding validity from `updated:`** — age is telemetry. Check 3 decides.
+- **Reimplementing freshness** — `knowledge-impact.sh` is the one implementation,
+  and `/spec execute` calls the same script. A second copy will disagree with it.
+- **Advancing `verified_at:` to silence check 3** — the pin means "the claims
+  were re-read against these sources at this commit". Moving it without reading
+  launders staleness into freshness.
+- **Setting `confidence: deprecated` autonomously** — the flag is set manually by
+  the orchestrator (`schema.md` § 8).
+- **Conflating broken `related:` slugs with broken `[[slug]]` body links** — a
+  frontmatter adjacency claim and a navigational link are distinct checks with
+  distinct remediation.
+- **Non-atomic index write** — always use the tmp → validate → rename protocol.
+- **Grepping `.oh/knowledge/README.md` for entries** — the README is this
+  subcommand's output, not its input. Enumerate the directories.
+- **Writing a run log** — there is no log tier. Report the findings and the
+  result to the terminal.
+- **Hardcoding today's date** — compute UTC at runtime with `date -u +%Y-%m-%d`.
 
 ## See Also
 
-- `.oh/skills/wiki/references/schema.md` — the locked schema, § 4 (cross-link / orphan / broken-link
-  definitions), § 5 (confidence lifecycle: who SETS vs REPORTS), § 6 (frontmatter
-  extraction canonical command)
-- `/wiki ingest` — add or update an entry; the only authorized write path to `.oh/skills/wiki/corpus/`
-- `/wiki query` — search the wiki by topic; shares the § 6 extraction command
-- `/audit context` — reference for `--dry-run` flag pattern and atomic-write convention
+- `.oh/skills/wiki/references/schema.md` — § 2 layout and the tracked boundary,
+  § 4 provenance forms, § 5 freshness, § 7 cross-links, § 8 confidence,
+  § 9 extraction, § 10 index freshness
+- `.oh/skills/wiki/scripts/knowledge-impact.sh` — the one freshness implementation
+- `/wiki ingest` — the authorized write path for entity pages
+- `/wiki query` — the read path; shares the § 9 extraction command

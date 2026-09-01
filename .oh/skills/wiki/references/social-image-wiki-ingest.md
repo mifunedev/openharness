@@ -1,14 +1,14 @@
 # Social image wiki ingest pattern
 
-Use when the user asks to study an attached image or screenshot from a social/share URL and index the knowledge in `.oh/skills/wiki/corpus/`.
+Use when the user asks to study an attached image or screenshot from a social/share URL and index the knowledge in `.oh/knowledge/`.
 
 ## Capture packet
 
 Preserve both the visual artifact and a text snapshot:
 
 - Normalize the social URL by stripping tracking params for human-facing prose, while keeping the original acquisition URL in the raw snapshot when useful.
-- Copy the attached image into `.oh/skills/wiki/corpus/raw/<yyyy-mm-dd>-<slug>.<ext>` when the image itself is the primary source.
-- Record image checksum and dimensions in `.oh/skills/wiki/corpus/raw/<yyyy-mm-dd>-<slug>.md` so future readers can verify they are looking at the same artifact.
+- Copy the attached image into `.oh/knowledge/raw/<yyyy-mm-dd>-<slug>.<ext>` when the image itself is the primary source.
+- Record image checksum and dimensions in `.oh/knowledge/raw/<yyyy-mm-dd>-<slug>.md` so future readers can verify they are looking at the same artifact.
 - Fetch lightweight social metadata when possible (`og:title`, `og:description`, `og:image`), but treat captions as wrapper context, not authoritative source truth.
 - Use vision/OCR to extract visible text, chart structure, source attribution, and uncertainty notes. Mark low-resolution names as provisional rather than overclaiming exact OCR.
 
@@ -26,4 +26,4 @@ Keep the entry under the normal 600-word cap. Put long OCR lists, checksums, and
 
 ## README regeneration pitfall
 
-When regenerating `.oh/skills/wiki/corpus/README.md` without `/wiki lint`, match `.oh/evals/probes/wiki-readme-index.sh` exactly: it extracts only literal single-line `tags:` values from frontmatter. Do not normalize multi-line YAML lists into bracket syntax during ad-hoc regeneration, or the probe will fail on existing entries that use block-style tags.
+When regenerating `.oh/knowledge/README.md` without `/wiki lint`, match `.oh/evals/probes/wiki-readme-index.sh` exactly: it extracts only literal single-line `tags:` values from frontmatter. Do not normalize multi-line YAML lists into bracket syntax during ad-hoc regeneration, or the probe will fail on existing entries that use block-style tags.

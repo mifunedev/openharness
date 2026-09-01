@@ -12,8 +12,6 @@ description: Weekly `/spec execute` task sweep — archive completed tasks
 # Weekly Task Cleanup
 
 Sweep `.oh/tasks/` once per week and archive anything that has finished.
-Completion is read from `progress.txt` alone; a task's identity and state are never
-tied to a terminal session, so this sweep detects and kills no agent session.
 Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
 note. The same weekly pass also grooms stale `.worktrees/` branch
@@ -75,15 +73,26 @@ only — never a `.oh/tasks/` subfolder.
    uncommitted task dirs in the shared checkout are never archived. For
    each `.worktrees/archive/$TODAY/.oh/tasks/<taskdesc>/` (skipping
    `.oh/tasks/archive/`):
-   - If `.oh/tasks/<taskdesc>/progress.txt` ends with a line matching exactly
-     `STATUS: COMPLETE`:
+   - If every user story in `.oh/tasks/<taskdesc>/prd.json` passes —
+     `jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/<taskdesc>/prd.json`
+     exits 0 — the task is complete:
      - Move the folder inside the worktree:
        `git -C .worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
        (falls back to `mv` + `git -C .worktrees/archive/$TODAY add` if
        `git mv` rejects an untracked path).
    - Otherwise, leave the folder in place and append a one-line note to
-     the reply recording that `<taskdesc>` is still active
-     (include the last `progress.txt` modification time).
+     the reply recording that `<taskdesc>` is still active, how many user
+     stories remain unpassed
+     (`jq '[.userStories[] | select(.passes != true)] | length' .oh/tasks/<taskdesc>/prd.json`),
+     and the last `progress.txt` modification time.
+   - Task state is read from the task folder alone and is **never** tied to a
+     tied to a terminal session, tab, or pane: the sweep does not look for,
+     attach to, or kill any implementation-agent process.
+   - A task folder with **no readable `prd.json`** — the file is missing,
+     unparseable, or carries no `userStories` array, so the `jq` test above
+     fails rather than exits 0 — is **not** complete: leave the folder in
+     place and note it in the reply as `unreadable-prd`, counted with the
+     still-active skips.
 5. **Groom stale `.worktrees/` branch checkouts** from the shared repo
    root after the task scan. Initialize `W=0` plus a `GROOMED_WORKTREES`
    list. This pass is intentionally limited to harness branch worktrees

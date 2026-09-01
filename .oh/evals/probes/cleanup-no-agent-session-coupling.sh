@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #928 — retire automated /spec agent handoff
-# desc: the weekly task sweep archives on the progress.txt STATUS marker alone; it never
-#       detects or kills a separately launched implementation-agent session
+# source: issue #928 — retire automated /spec agent handoff;
+#         issue #926 — completion derives from structured task-graph state
+# desc: the weekly task sweep archives on the task graph alone; it never detects or kills a
+#       separately launched implementation-agent session
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -22,7 +23,12 @@ kill_hits=$(grep -nF -- 'tmux kill-session' "$CLEANUP" || true)
 [[ -n "$kill_hits" ]] && found+=("sweep kills an agent session: ${kill_hits//$'\n'/ ; }")
 
 missing=()
-grep -qF 'STATUS: COMPLETE' "$CLEANUP" || missing+=("sweep no longer keys archival on the progress.txt STATUS: COMPLETE marker")
+# Archival keys on structured task-graph state. Issue #928 decoupled the sweep from an
+# agent session while the prose sentinel was still authoritative; issue #926 retired that
+# sentinel, so the decoupling this probe guards is now expressed against prd.json. The
+# invariant is unchanged: completion is read from the task folder, never from a session.
+grep -qF 'all(.userStories[]; .passes == true)' "$CLEANUP" \
+  || missing+=("sweep no longer keys archival on prd.json structured story state")
 grep -qiF 'never' "$CLEANUP" && grep -qiF 'tied to a terminal session' "$CLEANUP" \
   || missing+=("sweep no longer states that task state is untied from a terminal session")
 
@@ -37,4 +43,4 @@ if (( ${#found[@]} + ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: task cleanup archives on STATUS: COMPLETE alone, kills no agent session, and keeps its live-pane grooming guard" >&2
+echo "PASS: task cleanup archives on structured task-graph state alone, kills no agent session, and keeps its live-pane grooming guard" >&2

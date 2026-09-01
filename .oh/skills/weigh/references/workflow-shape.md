@@ -114,6 +114,6 @@ node -e 'import("../scripts/score-trajectories.mjs").then(m => console.log(JSON.
 - `scoring.md` — the weighting formula + sub-signal table the owned step implements.
 - `../scripts/score-trajectories.mjs` — the harness-owned scorer (`select`,
   `weight`, `validateWeights`, `clamp`, `DEFAULT_WEIGHTS`, `TRAJECTORY_SCHEMA`).
-- `../../wiki/corpus/recursive-language-models.md` — the RLM concept (the design
+- `../../../knowledge/source/recursive-language-models.md` — the RLM concept (the design
   thesis that the Workflow tool supplies the sampling substrate and the harness
   owns the weight function).

@@ -55,7 +55,7 @@ Read the following before spawning agents. Pass the assembled snapshot to every 
 ls "$AUDIT_ROOT/.claude/skills/"
 ls "$AUDIT_ROOT/crons/" 2>/dev/null || echo "no crons"
 tail -20 "$AUDIT_ROOT/crons/.cron.log" 2>/dev/null
-ls "$AUDIT_ROOT/.oh/skills/wiki/corpus/" 2>/dev/null | head -20
+ls "$AUDIT_ROOT/.oh/knowledge/" 2>/dev/null | head -20
 
 # Package health
 cat "$AUDIT_ROOT/package.json" 2>/dev/null | head -30
@@ -123,7 +123,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
-> 4. **Wiki utilization** — Count wiki pages under `.oh/skills/wiki/corpus/`. For each, is it populated or a placeholder stub? What percentage is populated?
+> 4. **Wiki utilization** — Count wiki pages under `.oh/knowledge/`. For each, is it populated or a placeholder stub? What percentage is populated?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -197,7 +197,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Wiki utilization** — List all files under `.oh/skills/wiki/corpus/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
+> 1. **Wiki utilization** — List all files under `.oh/knowledge/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
 > 2. **Cron health** — For each cron definition in `crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check `crons/.cron.log` for cron execution traces.
 >
@@ -321,7 +321,7 @@ Return this structured observation to the outer dispatcher; do not report a run 
 | Orchestrator skills | `.claude/skills/` |
 | Crons | `crons/` |
 | Cron liveness | `crons/.cron.log` |
-| Wiki | `.oh/skills/wiki/corpus/` |
+| Wiki | `.oh/knowledge/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |

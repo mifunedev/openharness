@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # tier: A
 # source: wikiskill arXiv:2608.27454 — skill-change ledger, never rolled back
-# desc: skill-impact.md is tracked, carries no slug (so it never enters the corpus index), and every SI record present at the merge-base is present and byte-identical at HEAD
+# desc: the skill-impact ledger lives on the decisions surface, is tracked, carries no slug (so it never enters the knowledge index), and every SI record present at the merge-base is present and byte-identical at HEAD
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-LEDGER_REL=".oh/skills/wiki/corpus/skill-impact.md"
+LEDGER_REL=".oh/evals/decisions/skill-impact.md"
 LEDGER="$ROOT/$LEDGER_REL"
 
 if [[ ! -f "$LEDGER" ]]; then
@@ -17,7 +17,7 @@ if ! git -C "$ROOT" ls-files --error-unmatch "$LEDGER_REL" >/dev/null 2>&1; then
   exit 1
 fi
 if grep -q '^slug:' "$LEDGER"; then
-  echo "REGRESSION: $LEDGER_REL carries a slug: field — it would become a corpus index row" >&2
+  echo "REGRESSION: $LEDGER_REL carries a slug: field — it would become a knowledge index row" >&2
   exit 1
 fi
 
@@ -47,7 +47,14 @@ if [[ -z "$base" ]]; then
   exit 2
 fi
 
-if ! git -C "$ROOT" cat-file -e "$base:$LEDGER_REL" 2>/dev/null; then
+# The ledger has moved between surfaces before, so locate it at the base by
+# filename rather than by today's path — a relocation must not read as "new".
+base_rel="$LEDGER_REL"
+if ! git -C "$ROOT" cat-file -e "$base:$base_rel" 2>/dev/null; then
+  base_rel="$(git -C "$ROOT" ls-tree -r --name-only "$base" \
+    | grep -E '(^|/)skill-impact\.md$' | head -1 || true)"
+fi
+if [[ -z "$base_rel" ]]; then
   echo "PASS: $LEDGER_REL is new on this branch; nothing to compare against the merge-base" >&2
   exit 0
 fi
@@ -76,7 +83,7 @@ records() {
     done
 }
 
-base_recs="$(git -C "$ROOT" show "$base:$LEDGER_REL" | records | sort)"
+base_recs="$(git -C "$ROOT" show "$base:$base_rel" | records | sort)"
 head_recs="$(records < "$LEDGER" | sort)"
 
 missing=(); mutated=()
@@ -99,5 +106,5 @@ if ((${#mutated[@]})); then
   exit 1
 fi
 
-echo "PASS: skill-impact.md is tracked, index-invisible, and append-only against the merge-base" >&2
+echo "PASS: the skill-impact ledger is on the decisions surface, tracked, index-invisible, and append-only against the merge-base" >&2
 exit 0

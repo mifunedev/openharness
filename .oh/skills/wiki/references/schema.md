@@ -1,91 +1,132 @@
-# Wiki — Schema and Authoring Rules
+# Knowledge — Schema and Authoring Rules
 
-The Open Harness wiki (`.oh/skills/wiki/corpus/`) is a personal-scale knowledge base compiled and maintained by the orchestrator. Its target quality bar is architecture-first pages that explain source-backed system relationships, not loose notes. Entity pages hold **facts and synthesis** about recurring topics; they are loaded directly into context on demand (via `/wiki query`) rather than retrieved through vector search.
+The Open Harness knowledge base lives at `.oh/knowledge/`: a personal-scale,
+LLM-readable cache of what this repository has been understood to be. Pages hold
+**facts and synthesis** about recurring topics and are loaded whole into context on
+demand (`/wiki query`) rather than retrieved through vector search. The target
+quality bar is architecture-first pages that explain source-backed system
+relationships, not loose notes.
 
-`.oh/skills/wiki/references/schema.md` is the sole schema document for `.oh/skills/wiki/corpus/`. There is no `.oh/skills/wiki/corpus/CLAUDE.md` — that would collide with the root `CLAUDE.md` symlink to `AGENTS.md`.
+**Two surfaces, one owner each.** `.oh/knowledge/` owns the **data**.
+`.oh/skills/wiki/` owns the **procedure** — how a page is written, queried,
+linted, and compiled. Nothing about a page's schema, provenance, or lifecycle
+lives inside the skill's implementation tree, and no knowledge page lives inside
+it either.
+
+**The repository outranks the knowledge base, always.** A page is orientation.
+Code and tests are implementation truth; canonical docs, RFCs, and ADRs are
+intended-design truth. When a page and its source disagree, the source wins and
+the page is wrong. This file is the sole schema document for `.oh/knowledge/`.
 
 ---
 
 ## 1. Boundary table
 
-The sharp test: *Is this a fact or synthesis about a topic, intended to be read whole into agent context on demand?* If yes → wiki. Else use the surface below.
+The sharp test: *Is this a fact or synthesis about a topic, intended to be read
+whole into agent context on demand?* If yes → knowledge. Else use the surface
+below.
 
-| Surface | Holds | Written by | When wiki wins instead |
+| Surface | Holds | Written by | When knowledge wins instead |
 | --- | --- | --- | --- |
-| `.oh/skills/*/SKILL.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, skills hold **how to behave**. A `kind: pattern` entry sits closest to this line: it records that a workaround *worked*, which is evidence; the skill records that the workaround *must be applied*, which is a norm. When a pattern's workaround becomes a rule, it is promoted into a skill and the pattern stays as the evidence for it |
-| `docs/` | Human-facing prose | Orchestrator / contributors | Wiki is LLM-readable; docs are human-readable |
-| `.claude/skills/*/SKILL.md` | Executable procedures | Orchestrator | Skills are *how to do*; wiki is *what is true* |
-| `.oh/skills/wiki/corpus/raw/` | Immutable source captures (snapshots of fetched pages, papers) | Skills writing snapshots only | Same surface; raw is upstream, wiki entries are synthesis |
+| `.oh/skills/*/SKILL.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Knowledge holds **facts**, skills hold **how to behave**. A `kind: pattern` entry sits closest to this line: it records that a workaround *worked*, which is evidence; the skill records that the workaround *must be applied*, which is a norm. When a pattern's workaround becomes a rule, it is promoted into a skill and the pattern stays as the evidence for it |
+| `docs/` | Human-facing prose | Orchestrator / contributors | Knowledge is LLM-readable; docs are human-readable |
+| `.oh/evals/decisions/` | Accepted/rejected proposal history (`skill-impact.md`) | `/builder`, `/benchmark` | A decision ledger is a record of judgments, not synthesis about a topic |
+| `.oh/knowledge/raw/` | Immutable external captures (snapshots of fetched pages, papers) | `/wiki ingest` | Same surface; raw is upstream evidence, entity pages are synthesis |
+| `.oh/knowledge/local/` | Per-machine scratch | anyone | **Nothing reads it.** A page only one machine can see must never inform a plan another machine cannot reproduce |
 
 ---
 
-## 2. Entry schema
+## 2. Directory layout and the tracked boundary
 
-Every wiki entry is a single markdown file at `.oh/skills/wiki/corpus/<slug>.md` with YAML frontmatter followed by a bounded, source-backed body. The minimum body is three sections; architecture and harness-mechanism entries use the source-backed expansion below.
+```text
+.oh/knowledge/
+├── README.md          generated index — owned by /wiki lint, never hand-edited
+├── source/<slug>.md   kind: repo | external entity pages          TRACKED
+├── patterns/pattern-<subsystem>-<mode>.md   kind: pattern pages   TRACKED
+├── raw/<yyyy-mm-dd>-<slug>.md               external snapshots    TRACKED
+└── local/                                   per-machine scratch   IGNORED
+```
+
+**The directory is the `kind` boundary, and `kind:` must agree with it.** A
+`kind: pattern` page lives in `patterns/`; `kind: repo` and `kind: external`
+pages live in `source/`. Both globs are flat and do not descend — a page in a
+sub-directory is invisible to `/wiki query` and `/wiki lint` while still visible
+to git, which is how a page silently stops being knowledge.
+
+**Tracked by default.** `source/`, `patterns/`, and `raw/` are committed like any
+other repository content, reviewed in the PR that lands them. There is no
+`git add -f` step and no whitelist. An untracked page is provenance a fresh clone
+cannot see, which is the same as no provenance.
+
+**`local/` is the only ignored tier, and nothing reads it.** `/wiki query`
+enumerates `source/` and `patterns/`. Every `/spec` flow consumes tracked
+knowledge only. There is no flag that folds a local page into a normal result
+set. Promotion out of `local/` goes through `/wiki ingest`, which applies this
+schema and lands a tracked page.
+
+**Path resolution.** A `raw/<...>` value in `sources:` resolves relative to
+`.oh/knowledge/`, not to the page's own directory. Every other `sources:` value
+is repository-relative from the repository root.
+
+---
+
+## 3. Entry schema
+
+Every entry is a single markdown file with YAML frontmatter followed by a
+bounded, source-backed body.
 
 ### Frontmatter
 
 ```yaml
 ---
-title: "GitHub Token Workflow Scope"
-slug: gh-token-workflow-scope
-kind: source          # source | pattern; absent means source
-tags: [git, github, auth, ci]
-created: 2026-05-23
-updated: 2026-05-23
+title: "Compose Environment Boundary"
+slug: compose-env-boundary
+kind: repo            # repo | external | pattern
+tags: [compose, devcontainer, boundary]
+created: 2026-08-31
+updated: 2026-08-31
 sources:
-  - raw/2026-05-23-github-docs-fine-grained-pat.md
-related: [github-auth-sandbox, ci-secrets-handling]
-confidence: confirmed   # provisional | confirmed | deprecated
+  - .devcontainer/docker-compose.yml
+  - .devcontainer/entrypoint.sh
+  - .oh/evals/probes/compose-env-boundary.sh
+verified_at: 1c5f37230822ec2bbc5ed316be92ad295722b693
+related: [sandbox-dependency-installs]
+confidence: confirmed
 ---
 ```
-
-Field definitions:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `title` | string | yes | Human-readable entry title |
 | `slug` | string | yes | Matches filename without `.md`; charset `[a-z0-9-]+` |
-| `kind` | enum | no | `source` \| `pattern`. **An absent `kind:` field means `kind: source`.** Set to `pattern` only by `/wiki compile` |
+| `kind` | enum | yes | `repo` \| `external` \| `pattern`. Must agree with the directory |
 | `tags` | list of strings | yes | Used by `/wiki query` for frontmatter-only grep |
 | `created` | date (YYYY-MM-DD) | yes | UTC date of initial creation; never updated |
-| `updated` | date (YYYY-MM-DD) | yes | UTC date of most recent ingest/edit; always updated on write |
-| `sources` | list of paths | yes | At least one `raw/<yyyy-mm-dd>-<slug>.md` snapshot path |
+| `updated` | date (YYYY-MM-DD) | yes | UTC date of most recent write. Telemetry only — see § 5 |
+| `sources` | list of paths | yes | The provenance **and** dependency declaration — see § 4 |
+| `verified_at` | commit sha | `kind: repo` only | The commit the page's claims were last checked against |
 | `related` | list of slugs | no | Slugs of conceptually adjacent entries |
 | `confidence` | enum | yes | `provisional` \| `confirmed` \| `deprecated` |
 
 ### Entry kinds
 
-The corpus holds two kinds of entry, distinguished by `kind:`.
+| `kind` | Directory | Holds | `sources:` | Written by | Read by |
+| --- | --- | --- | --- | --- | --- |
+| `repo` | `source/` | Synthesis about **this repository** — a subsystem, pipeline, runtime, or convention | Repository-relative paths or globs, plus `verified_at` | `/wiki ingest` | any session, `/wiki query <topic>` |
+| `external` | `source/` | Synthesis about an **outside** topic — a paper, a product, a landscape | At least one `raw/<yyyy-mm-dd>-<slug>.md` snapshot | `/wiki ingest` | any session, `/wiki query <topic>` |
+| `pattern` | `patterns/` | A failure mode or working strategy observed in **this harness's own runs**, with an actionable workaround | Pinned evidence, `<repo-relative-path>@<short-sha>` | `/wiki compile` | the proposer role, `/wiki query <topic> --patterns` |
 
-| `kind` | Holds | Written by | Read by |
-| --- | --- | --- | --- |
-| `source` | Facts and synthesis about an external topic, backed by a `raw/` snapshot | `/wiki ingest` | any session, via `/wiki query <topic>` |
-| `pattern` | A failure mode or successful strategy observed in this harness's own runs, with an actionable workaround | `/wiki compile` | the proposer role, via `/wiki query <topic> --patterns` |
-
-**Back-compatibility.** `kind` is the only optional-with-default field in this
-schema. Every entry authored before the field existed is a `source` entry, and none
-require editing. `/wiki ingest` MAY emit `kind: source` explicitly on new source
-pages but is not required to. **Consumers that filter on `kind` MUST apply the
-default: read the field, and treat empty as `source`.**
-
-**Pattern placement.** `kind: pattern` entries are flat files at
-`.oh/skills/wiki/corpus/pattern-<subsystem>-<short-name>.md` — never in a
-subdirectory. The `corpus/*.md` glob used by `/wiki query` and `/wiki lint` does not
-descend, so a pattern in a subdirectory would be invisible to both while still
-visible to `.oh/evals/probes/wiki-readme-index.sh`'s git pathspec, which does. The
-`pattern-` filename prefix is a redundant, greppable encoding of the `kind:` field:
-`ls corpus/pattern-*.md` answers "what has this harness learned" without parsing
-YAML, and the two must always agree. When a pattern page overflows the word cap,
-split it into a second flat pattern page and cross-link; do not create a
-sub-article.
+**A `kind: repo` page never snapshots this repository's own source into `raw/`.**
+The repository is already versioned; a snapshot of it is a second copy that
+drifts. Cite the paths and pin the commit instead. `raw/` holds external captures
+only, which is why it is the `kind: external` provenance form.
 
 **Why the proposer, and not every session, reads patterns.** The source this rule
-comes from measured it: giving the skill proposer access to accumulated knowledge was
-worth +15.0 points, while additionally giving the inference agent that same access
-*cost* 2.8 (`[[wikiskill-experience-compilation]]`). `--patterns` is a default, not a
-boundary — any session can read a pattern file directly. Say "default", never
-"isolation".
+comes from measured it: giving the skill proposer access to accumulated knowledge
+was worth +15.0 points, while additionally giving the inference agent that same
+access *cost* 2.8 (`[[wikiskill-experience-compilation]]`). `--patterns` is a
+default, not a boundary — any session can read a pattern file directly. Say
+"default", never "isolation".
 
 ### Body layout
 
@@ -109,25 +150,37 @@ boundary — any session can read a pattern file directly. Say "default", never
 - [[related-slug-two]]
 ```
 
-Sections must appear in this order: H1, optional `## Relevant Source Files`, `## Summary`, `## Detail`, optional `## System Relationships`, `## See Also`. Architecture/harness entries SHOULD include both optional sections; simple external-concept entries may omit them. `## Summary`, `## Detail`, and `## See Also` are always present even if `## See Also` has no bullets yet.
+Sections appear in this order: H1, optional `## Relevant Source Files`,
+`## Summary`, `## Detail`, optional `## System Relationships`, `## See Also`.
+`## Relevant Source Files` is **required** for `kind: repo` and `kind: pattern`
+and optional for `kind: external`. `## Summary`, `## Detail`, and `## See Also`
+are always present even if `## See Also` has no bullets yet.
 
 ### Source-backed architecture standard
 
-New or substantially revised architecture pages follow one shape: source files first, then concise synthesis, then component relationships, then navigation. A page meets the standard when:
+New or substantially revised architecture pages follow one shape: source files
+first, then concise synthesis, then component relationships, then navigation. A
+page meets the standard when:
 
-- **Relevant source files are explicit**: list the files that make the page true before the summary, not as vague bibliography. Prefer local repo paths; cite external URLs only when the page is about an external artifact.
-- **Claims are line-cited**: repository behavior, stage ordering, lifecycle claims, and invariants cite source paths with line numbers such as `AGENTS.md:111` or `.claude/skills/spec/references/execute.md:20`.
-- **Relationships are visible**: when the page explains a pipeline, runtime, or architecture, include a compact Mermaid diagram or table that shows ownership, ordering, and handoff boundaries.
-- **Synthesis stays separate from evidence**: use prose to explain what the cited files imply, but do not let unsupported interpretation look like a source fact.
-- **Navigation closes the loop**: `## See Also` points to adjacent wiki entries using `[[slug]]` links, so a reader can walk between related pages.
+- **Relevant source files are explicit**: list the files that make the page true
+  before the summary, not as vague bibliography. Prefer local repository paths;
+  cite external URLs only when the page is about an external artifact.
+- **Claims are line-cited**: repository behavior, stage ordering, lifecycle
+  claims, and invariants cite source paths with line numbers such as
+  `AGENTS.md:111` or `.oh/skills/spec/references/execute.md:20`.
+- **Relationships are visible**: when the page explains a pipeline, runtime, or
+  architecture, include a compact Mermaid diagram or table showing ownership,
+  ordering, and handoff boundaries.
+- **Synthesis stays separate from evidence**: use prose to explain what the cited
+  files imply, but do not let unsupported interpretation look like a source fact.
+- **Navigation closes the loop**: `## See Also` points to adjacent entries using
+  `[[slug]]` links, so a reader can walk between related pages.
 
 ### Pattern body layout (`kind: pattern`)
 
-A pattern page uses the **same sections in the same order** as a source page. The
-paper's Symptom / Root cause / Workaround / Evidence all fit inside them as bold
-leads, so patterns need no structural exception and no special case in `/wiki lint`.
-The only rule change is that `## Relevant Source Files` — where the evidence lands —
-is **required** for `kind: pattern`, where it is optional for `kind: source`.
+A pattern page uses the **same sections in the same order** as an entity page.
+Symptom / Root cause / Workaround / Evidence all fit inside them as bold leads,
+so patterns need no structural exception and no special case in `/wiki lint`.
 
 ```markdown
 # <Pattern title — the failure mode, not the incident>
@@ -148,21 +201,21 @@ is **required** for `kind: pattern`, where it is optional for `kind: source`.
 workaround is annotated `(superseded YYYY-MM-DD, SI-nnnn)`, never deleted.>
 
 ## See Also
-- [[<motivating source page>]]
+- [[<motivating entity page>]]
 ```
 
 Title a pattern for the failure mode, not the incident that revealed it:
-`pattern-eval-probe-provenance-decay`, not `pattern-2026-08-31-retro-findings`. One
-page per failure mode, never one per run — a dated per-run page is a session journal,
-which this corpus is not.
+`pattern-evals-probe-provenance-decay`, not `pattern-2026-08-31-retro-findings`.
+One page per failure mode, never one per run — a dated per-run page is a session
+journal, which this knowledge base is not.
 
 **`sources:` for a pattern.** A pattern entry MUST carry at least one `sources:`
-entry. Each is either a `raw/<yyyy-mm-dd>-<slug>.md` snapshot path (when the pattern
-is grounded in an ingested source) **or** a pinned repository-evidence path of the
-form `<repo-relative-path>@<short-sha>` — for example
-`.oh/tasks/<slug>/progress.txt@a1b2c3d`, `.oh/evals/RESULTS.md@a1b2c3d`. The
+entry, each a pinned repository-evidence path of the form
+`<repo-relative-path>@<short-sha>` — for example
+`.oh/tasks/<slug>/evidence.md@a1b2c3d`, `.oh/evals/RESULTS.md@a1b2c3d`. The
 `@<short-sha>` suffix is required: it buys for a mutable tracked file the same
-reproducibility that immutability buys for a `raw/` snapshot.
+reproducibility that immutability buys for a `raw/` snapshot. A pattern grounded
+in an ingested external source may additionally cite that `raw/` snapshot.
 
 **`/wiki compile` MUST NOT write a `raw/` snapshot of a `/retro` report.** `raw/`
 holds snapshots of external sources. A `/retro` report is this harness's own
@@ -170,73 +223,150 @@ ephemeral output, and `/retro` is report-only by contract; persisting its report
 under `raw/` would recreate the per-session journal tier the harness deliberately
 removed, wearing a new name.
 
-**Authoring constraint.** Pattern prose discusses harness subsystems, so it is the
-most likely place for retired vocabulary to reappear. `.oh/evals/probes/audit-stale-references.sh`
-greps every tracked file, this corpus included, for retired route and skill names.
-Read that probe's pattern before writing about an audit subsystem, and use the
-current route names.
+**Authoring constraint.** Pattern prose discusses harness subsystems, so it is
+the most likely place for retired vocabulary to reappear.
+`.oh/evals/probes/audit-stale-references.sh` greps every tracked file, this
+knowledge base included, for retired route and skill names. Read that probe's
+pattern before writing about an audit subsystem, and use the current route names.
 
-### Word cap and sub-articles
+### Word cap
 
-Every entry should stay concise enough to read whole into context. Default cap is ≤ 600 words (title excluded, frontmatter excluded). Architecture/harness entries may reach ≤ 900 words when needed for source-file evidence and diagrams. When a topic overflows, split into sub-articles named `.oh/skills/wiki/corpus/<parent>/<child>.md`. The parent entry becomes an index: its `## Detail` section lists child slugs as `[[parent/child]]` cross-links; each child carries its own frontmatter with its own `slug` (e.g., `gh-auth/sandbox`), `sources`, and `confidence`.
+Every entry should stay concise enough to read whole into context. Default cap is
+≤ 600 words (title excluded, frontmatter excluded). Architecture entries may
+reach ≤ 900 words when needed for source-file evidence and diagrams. When a topic
+overflows, split it into a second flat page in the same directory and cross-link;
+do not create a sub-directory (§ 2).
 
 ---
 
-## 3. Slug derivation rule
+## 4. `sources:` is the dependency declaration
+
+There is **one** provenance list, and freshness is computed from it. A second
+`depends_on:` list holding the same paths would be a copy that drifts.
+
+An entry in `sources:` is one of three forms:
+
+| Form | Example | Expires? |
+| --- | --- | --- |
+| Repository path or glob | `.devcontainer/docker-compose*.yml` | **yes** — this is a live dependency |
+| Immutable external snapshot | `raw/2026-07-04-runtime-isolation-landscape.md` | no — the file never changes |
+| Pinned repository evidence | `.oh/evals/RESULTS.md@a1b2c3d` | no — the sha names a fixed revision |
+| Bare upstream reference | `https://arxiv.org/abs/2607.21653v1` | no — but it is the **weakest** form |
+
+Only the first form participates in freshness. A `kind: repo` page must carry at
+least one of them; a page that declares no live dependency has nothing to be
+verified against and `/wiki lint` reports it as such.
+
+A path that has left the working tree but is real at a known commit becomes a
+pin rather than a broken source: `.oh/tasks/<slug>/evidence.md@0fd2efcb`. **A pin
+survives a rename**: the sha names a revision of the file's *content*, so a
+resolver that cannot find `<sha>:<path>` looks the basename up in that commit's
+tree rather than declaring the provenance broken.
+
+**The bare upstream reference is a legacy form, not an option.** `/wiki ingest`
+always writes a snapshot for anything it fetches, so a page it authors can never
+take this form. It exists for pages written before that rule, whose fetch was
+never committed and whose snapshot is therefore unrecoverable — an unsnapshotted
+URL is a claim about a moving target and proves nothing about what was read. When
+such a page is next re-ingested, the snapshot replaces the URL.
+
+---
+
+## 5. Freshness is a source-change fact, not an age
+
+`verified_at:` records the commit a `kind: repo` page's claims were last checked
+against. A page is **needs-review** when any live dependency in its `sources:`
+list changed after that commit. That is the whole test:
+
+```bash
+bash .oh/skills/wiki/scripts/knowledge-impact.sh --verified
+```
+
+`knowledge-impact.sh` is the single implementation of dependency-aware
+invalidation. `/wiki lint` calls it for the freshness check and `/spec execute`
+calls it with `--changed <paths>` for the Actual Knowledge Impact gate; neither
+reimplements the logic.
+
+**`updated:` is telemetry, not a validity test.** A page updated today is stale
+one commit later if a source it depends on moved, and a page untouched for a year
+is perfectly valid if nothing it cites has changed. `/wiki lint` may report
+`last-reviewed` age as informational output; nothing decides validity from it.
+
+`kind: external` and `kind: pattern` pages have immutable provenance, so
+freshness does not apply to them. They are re-examined when their topic is
+re-ingested or a later run produces counter-evidence.
+
+---
+
+## 6. Slug derivation rule
 
 Slugs are derived from the source URL or file path. Rules, in order:
 
-1. **URL path — last non-UUID segment**: take the URL path, strip trailing slashes, split on `/`, take the last segment. If that segment is a UUID or a bare hash (matches `/^[0-9a-f-]{8,}$/i`), it is a UUID/gist ID — see rule 3.
-   - Example: `https://example.com/foo/bar` → `bar`
-   - Example: `https://docs.github.com/en/authentication/token-scopes` → `token-scopes`
-2. **Lowercased kebab-case**: lowercase the segment; replace non-`[a-z0-9]` runs with a single `-`; strip leading/trailing `-`.
-3. **Gist / UUID URLs**: if the last path segment is a UUID or hash (e.g., `https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f`), the segment contains no meaningful label. `/wiki ingest` MUST require `--slug <override>` and exit with an error if it is absent.
-   - Example: `/wiki ingest https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f --slug karpathy-llm-wiki`
-4. **Social / share URLs**: if the URL host is a known social platform (`linkedin.com`, `x.com`, `twitter.com`, `threads.net`, `facebook.com`, `instagram.com`), OR the last path segment contains a run of ≥ 10 consecutive digits (an embedded share/activity ID), OR the slugified segment would exceed 60 characters, the segment contains no meaningful label. `/wiki ingest` MUST require `--slug <override>` and exit with an error if it is absent:
+1. **URL path — last non-UUID segment**: take the URL path, strip trailing
+   slashes, split on `/`, take the last segment. If that segment is a UUID or a
+   bare hash (matches `/^[0-9a-f-]{8,}$/i`), see rule 3.
+   - `https://example.com/foo/bar` → `bar`
+   - `https://docs.github.com/en/authentication/token-scopes` → `token-scopes`
+2. **Lowercased kebab-case**: lowercase the segment; replace non-`[a-z0-9]` runs
+   with a single `-`; strip leading/trailing `-`.
+3. **Gist / UUID URLs**: if the last path segment is a UUID or hash, it contains
+   no meaningful label. `/wiki ingest` MUST require `--slug <override>` and exit
+   with an error if it is absent.
+4. **Social / share URLs**: if the URL host is a known social platform
+   (`linkedin.com`, `x.com`, `twitter.com`, `threads.net`, `facebook.com`,
+   `instagram.com`), OR the last path segment contains a run of ≥ 10 consecutive
+   digits, OR the slugified segment would exceed 60 characters, the segment
+   contains no meaningful label. `/wiki ingest` MUST require `--slug <override>`:
    ```
    ERROR: URL segment is a social/share URL with no meaningful label (social host, >=10-digit share/activity ID, or >60-char slug).
    Re-run with --slug <override>, e.g.:
      /wiki ingest <url> --slug inspectable-agent-harness
    ```
-5. **File paths**: use the basename without extension, slugified per rule 2. `--slug <override>` is optional; without it, the basename is used.
-6. **Charset constraint**: the final slug MUST match `[a-z0-9-]+`. Any slug that does not pass this check is rejected by `/wiki ingest` before any file is written.
+5. **File paths**: use the basename without extension, slugified per rule 2.
+   `--slug <override>` is optional.
+6. **Charset constraint**: the final slug MUST match `[a-z0-9-]+`. Any slug that
+   fails this check is rejected before any file is written.
 
 ---
 
-## 4. Cross-link convention
+## 7. Cross-link convention
 
-Cross-links between wiki entries use Obsidian-style double-bracket syntax:
+Cross-links use Obsidian-style double-bracket syntax:
 
 ```markdown
-- [[gh-token-workflow-scope]]
-- [[github-auth-sandbox]]
+- [[compose-env-boundary]]
+- [[sandbox-dependency-installs]]
 ```
 
 Rules:
 
-- The slug inside `[[...]]` MUST be a valid slug matching `[a-z0-9-]+` — no spaces, no uppercase, no special characters
-- Cross-links appear in `## See Also` sections and may appear inline in `## Detail` prose
-- `/wiki lint` greps all entry bodies for outbound links using: `grep -roE '\[\[[a-z0-9-]+\]\]' .oh/skills/wiki/corpus/`
-- A link is **broken** if its slug does not match any existing `.oh/skills/wiki/corpus/<slug>.md` frontmatter `slug` field
-- A link is **orphaned** (from the target's perspective) if no other entry links to it — zero inbound `[[slug]]` references
+- The slug inside `[[...]]` MUST match `[a-z0-9-]+` — no spaces, no uppercase, no
+  special characters.
+- Cross-links appear in `## See Also` and may appear inline in `## Detail` prose.
+- A link is **broken** if its slug matches no entry's frontmatter `slug` in
+  either `source/` or `patterns/`. Links cross the two directories freely; the
+  slug namespace is flat.
+- Outbound links are enumerated with:
+  ```bash
+  grep -roE '\[\[[a-z0-9-]+\]\]' .oh/knowledge/source/ .oh/knowledge/patterns/
+  ```
 
-Sub-article cross-links use the full path form: `[[parent/child]]`. The grep pattern for sub-articles extends to: `grep -roE '\[\[[a-z0-9/-]+\]\]' .oh/skills/wiki/corpus/`.
+**Inbound-link count is not a health signal.** A queryable page with zero inbound
+links is perfectly valid in a knowledge base this size, and treating it as a
+finding trains readers to ignore the report. `/wiki lint` does not check it.
 
 ---
 
-## 5. Confidence lifecycle
-
-The `confidence` field tracks the curation state of a wiki entry. Ownership is strictly defined:
+## 8. Confidence lifecycle
 
 | Value | Set by | Trigger |
 | --- | --- | --- |
-| `provisional` | `/wiki ingest` | Automatically on entry creation |
-| `confirmed` | Orchestrator, manually | After the orchestrator reviews and validates the entry's accuracy (e.g., via `Edit` tool) |
+| `provisional` | `/wiki ingest`, `/wiki compile` | Automatically on entry creation |
+| `confirmed` | Orchestrator, manually | After the orchestrator reviews and validates the entry's accuracy |
 | `deprecated` | Orchestrator, manually | When the orchestrator judges the entry stale, superseded, or incorrect beyond update |
 
-**`/wiki lint` (US-004) REPORTS entries with `confidence: deprecated` but NEVER sets the flag.** The lint skill surfaces deprecated entries as a finding with recommendation "consider archive or delete" — action is always taken by the orchestrator, never autonomously.
-
-Lifecycle flow:
+`/wiki lint` never sets `confidence`. The value is set manually by the
+orchestrator; automation only reads it.
 
 ```
 [create via /wiki ingest] → confidence: provisional
@@ -245,124 +375,125 @@ Lifecycle flow:
          ↓  (orchestrator judges stale/superseded)
     confidence: deprecated
          ↓  (orchestrator archives or deletes; no automation)
-    [entry removed or moved to .oh/skills/wiki/corpus/archive/<slug>.md]
+    [entry removed]
 ```
 
 **Patterns.** A `kind: pattern` entry is created `provisional` by `/wiki compile`.
 The orchestrator promotes it to `confirmed` when a skill proposal it motivated is
-recorded `ACCEPTED` in `.oh/skills/wiki/corpus/skill-impact.md`. **A `REJECTED`
-proposal never demotes or deprecates its motivating pattern** — see § 8.
-
-The archive vs. delete decision for `deprecated` entries is not yet defined — defer to `.oh/skills/wiki/references/schema.md` update after the first deprecation in practice.
+recorded `ACCEPTED` in `.oh/evals/decisions/skill-impact.md`. **A `REJECTED`
+proposal never demotes or deprecates its motivating pattern** — see § 12.
 
 ---
 
-## 6. Frontmatter extraction canonical command
+## 9. Frontmatter extraction canonical command
 
-Both `/wiki query` (US-003) and `/wiki lint` (US-004) MUST extract YAML frontmatter from a wiki entry using this exact command:
+`/wiki query`, `/wiki lint`, and `knowledge-impact.sh` MUST extract YAML
+frontmatter using this exact command:
 
 ```bash
-awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/<slug>.md
+awk '/^---$/{f=!f; next} f{print}' .oh/knowledge/source/<slug>.md
 ```
 
-This pattern toggles a flag on each `---` delimiter and prints lines only while the flag is active (between the opening and closing `---`). It correctly handles:
-- Frontmatter at the start of the file (opening `---` on line 1)
-- Body content that contains `---` separators (the flag toggles off again)
-- Files with no frontmatter (flag never activates; no output)
+It toggles a flag on each `---` delimiter and prints lines only while the flag is
+active. It correctly handles frontmatter at the start of the file, body content
+containing `---` separators, and files with no frontmatter (no output).
 
-**Deviation from this canonical command is forbidden.** Both skills must use the identical extraction method to prevent silent divergence — a grep that works on one skill's output must work identically on the other's. Any future change to this extraction method requires updating both skills atomically.
-
-Usage in practice:
+**Deviation from this canonical command is forbidden.** A grep that works on one
+consumer's output must work identically on another's. Any future change requires
+updating every consumer atomically.
 
 ```bash
-# Extract frontmatter from a single entry
-awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/gh-token-workflow-scope.md
-
-# Extract and grep for a field
-awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/gh-token-workflow-scope.md | grep '^tags:'
-
-# Enumerate all entry slugs (for orphan check, broken-link check)
-for f in .oh/skills/wiki/corpus/*.md; do
+# Enumerate every entry slug
+for f in .oh/knowledge/source/*.md .oh/knowledge/patterns/*.md; do
   awk '/^---$/{f=!f; next} f{print}' "$f" | grep '^slug:'
 done
 ```
 
 ---
 
-## 6a. README index freshness
+## 10. README index freshness
 
-`.oh/skills/wiki/corpus/README.md` is an owned generated index. Its table MUST match the current `.oh/skills/wiki/corpus/*.md` entry frontmatter exactly: one row per entry slug (excluding `README.md`), row fields derived from `slug`, `title`, `tags`, and `updated`, sorted by `updated` descending with the same deterministic tie behavior as `/wiki lint`.
+`.oh/knowledge/README.md` is an owned generated index. Its table MUST match the
+current tracked `source/*.md` and `patterns/*.md` frontmatter exactly: one row
+per entry slug, fields derived from `slug`, `title`, `tags`, and `updated`,
+sorted by `updated` descending with the deterministic tie behavior `/wiki lint`
+uses.
 
-The tier-A probe `.oh/evals/probes/wiki-readme-index.sh` is the drift guard. It reconstructs the expected table from the canonical § 6 frontmatter extraction and exits REGRESSION when the committed README has missing, extra, stale, or out-of-order rows. Any change to `/wiki lint` index generation must keep that probe green.
-
----
-
-## 7. Body-merge strategy for `/wiki ingest` updates
-
-When `/wiki ingest` is invoked with a source whose derived slug matches an existing `.oh/skills/wiki/corpus/<slug>.md`, the skill MUST update that entry using the following merge strategy — it MUST NOT create a duplicate entry, and it MUST NOT concatenate old and new bodies.
-
-**Merge steps, in order:**
-
-1. **Replace `## Summary`**: overwrite the entire `## Summary` section (from `## Summary` heading to the next `##` heading) with the new summary derived from the freshly-ingested source.
-
-2. **Replace `## Detail`**: overwrite the entire `## Detail` section in-place with the new detail prose derived from the fresh source.
-
-3. **Append to `sources:`**: append the new snapshot path (`raw/<yyyy-mm-dd>-<slug>.md`) to the `sources:` list in the frontmatter. Do NOT remove prior snapshot paths — every snapshot remains in the provenance trail.
-
-4. **Append to `## See Also`** (deduplicated): extract `[[slug]]` candidates from the new source and append any that are not already present in `## See Also`. Do not remove existing cross-links.
-
-5. **Update `updated:`**: set `updated:` in the frontmatter to today's date (UTC, `date -u +%Y-%m-%d`).
-
-6. **Do NOT touch `created:`**: the `created:` field is immutable after initial entry creation. `/wiki ingest` must skip it during updates.
-
-7. **Do NOT concatenate bodies**: the prior `## Summary` and `## Detail` content is replaced, not concatenated. The entry stays ≤ 600 words.
-
-**Rationale**: bodies grow unbounded if concatenated across multiple ingests, eventually exceeding the 600-word cap and diluting the entry's utility. The replace-in-place strategy keeps entries fresh and bounded while the `sources:` list preserves the full provenance trail.
+The tier-A probe `.oh/evals/probes/wiki-readme-index.sh` is the drift guard. It
+reconstructs the expected table from the § 9 extraction and exits REGRESSION when
+the committed README has missing, extra, stale, or out-of-order rows. Any change
+to `/wiki lint` index generation must keep that probe green.
 
 ---
 
-## 7a. Pattern amendment to the body-merge strategy
+## 11. Body-merge strategy for `/wiki ingest` updates
 
-Applies only when the target entry has `kind: pattern`. All of § 7 holds except
-steps 1, 2, and 7, which are amended as follows.
+When `/wiki ingest` is invoked with a source whose derived slug matches an
+existing entry, the skill MUST update that entry using the following merge
+strategy — it MUST NOT create a duplicate entry, and it MUST NOT concatenate old
+and new bodies.
 
-**1'. `## Summary` is replaced** — unchanged from § 7 step 1. The summary is a
-rolling 2-3 sentence statement of the current understanding.
+1. **Replace `## Summary`**: overwrite the entire section with the new summary.
+2. **Replace `## Detail`**: overwrite the entire section in place.
+3. **Append to `sources:`**: append the new snapshot path or repository path. Do
+   NOT remove prior entries — every one remains in the provenance trail.
+4. **Append to `## See Also`** (deduplicated): add new `[[slug]]` candidates; do
+   not remove existing cross-links.
+5. **Update `updated:`** to today's UTC date (`date -u +%Y-%m-%d`).
+6. **Update `verified_at:`** to `git rev-parse HEAD` for a `kind: repo` page —
+   the write re-checked the claims, so the pin moves with them.
+7. **Do NOT touch `created:`** — immutable after initial creation.
+8. **Do NOT concatenate bodies** — the prior `## Summary` and `## Detail` are
+   replaced. The entry stays inside the word cap.
+
+**Rationale**: bodies grow unbounded if concatenated across ingests, eventually
+exceeding the cap and diluting the entry. Replace-in-place keeps entries fresh
+and bounded while `sources:` preserves the full provenance trail.
+
+### 11a. Pattern amendment
+
+Applies only when the target entry has `kind: pattern`. All of § 11 holds except
+steps 1, 2, and 8, which are amended as follows.
+
+**1'. `## Summary` is replaced** — unchanged. The summary is a rolling 2-3
+sentence statement of the current understanding.
 
 **2'. `## Detail` is merged, not replaced.**
 
 - `**Symptom.**` and `**Root cause.**` are rewritten in place ONLY when the new
   evidence contradicts them. New corroborating evidence adds a citation, not a
   rewrite.
-- `**Workaround.**` is **append-only**. A new workaround is appended. A workaround
-  shown not to work is annotated `(superseded YYYY-MM-DD, SI-nnnn)` and left in
-  place. It is never deleted.
+- `**Workaround.**` is **append-only**. A new workaround is appended. A
+  workaround shown not to work is annotated `(superseded YYYY-MM-DD, SI-nnnn)`
+  and left in place. It is never deleted.
 
-**7'. The word cap is met by compressing older evidence into one clause, never by
-dropping a distinct root cause.** When a pattern page holds two or more distinct root
-causes and exceeds the cap, split it into two flat pattern pages (§ 2, pattern
-placement) and cross-link them.
+**8'. The word cap is met by compressing older evidence into one clause, never by
+dropping a distinct root cause.** When a pattern page holds two or more distinct
+root causes and exceeds the cap, split it into two flat pattern pages and
+cross-link them.
 
-**Rationale**: § 7's replace-in-place strategy keeps a source page fresh against a
-moving upstream. A pattern page has no upstream — it is this harness's own
-accumulated experience, and replacing it discards exactly the knowledge the page
-exists to hold.
+**Rationale**: § 11's replace-in-place strategy keeps an entity page fresh
+against a moving upstream. A pattern page has no upstream — it is this harness's
+own accumulated experience, and replacing it discards exactly the knowledge the
+page exists to hold.
 
 ---
 
-## 8. Pattern persistence invariant
+## 12. Pattern persistence invariant
 
 **A `kind: pattern` entry is never rolled back.**
 
-When a skill proposal is rejected and the skill edit is reverted, the revert covers
-the skill artifact **only**. The pattern page that motivated the proposal stays, its
-`confidence` is unchanged, its `sources:` list is unchanged, and its accumulated
-`**Workaround.**` text is unchanged. `/wiki compile` records the rejection as
-evidence — annotating the workaround that failed with `(superseded YYYY-MM-DD,
-SI-nnnn)` — rather than deleting it. The `skill-impact.md` record of the rejected
-proposal is likewise never removed.
+When a skill proposal is rejected and the skill edit is reverted, the revert
+covers the skill artifact **only**. The pattern page that motivated the proposal
+stays, its `confidence` is unchanged, its `sources:` list is unchanged, and its
+accumulated `**Workaround.**` text is unchanged. `/wiki compile` records the
+rejection as evidence — annotating the workaround that failed with
+`(superseded YYYY-MM-DD, SI-nnnn)` — rather than deleting it. The
+`.oh/evals/decisions/skill-impact.md` record of the rejected proposal is likewise
+never removed.
 
-**Reverting a `corpus/` path as collateral of a skill revert is forbidden.**
+**Reverting a `.oh/knowledge/` path as collateral of a skill revert is
+forbidden.**
 
 Rationale: the knowledge that an approach was tried and did not work is the most
 valuable output of a rejected cycle, and it is the only thing preventing the same
@@ -372,5 +503,5 @@ persistence this layer exists to provide.
 Prose is not enforcement. The oracles are
 `.oh/evals/probes/wiki-pattern-persistence.sh` (pattern pages present at the
 merge-base are present at HEAD, and no pattern's `sources:` list has shrunk) and
-`.oh/evals/probes/wiki-skill-impact-append-only.sh` (ledger records are added, never
-removed or edited in place).
+`.oh/evals/probes/wiki-skill-impact-append-only.sh` (ledger records are added,
+never removed or edited in place).

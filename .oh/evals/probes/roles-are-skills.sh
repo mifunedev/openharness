@@ -22,7 +22,6 @@ done
 
 agent_file_refs="$(grep -rnE '\.(oh|claude|codex|pi)/agents/[A-Za-z0-9_-]+\.md' \
   .oh/skills docs AGENTS.md README.md .oh/README.md 2>/dev/null \
-  | grep -v '^\.oh/skills/wiki/corpus/' \
   | grep -v '^docs/rfcs/preserved-changelog-rationale\.md:' || true)"
 if [ -n "$agent_file_refs" ]; then
   echo "REGRESSION: active surfaces still cite project-agent definition files:" >&2
@@ -31,7 +30,6 @@ if [ -n "$agent_file_refs" ]; then
 fi
 
 retired_role_uses="$(grep -rnE '\b(Advisor|First Mate)\b' .oh/skills 2>/dev/null \
-  | grep -v '^\.oh/skills/wiki/corpus/' \
   | grep -vE '\b([Nn]o|[Nn]ot|[Nn]ever|[Nn]either)\b' || true)"
 if [ -n "$retired_role_uses" ]; then
   echo "REGRESSION: active skills still invoke a retired role identity (a retired role may only appear in a negation):" >&2

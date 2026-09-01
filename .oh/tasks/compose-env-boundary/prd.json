@@ -159,7 +159,7 @@
                 ".oh/scripts/migrate-harness-yaml.sh stops mapping the retired keys in both directions; the legacy shim stays",
                 "CHANGELOG.md gains a BREAKING entry under ## [Unreleased], one sentence, <=250 characters, linking #920",
                 "bash .oh/evals/probes/changelog-entry-length.sh reports no over-length entry",
-                ".oh/skills/wiki/corpus/compose-env-boundary.md exists with valid frontmatter and body order H1, Relevant Source Files, Summary, Detail, System Relationships, See Also",
+                ".oh/knowledge/source/compose-env-boundary.md exists with valid frontmatter and body order H1, Relevant Source Files, Summary, Detail, System Relationships, See Also",
                 "Every wiki claim about repository behavior cites a source path with a line number; System Relationships carries a Mermaid diagram of the oh.json to CLI to entrypoint path",
                 "The wiki entry is <=900 words and See Also cross-links [[sandbox-dependency-installs]] and [[oh-cli-portable-lifecycle]]",
                 "sandbox-dependency-installs.md no longer claims compose passes SKIP_PNPM_INSTALL into the container, and its updated date is bumped",

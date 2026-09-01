@@ -7,7 +7,7 @@
 
 # Wiki Ingest
 
-Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `.oh/skills/wiki/corpus/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
+Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `.oh/knowledge/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
 
 The canonical schema, slug derivation rules, and body-merge strategy all live in `.oh/skills/wiki/references/schema.md`. This skill defers to those rules — it does not redefine them.
 
@@ -54,7 +54,7 @@ No other forms are documented or supported. `argument-hint` frontmatter above en
 
 - `/wiki query` — for searching and reading existing entries into context.
 - `/wiki lint` — for health checks, index regeneration, stale/orphan reporting.
-- Direct `Edit` tool writes to `.oh/skills/wiki/corpus/<slug>.md` — use only for manual `confidence` field upgrades or small factual corrections that do not require a new snapshot.
+- Direct `Edit` tool writes to `.oh/knowledge/source/<slug>.md` — use only for manual `confidence` field upgrades or small factual corrections that do not require a new snapshot.
 
 ## Instructions
 
@@ -67,19 +67,19 @@ Parse `$ARGUMENTS` to determine the invocation form:
 
 Extract `--slug <override>` and `--allow-stale` flags if present.
 
-### 2. Ensure .oh/skills/wiki/corpus/raw/ exists
+### 2. Ensure .oh/knowledge/raw/ exists
 
 Before any file write, run:
 
 ```bash
-mkdir -p .oh/skills/wiki/corpus/raw/
+mkdir -p .oh/knowledge/raw/
 ```
 
-`.oh/skills/wiki/corpus/raw/` is gitignored (only `.oh/skills/wiki/corpus/raw/README.md` is tracked). On a fresh clone the directory may not exist. This step is mandatory — never assume the directory is present.
+`.oh/knowledge/raw/` is tracked, but a fresh clone that has never ingested anything may still be missing a sub-path this route writes to. This step is mandatory — never assume the directory is present.
 
 ### 3. Slug derivation
 
-Slug derivation follows `.oh/skills/wiki/references/schema.md` § 3 verbatim. Summary for reference (the rule document is authoritative):
+Slug derivation follows `.oh/skills/wiki/references/schema.md` § 6 verbatim. Summary for reference (the rule document is authoritative):
 
 1. **URL — last non-UUID segment**: take the URL path, strip trailing slashes, split on `/`, take the last segment. If that segment matches `/^[0-9a-f-]{8,}$/i` (UUID or bare hash), proceed to rule 3.
    - `https://example.com/foo/bar` → `bar`
@@ -109,22 +109,22 @@ If `--slug <override>` is provided, use it directly (still validate charset).
 1. WebFetch the URL to retrieve the page body.
    - For LinkedIn/social pages, inspect embedded metadata and JSON-LD (`articleBody`, `headline`, `comment`, `og:description`, `twitter:description`) when the visible DOM is gated or duplicated. Capture useful comments only when they materially clarify the source claim; keep the wiki page bounded and point to the raw snapshot for the full capture.
    - If a material comment or metadata field contains the actual referenced artifact (for example, "Link to the prompt" pointing to a gist/raw file), fetch that artifact too and include a concise quoted copy or excerpt in the raw snapshot. Synthesize the wiki entry from both the social wrapper and the linked primary artifact; cite the social post as the source and mention the linked artifact in Detail when it carries the technique.
-2. Normalize the displayed source URL before writing synthesized .oh/skills/wiki/corpus/log text:
+2. Normalize the displayed source URL before writing synthesized .oh/knowledge/log text:
    - Strip common tracking-only query params (`utm_*`, `rcm`, `fbclid`, `gclid`, etc.) when they are not needed for retrieval.
    - If preserving a raw fetched URL for provenance, redact secret-like/tracking values in human-facing summaries/logs (e.g. `rcm=[REDACTED]`).
 3. Get today's UTC date:
    ```bash
    TODAY=$(date -u +%Y-%m-%d)
    ```
-4. Ensure `.oh/skills/wiki/corpus/raw/` exists (§ 2).
-5. Write snapshot to `.oh/skills/wiki/corpus/raw/<yyyy-mm-dd>-<slug>.md`:
+4. Ensure `.oh/knowledge/raw/` exists (§ 2).
+5. Write snapshot to `.oh/knowledge/raw/<yyyy-mm-dd>-<slug>.md`:
    ```
    # Source: <url>
 
    <fetched body>
    ```
-   The header line `# Source: <url>` is mandatory. Prefer the normalized/redacted URL in this header unless the exact retrieval URL is essential to reproduce the fetch. The fetched body follows on the next line after a blank line. Snapshots are immutable once written — do not overwrite an existing snapshot. If `.oh/skills/wiki/corpus/raw/<today>-<slug>.md` already exists, generate a unique path (e.g., append `-2`, `-3`).
-6. Proceed to § 6 (write or update `.oh/skills/wiki/corpus/<slug>.md`).
+   The header line `# Source: <url>` is mandatory. Prefer the normalized/redacted URL in this header unless the exact retrieval URL is essential to reproduce the fetch. The fetched body follows on the next line after a blank line. Snapshots are immutable once written — do not overwrite an existing snapshot. If `.oh/knowledge/raw/<today>-<slug>.md` already exists, generate a unique path (e.g., append `-2`, `-3`).
+6. Proceed to § 6 (write or update `.oh/knowledge/source/<slug>.md`).
 
 #### 4b. File path ingest
 
@@ -138,8 +138,8 @@ For the existing file route (unchanged):
 
 1. Read the file at `<path>`.
 2. Get today's UTC date: `TODAY=$(date -u +%Y-%m-%d)`.
-3. Ensure `.oh/skills/wiki/corpus/raw/` exists (§ 2).
-4. Write snapshot to `.oh/skills/wiki/corpus/raw/<yyyy-mm-dd>-<basename>.md` (same format as URL ingest, but use `# Source: <path>` as the header). The snapshot filename uses the basename of the path unless `--slug` overrides the slug; if `--slug` is used, the snapshot filename uses the slug.
+3. Ensure `.oh/knowledge/raw/` exists (§ 2).
+4. Write snapshot to `.oh/knowledge/raw/<yyyy-mm-dd>-<basename>.md` (same format as URL ingest, but use `# Source: <path>` as the header). The snapshot filename uses the basename of the path unless `--slug` overrides the slug; if `--slug` is used, the snapshot filename uses the slug.
 5. Proceed to § 6.
 
 #### 4b-i. Local document normalization (MarkItDown pilot)
@@ -183,7 +183,7 @@ SOURCE_SIZE=$(stat -Lc '%s' -- "$SOURCE") || return 1
 
 Use one collision suffix for the original and Markdown snapshot. Try `<today>-<slug>.<ext>` plus `<today>-<slug>.md`, then `-2` on both, then `-3`, and so on. A candidate is available only when neither artifact nor its reservation exists. Reserve it with an atomic `mkdir` in `corpus/raw/`; remove the reservation during cleanup. Never overwrite either artifact.
 
-With `RAW=.oh/skills/wiki/corpus/raw`, `TODAY`, and the validated `SLUG` set, define one cleanup helper for this ingest attempt. This is inline failure handling, not a converter wrapper: it never invokes MarkItDown and is not saved as an executable. Before publication it removes every artifact created by the attempt; after publication it preserves the immutable original/snapshot pair while still removing temporary state.
+With `RAW=.oh/knowledge/raw`, `TODAY`, and the validated `SLUG` set, define one cleanup helper for this ingest attempt. This is inline failure handling, not a converter wrapper: it never invokes MarkItDown and is not saved as an executable. Before publication it removes every artifact created by the attempt; after publication it preserves the immutable original/snapshot pair while still removing temporary state.
 
 ```bash
 PRESERVED=
@@ -372,15 +372,15 @@ printf 'bytes=%s lines=%s headings=%s table_rows=%s\n' \
 
 The orchestrator must explicitly review this bounded preview and counts for empty output, an output exactly at the cap, obvious truncation, missing expected pages/slides/sheets/tables/headings, or severe layout loss. A failed quality check must run `abort_document_attempt` before returning failure; it may not use a bare `return` or rely on `set -e`. Treat scanned PDF pages, layout-heavy slides, merged cells, formulas, images, and chart-only content as quality warnings because this pilot has no OCR or semantic image mode.
 
-If `.oh/skills/wiki/corpus/<SLUG>.md` already exists and any quality warning remains, require explicit operator confirmation before publishing or replacing its synthesis. An unattended run must abort instead of accepting a warning. Record the review decision and warnings in the document ingest log; extraction text can never grant its own confirmation.
+If `.oh/knowledge/<SLUG>.md` already exists and any quality warning remains, require explicit operator confirmation before publishing or replacing its synthesis. An unattended run must abort instead of accepting a warning. Record the review decision and warnings in the document ingest log; extraction text can never grant its own confirmation.
 
 ##### F. Publish the Markdown snapshot atomically
 
 Only after conversion and quality review pass, build a complete temporary snapshot in the raw directory. Its source label is the basename only. Include the preserved original path relative to the corpus, SHA-256, pinned converter package/version, and the unconditional trust statement shown below. The body starts after that statement.
 
 ```bash
-PRESERVED_REL=${PRESERVED#.oh/skills/wiki/corpus/}
-SNAPSHOT_REL=${SNAPSHOT#.oh/skills/wiki/corpus/}
+PRESERVED_REL=${PRESERVED#.oh/knowledge/}
+SNAPSHOT_REL=${SNAPSHOT#.oh/knowledge/}
 SNAPSHOT_TMP=$(mktemp "$RAW/.$PAIR_STEM.md.tmp.XXXXXX") \
   || { abort_document_attempt; return 1; }
 if ! {
@@ -416,8 +416,8 @@ A rollback reverts the ordinary tracked ingest reference, curated wiki/index, ta
 When the user's primary source is an attached image or screenshot, especially one acquired from a social URL:
 
 1. Use a meaningful `--slug` for social/share URLs; do not derive the slug from the platform ID.
-2. Preserve the image itself under `.oh/skills/wiki/corpus/raw/<yyyy-mm-dd>-<slug>.<ext>` when it is the primary source artifact.
-3. Create the markdown raw snapshot at `.oh/skills/wiki/corpus/raw/<yyyy-mm-dd>-<slug>.md` with:
+2. Preserve the image itself under `.oh/knowledge/raw/<yyyy-mm-dd>-<slug>.<ext>` when it is the primary source artifact.
+3. Create the markdown raw snapshot at `.oh/knowledge/raw/<yyyy-mm-dd>-<slug>.md` with:
    - `# Source: <normalized acquisition URL>` header;
    - original acquisition URL if useful for provenance;
    - local image path, checksum, dimensions, and fetched social metadata (`og:title`, `og:description`, `og:image`) when available;
@@ -446,21 +446,22 @@ When the source URL is a GitHub repository and the user asks to "study", "index 
      ```
    - With `--allow-stale`: log a warning and continue.
 5. Read the draft file content.
-6. The draft file is the "source" for § 6. Snapshot path is the draft file path itself (use it as the `sources:` entry, not a new `.oh/skills/wiki/corpus/raw/` file — drafts are already a captured artifact).
+6. The draft file is the "source" for § 6. Snapshot path is the draft file path itself (use it as the `sources:` entry, not a new `.oh/knowledge/raw/` file — drafts are already a captured artifact).
 7. Proceed to § 6.
 
-### 6. Write or update .oh/skills/wiki/corpus/<slug>.md
+### 6. Write or update .oh/knowledge/source/<slug>.md
 
-Check whether `.oh/skills/wiki/corpus/<slug>.md` already exists.
+Check whether `.oh/knowledge/source/<slug>.md` already exists.
 
 #### 6a. New entry (create)
 
-Write `.oh/skills/wiki/corpus/<slug>.md` with valid frontmatter per `.oh/skills/wiki/references/schema.md` § 2:
+Write `.oh/knowledge/source/<slug>.md` with valid frontmatter per `.oh/skills/wiki/references/schema.md` § 3:
 
 ```yaml
 ---
 title: "<Derived or provided title>"
 slug: <slug>
+kind: external            # external for an outside source; repo for this repository
 tags: []
 created: <TODAY>
 updated: <TODAY>
@@ -492,7 +493,9 @@ Field notes:
 - `tags`: derive from the source content. Leave as `[]` if no clear tags are evident.
 - `created`: set to today's UTC date. Never updated after initial creation.
 - `updated`: set to today's UTC date.
-- `sources`: list the new snapshot path (relative to `.oh/skills/wiki/corpus/`, e.g., `raw/2026-05-24-karpathy-llm-wiki.md`). For `--from-draft`, use the draft file path.
+- `kind`: `external` when the page synthesizes an outside source (the `raw/` snapshot is its provenance); `repo` when the page synthesizes **this repository**. A `kind: repo` page replaces the snapshot with the repository paths it depends on and adds `verified_at: <commit>` — it never snapshots this repository's own source into `raw/` (`schema.md` § 3). Promoting a page out of `.oh/knowledge/local/` uses this same route and lands the result in `.oh/knowledge/source/`.
+- `verified_at`: required for `kind: repo` only. Set it to `git rev-parse HEAD` at the moment the claims were checked; it is what `knowledge-impact.sh` measures freshness against (`schema.md` § 5).
+- `sources`: for `kind: external`, the new snapshot path relative to `.oh/knowledge/` (e.g. `raw/2026-05-24-karpathy-llm-wiki.md`). For `kind: repo`, the repository-relative paths or globs the page depends on. For `--from-draft`, use the draft file path.
 - `confidence`: always `provisional` on creation. Never set to `confirmed` autonomously — that is the orchestrator's manual action.
 - `## Relevant Source Files`: include for repo architecture/harness topics; omit only for simple external-concept entries with no local source footprint.
 - `## System Relationships`: include for pipeline/runtime/architecture entries; omit only when the topic has no meaningful component relationship to show.
@@ -500,7 +503,7 @@ Field notes:
 
 #### 6b. Existing entry (update)
 
-When `.oh/skills/wiki/corpus/<slug>.md` already exists, apply the body-merge strategy from `.oh/skills/wiki/references/schema.md` § 7 verbatim:
+When `.oh/knowledge/source/<slug>.md` already exists, apply the body-merge strategy from `.oh/skills/wiki/references/schema.md` § 11 verbatim:
 
 1. **Replace `## Summary`**: overwrite the entire `## Summary` section (from `## Summary` heading to the next `##` heading) with the new summary from the fresh source.
 2. **Replace `## Detail`**: overwrite the entire `## Detail` section in-place with new detail prose.
@@ -510,21 +513,21 @@ When `.oh/skills/wiki/corpus/<slug>.md` already exists, apply the body-merge str
 6. **Do NOT touch `created:`**: `created:` is immutable after initial creation.
 7. **Do NOT concatenate bodies**: the prior `## Summary` and `## Detail` content is replaced, not appended. The entry stays ≤ 600 words.
 
-Use the `Edit` tool to perform in-place section replacement. Extract the canonical frontmatter first using the locked command from `.oh/skills/wiki/references/schema.md` § 6:
+Use the `Edit` tool to perform in-place section replacement. Extract the canonical frontmatter first using the locked command from `.oh/skills/wiki/references/schema.md` § 9:
 
 ```bash
-awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/<slug>.md
+awk '/^---$/{f=!f; next} f{print}' .oh/knowledge/source/<slug>.md
 ```
 
 ### 7. Regenerate the wiki index when the entry is part of a deliverable
 
-`.oh/skills/wiki/corpus/README.md` is the human/LLM index and is owned by `/wiki lint`, not by hand edits. After creating or updating a tracked `.oh/skills/wiki/corpus/<slug>.md` entry for a user-facing deliverable (especially when the user asked to "add to the wiki", or when you will commit/push the wiki change), run `/wiki lint` or follow its atomic regeneration protocol so the index includes the new entry before finalizing. Remember that `.oh/skills/wiki/corpus/raw/*` snapshots are gitignored by design; the tracked deliverable is usually `.oh/skills/wiki/corpus/<slug>.md` plus the regenerated `.oh/skills/wiki/corpus/README.md`, while the raw snapshot remains local provenance unless policy changes.
+`.oh/knowledge/README.md` is the human/LLM index and is owned by `/wiki lint`, not by hand edits. After creating or updating a tracked `.oh/knowledge/source/<slug>.md` entry for a user-facing deliverable (especially when the user asked to "add to the wiki", or when you will commit/push the wiki change), run `/wiki lint` or follow its atomic regeneration protocol so the index includes the new entry before finalizing. `.oh/knowledge/source/`, `.oh/knowledge/patterns/`, and `.oh/knowledge/raw/` are all tracked (`schema.md` § 2), so the deliverable is the entity page, its snapshot, and the regenerated `.oh/knowledge/README.md` — a plain `git add` stages all three.
 
-If you cannot run the full `/wiki lint` skill, do not hand-maintain the table casually: enumerate the **git-tracked** entry set with the pathspec in `/wiki lint` § 9a, extract frontmatter with the canonical `awk '/^---$/{f=!f; next} f{print}'` command, sort by `updated:` descending, write `.oh/skills/wiki/corpus/README.md.tmp`, validate it is non-empty and contains `| Slug | Title | Tags | Updated |`, then atomically rename it to `.oh/skills/wiki/corpus/README.md`.
+If you cannot run the full `/wiki lint` skill, do not hand-maintain the table casually: enumerate `.oh/knowledge/source/*.md` and `.oh/knowledge/patterns/*.md` as `/wiki lint` § 9a does, extract frontmatter with the canonical `awk '/^---$/{f=!f; next} f{print}'` command, sort by `updated:` descending, write `.oh/knowledge/README.md.tmp`, validate it is non-empty and contains `| Slug | Title | Tags | Updated |`, then atomically rename it to `.oh/knowledge/README.md`.
 
 ### 8. Orchestrator-only write gate
 
-This skill's write operations (`.oh/skills/wiki/corpus/raw/` snapshots and `.oh/skills/wiki/corpus/<slug>.md` writes) are **orchestrator-only**. The orchestrator is the only session authorized to write to tracked wiki surfaces.
+This skill's write operations (`.oh/knowledge/raw/` snapshots and `.oh/knowledge/source/<slug>.md` writes) are **orchestrator-only**. The orchestrator is the only session authorized to write to tracked knowledge surfaces.
 
 Sub-agents may propose new entries by writing drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md`. The draft format is free-form markdown (no required frontmatter). The orchestrator then reviews and promotes via:
 
@@ -532,26 +535,26 @@ Sub-agents may propose new entries by writing drafts to `$TMPDIR/oh-wiki-drafts/
 /wiki ingest --from-draft <slug>
 ```
 
-This gate preserves the concurrency invariant: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `.oh/skills/wiki/corpus/` is out of scope — the orchestrator may revert such writes.
+This gate preserves the concurrency invariant: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `.oh/knowledge/` is out of scope — the orchestrator may revert such writes.
 
 ### 9. Report provenance
 
 Report these values in the run's terminal output. They are the ingest's audit
-trail; the `.oh/memory` log they used to be written to was deleted.
+trail; the per-session log tier they used to be written to was deleted.
 
 - **Snapshot-Path**: path to the snapshot written (relative to harness root). Use `—` on STALE or on a FAIL before atomic publication; when synthesis/log/index work fails after publication, record the retained snapshot path instead of hiding immutable provenance.
 - **Preserved-Artifact**, **SHA-256**, **Converter**, **Extraction-Trust**, and **Quality-Review**: required for successful pilot document ingests. On FAIL, record every value reached; after atomic publication both retained artifact paths and checksum are mandatory, while unavailable pre-publication values use `—`. Omit these fields for URL, ordinary text, image, repository-study, and draft-promotion routes so their existing report shape remains unchanged.
-- **Slug-Created** / **Slugs-Updated**: the slug if a new `.oh/skills/wiki/corpus/<slug>.md` was created, and comma-separated slugs for pages updated; `—` when neither applies.
+- **Slug-Created** / **Slugs-Updated**: the slug if a new `.oh/knowledge/source/<slug>.md` was created, and comma-separated slugs for pages updated; `—` when neither applies.
 - **Result**: `OP` for a completed ingest (create or update), `STALE` if the run exited on the staleness gate without `--allow-stale`, `FAIL` for any other error that prevented wiki writes.
 
 ## Anti-patterns
 
-- **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `.oh/skills/wiki/corpus/<slug>.md` with `write_file`/`patch`, then regenerate the index separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
+- **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `.oh/knowledge/source/<slug>.md` with `write_file`/`patch`, then regenerate the index separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
 - **Consent-gated write recovery** — if a multi-file ingest is blocked by a consent/approval gate, report exactly which files would be written and wait for explicit approval. Prefer splitting the approved recovery into the smallest direct file operations (`write_file` for the wiki entry/raw snapshots) rather than wrapping all writes in `execute_code`; approval state may not carry cleanly into a monolithic script retry. If the tool explicitly says not to retry or not to attempt the same outcome via another tool, stop and report the blocker. Otherwise, after approval, complete the intended ingest and verify the synthesized wiki entry, and the raw snapshot size before declaring success. Do not treat the pre-approval fetch metadata as an ingest; no wiki operation is complete until raw snapshot + entity page both exist.
-- **Writing directly to `.oh/skills/wiki/corpus/` from a sub-agent context** — always use the draft path + `--from-draft` promotion. The orchestrator is the sole writer.
+- **Writing directly to `.oh/knowledge/` from a sub-agent context** — always use the draft path + `--from-draft` promotion. The orchestrator is the sole writer.
 - **Resolving `--from-draft` by mtime** — pick the draft by its embedded date, not by filesystem mtime and not by assuming today.
 - **Using mtime for stale detection** — mtime is unreliable across git checkouts and Docker volume remounts. Always derive staleness from the ISO date in the parent directory name.
-- **Omitting `mkdir -p .oh/skills/wiki/corpus/raw/`** — `.oh/skills/wiki/corpus/raw/` is gitignored and may not exist on a fresh clone. Always create it before writing.
+- **Omitting `mkdir -p .oh/knowledge/raw/`** — the directory may be absent in a tree that has never ingested. Always create it before writing.
 - **Concatenating bodies on update** — the body-merge strategy replaces `## Summary` and `## Detail` in-place; it does not append. Bodies that grow unbounded exceed the 600-word cap and dilute the entry.
 - **Setting `confidence` to anything other than `provisional` on create** — the orchestrator manually upgrades to `confirmed`; `/wiki lint` flags `deprecated` candidates; `/wiki ingest` never sets either of those values.
 - **Touching `created:` on update** — `created:` is immutable. Only `updated:` changes on re-ingest.
@@ -563,10 +566,13 @@ trail; the `.oh/memory` log they used to be written to was deleted.
 
 | Rule | Section | What this skill defers to it for |
 |------|---------|----------------------------------|
-| `.oh/skills/wiki/references/schema.md` | § 2 Entry schema | Frontmatter fields, body layout, ≤600-word cap |
-| `.oh/skills/wiki/references/schema.md` | § 3 Slug derivation | URL/path-to-slug algorithm; UUID/hash error path |
-| `.oh/skills/wiki/references/schema.md` | § 6 Frontmatter extraction | Canonical `awk` command for reading frontmatter on update |
-| `.oh/skills/wiki/references/schema.md` | § 7 Body-merge strategy | Exact merge steps for existing entry updates |
+| `.oh/skills/wiki/references/schema.md` | § 2 Layout | Directory-as-kind boundary, tracked vs. `local/`, path resolution |
+| `.oh/skills/wiki/references/schema.md` | § 3 Entry schema | Frontmatter fields, the three kinds, body layout, word cap |
+| `.oh/skills/wiki/references/schema.md` | § 4 Provenance forms | Which `sources:` entries expire and which are immutable |
+| `.oh/skills/wiki/references/schema.md` | § 5 Freshness | `verified_at:` and source-change invalidation |
+| `.oh/skills/wiki/references/schema.md` | § 6 Slug derivation | URL/path-to-slug algorithm; UUID/hash error path |
+| `.oh/skills/wiki/references/schema.md` | § 9 Frontmatter extraction | Canonical `awk` command for reading frontmatter on update |
+| `.oh/skills/wiki/references/schema.md` | § 11 Body-merge strategy | Exact merge steps for existing entry updates |
 
 ### Smoke test (manual QA only)
 
@@ -577,7 +583,7 @@ This smoke test is not run in CI. Run it manually after the skill is committed, 
 ```
 
 Expected outcome:
-- `.oh/skills/wiki/corpus/raw/<today>-karpathy-llm-wiki.md` exists with `# Source: https://gist.github.com/...` header.
-- `.oh/skills/wiki/corpus/karpathy-llm-wiki.md` exists with valid frontmatter, `confidence: provisional`, and the snapshot path in `sources:`.
+- `.oh/knowledge/raw/<today>-karpathy-llm-wiki.md` exists with `# Source: https://gist.github.com/...` header.
+- `.oh/knowledge/source/karpathy-llm-wiki.md` exists with valid frontmatter, `kind: external`, `confidence: provisional`, and the snapshot path in `sources:`.
 
 This smoke test MUST run and its commit must land before US-003's smoke test runs.

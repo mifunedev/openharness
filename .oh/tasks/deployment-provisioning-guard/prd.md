@@ -84,14 +84,20 @@ Issue: [#937](https://github.com/mifunedev/openharness/issues/937) · slug
 - **Source plan**: `.claude/plans/i-would-like-to-velvety-diffie.md` (operator
   written and approved; handing it to `/spec` is the commitment gate).
 - **Intent preserved**: YES
-- **Material deviations**: one, operator-directed and therefore already approved.
+- **Material deviations**: three, all operator-directed and therefore already
+  approved. (1)
   Mid-run the operator extended the scope: *"This is NOT ONLY meant to be CI. I
   would like a skill (use /builder skill) that becomes a pointer for use locally to
   validate features without polluting my main harness sandbox."* The written plan
   treated CI as the instrument and had no operator-facing door. R0 adds
   `/deploy-check` as the primary entry point, demotes the workflow to its second
   consumer, and makes sandbox isolation an explicit requirement rather than an
-  incidental property of unique naming. Nothing in the plan is removed. Every other claim the plan leans on was verified at
+  incidental property of unique naming. (2) The CI leg was then removed entirely
+  — *"lets simplify without ci for now"* — leaving the instrument a
+  parent-sandbox QA door with no CI consumer; R5 is rewritten accordingly. (3)
+  The first real use of that door surfaced a live defect in `PNPM_HOME` and in
+  the healthcheck's treatment of a failed provision, and the operator directed
+  the repair here rather than in a separate change; R7 records it. Every other claim the plan leans on was verified at
   the base commit: `compose()` invokes a script (`sandbox-boot-smoke.sh:16`); the
   image-only compose file is already parameterised on `OH_SANDBOX_IMAGE`,
   `OH_PULL_POLICY`, `SANDBOX_NAME`, `OH_HOME_MOUNT`; `verify-sandbox-image.sh`
@@ -250,23 +256,44 @@ the bind path. Assertions pin short wrap-safe fragments, using `grep -qxF` for
 whole lines (constraint 5). Its SKIPPED guard must not be able to fire in the
 repository that normally runs it (constraint 4).
 
-### R5 — `.github/workflows/deployment-guard.yml` (the second consumer)
+### R5 — no CI leg (revised by operator direction)
 
-`workflow_run` on completion of the workflow named `Release`, gated on
-`conclusion == 'success'`, plus `workflow_dispatch` with an `image` input
-defaulting to `ghcr.io/mifunedev/openharness:latest`. One job,
-`permissions: contents: read`, `timeout-minutes: 20`, installs `jq` if absent,
-runs `link-providers.sh --init`, then `bash .oh/scripts/deployment-guard.sh`. It
-must fail loudly rather than skip when Docker or the network is unavailable — a
-silent skip is exactly the failure mode this closes.
+The plan called for `.github/workflows/deployment-guard.yml` on `workflow_run`
+after `Release`. The operator removed it mid-build: *"We should possibly remove
+this ci entirely… lets simplify without ci for now."* The workflow had never
+fired — `workflow_run` only triggers from the default branch, so no PR could
+exercise it — and nothing depended on it, so it was machinery ahead of its use.
+
+The instrument is now a **parent-sandbox QA door**: a parent harness stands up a
+child sandbox over the Docker socket, asserts against it, and destroys it, so QA
+never pollutes the parent. The probe gains an assertion that fails if a CI leg
+reappears, so the removal is a decision the suite holds rather than a gap that
+quietly refills.
 
 ### R6 — `docs/deployment-prebuilt-image.md`
 
 Replace the "Manual live-host smoke checklist (non-gating)" section with a
-pointer to `/deploy-check`, the guard script, and the workflow. Correct the line that names the boot-time
+pointer to `/deploy-check` and the guard script. Correct the line that names the boot-time
 defaults as "Claude Code, Codex, Pi": the catalog is the source of truth and the
 same boot installs more than three. No CI lint change is needed —
 `ci-harness.yml:130` already globs `.oh/scripts/*.sh`.
+
+### R7 — repair what the instrument found
+
+The first real use of the child-sandbox door surfaced a live defect, and this
+task repairs it rather than only reporting it:
+
+- **`PNPM_HOME` was a root-owned system path.** `agent-browser` is the only
+  catalog entry installed with `pnpm add -g`, and pnpm writes to `PNPM_HOME`, not
+  `NPM_USER_PREFIX`. With `PNPM_HOME=/usr/local/share/pnpm` (root-owned, and
+  absent from the image) and `installUser: "sandbox"`, the install could not
+  succeed for any non-root user on any current image. It moves into the home
+  mount, created sandbox-owned in the `home` stage.
+- **A failed provision reported healthy.** `entrypoint.sh` downgrades the failure
+  to a WARNING so a transient registry outage cannot abort boot — the right call —
+  but the container then reported `(healthy)` with an explicitly requested tool
+  absent. `provision-defaults.sh` now writes a marker on a missing requested
+  install and clears it on a clean run; the healthcheck fails while it exists.
 
 ## Risks
 

@@ -317,12 +317,11 @@ and runs no `prune` verb — so it is safe on a daemon that is also running your
 sandbox. Pass `--keep` to leave the container up for triage; it prints the exact
 cleanup command it did not run.
 
-Two consumers drive that one script, and neither adds assertions of its own:
-
-- **`/deploy-check`** — the local door. `/deploy-check [scenario] [--image <ref>]
-  [--local] [--keep]`, default scenario `provisioning`.
-- **`.github/workflows/deployment-guard.yml`** — runs after every successful
-  `Release`, and on manual dispatch against any ref.
+**`/deploy-check`** is the door, and it adds no assertions of its own —
+`/deploy-check [scenario] [--image <ref>] [--local] [--keep]`, default scenario
+`provisioning`. There is deliberately no CI leg: the point is that a parent
+harness can stand up a child sandbox and QA it there, so the parent stays
+unpolluted.
 
 See also [the CLI path](#cli-path-recommended) above for the Flavor A
 equivalent of pulling a pinned tag.

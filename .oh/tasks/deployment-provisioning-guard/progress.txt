@@ -47,3 +47,33 @@ Learnings.
   ref. Fixed with the ${OH_DEFAULT_SANDBOX_IMAGE:-...} form.
 - The planner predicted sandbox-dependency-installs would need an update; the diff says
   NOT-AFFECTED. That is the step-6 gate doing its job.
+
+2026-09-01 execute (revision 2) — operator removed the CI leg and directed a repair.
+- Dropped .github/workflows/deployment-guard.yml; the probe now fails if a CI leg
+  reappears. The instrument is a parent-sandbox QA door: a parent stands up a child
+  sandbox over the Docker socket, asserts, and destroys it. Commit 7c1ba1fc.
+- Used that door to reproduce the operator's reported failure in a child booted from
+  :latest. `oh tool install agent-browser --yes` -> EACCES mkdir '/usr/local/share/pnpm'.
+  Cause: agent-browser is the only catalog entry using `pnpm add -g`, and pnpm honours
+  PNPM_HOME, not NPM_USER_PREFIX; PNPM_HOME was a root-owned system path absent from the
+  image while installUser is "sandbox". Unfixable for any non-root user on any image.
+- Fixed both halves in 5f202c2d: PNPM_HOME moved into the home mount (sandbox-owned,
+  created in the `home` stage, build-time `pnpm setup --force` dropped), and a failed
+  provision now writes a marker that the healthcheck fails on, so a container stops
+  reporting healthy with a requested tool absent.
+- Verified against a locally built image in a child: install exits 0, binary resolves
+  under PNPM_HOME, agent-browser 0.8.5, catalog installed:true. Healthcheck marker
+  flips the container to (unhealthy) and provision-defaults.sh clears it.
+- prd.json US-006 rewritten as the no-CI decision; US-010 added for the repair.
+
+Learnings.
+- A staged deletion swept into an unrelated commit: `git rm` of the workflow sat in the
+  index and rode along with the Dockerfile fix, leaving a committed tree whose own probe
+  failed. Caught by running the probe against the committed tree before pushing, not by
+  reading the diff. Nothing was pushed, so the commit was split.
+- The parent could not reproduce this defect at all: its /usr/local/share/pnpm dates to
+  2026-07-09 and holds a baked agent-browser from before the unbaking. The child-sandbox
+  door was not a convenience here, it was the only way to see the bug.
+- The guard cannot validate a locally built image (it pulls unconditionally), which is
+  precisely what is needed after a Dockerfile change. Recorded in the skill under Known
+  gaps rather than left as a documented flag that fails.

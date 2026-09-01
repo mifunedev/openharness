@@ -104,19 +104,17 @@
     },
     {
       "id": "US-006",
-      "title": "Post-release CI workflow",
-      "description": "As the project, I want the guard to run automatically after every successful release and on demand, so that a broken published image is caught rather than discovered by a user.",
+      "title": "No CI leg \u2014 the instrument is a parent-sandbox QA door",
+      "description": "As the operator, I want this instrument to stand up a child sandbox over the Docker socket and QA it there, with no CI workflow, so the parent harness stays unpolluted and no machinery exists ahead of its use.",
       "acceptanceCriteria": [
-        ".github/workflows/deployment-guard.yml exists with `workflow_run` on completion of the workflow named `Release`, gated on the workflow_run conclusion being success",
-        "It also declares workflow_dispatch with an `image` input defaulting to ghcr.io/mifunedev/openharness:latest",
-        "One job: permissions contents read, timeout-minutes 20, checkout, `bash .oh/scripts/link-providers.sh --init`, jq installed if absent, then `bash .oh/scripts/deployment-guard.sh`",
-        "The job fails loudly when Docker or the network is unavailable; it contains no conditional that turns a missing daemon into a skip",
-        "The file parses as YAML and actionlint reports no error",
-        "It does not push, log in to a registry, request packages write, or reference secrets beyond the default token"
+        ".github/workflows/deployment-guard.yml does not exist",
+        "The tier-A probe fails if a deployment-guard CI workflow reappears, so the removal is a decision the suite holds rather than a gap that refills",
+        "The /deploy-check skill and .oh/scripts/deployment-guard.sh are the only entry points, and neither references a CI consumer",
+        "docs/deployment-prebuilt-image.md names the guard and the skill, and no workflow"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Workflow parses; workflow_run on Release + workflow_dispatch; no push/login/packages:write. NOT yet fired \u2014 workflow_run only fires from the default branch, so first proof is the release after merge."
+      "notes": "Operator direction: 'lets simplify without ci for now'. The workflow had never fired \u2014 workflow_run cannot be exercised from a PR \u2014 so nothing depended on it."
     },
     {
       "id": "US-007",
@@ -165,6 +163,24 @@
       "priority": 9,
       "passes": true,
       "notes": "knowledge-impact.sh reported no NEEDS-REVIEW; the Expected union resolved as compose-env-boundary UPDATED (verified_at advanced after re-reading cited claims), audit-architecture UPDATED (verified_at deliberately not advanced), sandbox-dependency-installs NOT-AFFECTED. wiki-readme-index PASS."
+    },
+    {
+      "id": "US-010",
+      "title": "Fix the defect the instrument found: PNPM_HOME, and a failed provision reporting healthy",
+      "description": "As an operator of a fresh sandbox, I want `oh tool install agent-browser` to work and a failed provision to be visible, so the first thing the QA child surfaced is actually repaired.",
+      "acceptanceCriteria": [
+        "PNPM_HOME is /home/sandbox/.local/share/pnpm, created sandbox-owned in the Dockerfile's `home` stage so it seeds into the home mount",
+        "The build-time `pnpm setup --force` is removed, with its two jobs accounted for (rc exports already explicit; directory creation moved to the `home` stage)",
+        "In a child sandbox from a locally built image, `oh tool install agent-browser --yes` exits 0, the binary resolves under PNPM_HOME, `agent-browser --version` prints a numeric version, and the catalog reports installed: true",
+        "provision-defaults.sh writes a marker when a requested install is missing and removes it on a clean run",
+        "sandbox-healthcheck.sh fails while that marker exists and names the recovery command",
+        "Observed live: a container with the marker reports (unhealthy), and running provision-defaults.sh clears it and returns health",
+        "entrypoint.sh still downgrades the failure to a WARNING rather than aborting boot, so a transient registry outage does not kill a sandbox",
+        "shellcheck -S warning passes on every changed script"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Reproduced in a child booted from :latest over the Docker socket: EACCES mkdir '/usr/local/share/pnpm'. agent-browser is the only entry using `pnpm add -g`, which honours PNPM_HOME, not NPM_USER_PREFIX. Verified fixed end to end against a locally built image."
     }
   ]
 }

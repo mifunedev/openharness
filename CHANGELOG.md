@@ -64,6 +64,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 - Add `.oh/skills/wiki/scripts/knowledge-impact.sh`, the single dependency-aware invalidation primitive: `--verified` for `/wiki lint`, `--changed` for the `/spec execute` knowledge gate. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Add `evals-20260901-suite-tree-clean` and `docs-20260901-followup-artifact-cited`: no probe may redirect into the repository, and a criterion met by a follow-up must cite its URL. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Add ten tier-A probes covering the knowledge surface, the planning recall and reconciliation gates, the RUNNING contract, structured completion, and the retired vocabulary. ([#926](https://github.com/mifunedev/openharness/issues/926))
 - Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))
 - Add `.oh/logs/`, gitignored by default with a tracked README, for records that outlive the session that wrote them; `/escalate` appends every attempt to `escalations.jsonl`. ([#919](https://github.com/mifunedev/openharness/issues/919))

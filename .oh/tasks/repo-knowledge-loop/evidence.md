@@ -513,6 +513,32 @@ Both planning probes were rewritten to assert the block by exact line
 
 ## 6. What this run compounded back
 
+Both probes the session-scoped retro nominated are **minted**, and each was
+fault-injected on every branch before being counted green:
+
+| Probe | Guards | Injection observed |
+|---|---|---|
+| `evals-20260901-suite-tree-clean` | no probe redirects into the repository (`&>N`, or a redirect targeting `$ROOT`/`$HARNESS`), and no redirect residue is tracked at the root | all three branches fired: the `&>2` spelling, a `> "$ROOT/..."` write, and a tracked root file named `2` |
+| `docs-20260901-followup-artifact-cited` | the evidence contract requires a follow-up to be cited, and every tracked `evidence.md` bullet tying a criterion to a follow-up carries a resolvable issue/PR URL | reconstructing **this run's own defect** — replacing the openharness-web#37 link with the words "a separate follow-up issue" — fires it |
+
+The second is the sharper of the two: it fails on the exact text this build
+shipped before verification caught it, which is the only real test of a probe
+minted from a retro.
+
+Two design choices are worth the reviewer's eye. `evals-20260901-suite-tree-clean`
+is a **static** guard plus a residue check, not a sandboxed execution test: a
+probe cannot run the suite to observe what the suite writes without recursing
+into itself. A first draft flagged any redirect to a relative path and produced
+46 findings — shell comparisons (`(( n > CAP ))`), prose arrows, and heredocs
+written inside a probe's own `mktemp` directory — so it was narrowed to patterns
+that cannot mean anything else. `$AUDIT_ROOT` is deliberately not anchored: it is
+invocation-scoped by contract and probes legitimately point it at a fixture.
+
+The `&>[0-9]` check added to `eval-contract-text-20260831.sh` mid-session was
+**moved** into the new probe rather than duplicated. One rule, one owner: the
+literal-pinning probe guards pinning, and write hygiene now has its own.
+
+
 `/retro --task repo-knowledge-loop` tested 9 hypotheses (8 supported, 1
 inconclusive) and `/wiki compile` turned the durable ones into knowledge:
 

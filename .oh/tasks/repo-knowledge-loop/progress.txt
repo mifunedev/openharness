@@ -69,3 +69,16 @@
   eval-contract-text-20260831.sh now fails any probe containing &>[0-9], with the
   reason spelled out. Fault-injected and fires. plan-vs-built-reconciliation
   re-verified against the new execute.md anchors; verified_at advanced.
+
+2026-09-01 probes-minted — Minted both probes the session-scoped /retro nominated.
+  evals-20260901-suite-tree-clean: no probe redirects into the repository (&>N, or
+  a redirect targeting $ROOT/$HARNESS) and no redirect residue is tracked at the
+  root; the mid-session &>[0-9] check moved out of eval-contract-text-20260831.sh
+  so one rule has one owner. A first draft flagging any relative-path redirect
+  produced 46 false findings and was narrowed.
+  docs-20260901-followup-artifact-cited: reviewer-evidence-doc.md gained the
+  "Follow-ups are cited, not named" rule, and the probe requires every tracked
+  evidence.md bullet tying a criterion to a follow-up to carry an issue/PR URL.
+  All five branches across the two probes fault-injected and fire, including a
+  reconstruction of this run's own uncited-follow-up defect.
+  138 probes, runner exit 0, zero green->red.

@@ -27,3 +27,18 @@
   Delegated one bounded worker for the peripheral consumer sweep (.oh/README.md,
   .oh/tasks/README.md, manifest, CI, cleanup cron, docs, RFC); reconciled and corrected
   its glossary 'loop' entry. CHANGELOG entries added.
+
+2026-09-01 terminal — READY. PR #927 marked ready for review after a fresh
+  PR-AUDIT-PROMOTABLE (audit-20260901T024245Z-1853136): CI green on all four
+  checks, MERGEABLE, CLEAN, evidence.md present and tracked. Never merged.
+  Gate record: /audit implementation AUDIT-PASS with SIMPLICITY-RESIDUAL: 0
+  (audit-20260901T022121Z-1697369, after four cycles: gate 1 task graph, gate 2
+  evidence.md re-introducing the retired path, gate 5 dead --since mode, then
+  PASS). /eval 136 probes exit 0, zero green->red. All ten required probes
+  fault-injected; two were found silently inert and rewritten. Knowledge impact
+  resolved to 5 UPDATED / 1 REVERIFIED / 1 NOT-AFFECTED. /retro -> 9 hypotheses,
+  2 new pattern pages compiled, 2 existing patched. /benchmark BENEFICIAL
+  (justified hold) with a REDIRECT-FLAG on the missing capability axis. Three
+  development merges (#930, #931, #934) reconciled during the tail; the #930
+  collision with #926's pinned execution comment is flagged for the operator on
+  the PR as a decision, not silently resolved.

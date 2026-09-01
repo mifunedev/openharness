@@ -245,8 +245,11 @@ A healthy boot ends with `Providers OK: …` and `SEED_OK`, and the logs show
 authoritative — later boots see the `.oh/.image-seeded` marker and skip
 re-seeding, so your in-container edits persist.
 
-The same first boot also installs the default harnesses (Claude Code, Codex, Pi)
-into `/home/sandbox/.local`; they are not baked into the image. Expect the boot
+The same first boot also installs every `kind:"default"` harness and tool from the
+catalogs into `/home/sandbox/.local`; none of them is baked into the image. The
+catalogs are the source of truth for that set — read the current one with
+`oh harness list --defaults` and `oh tool list --defaults` rather than trusting a
+list written down here. Expect the boot
 to run 60–180s longer than the `sleep 8` above and to need network — check with
 `docker exec "$NAME" bash -lc 'oh harness list --defaults'`. If the registry was
 unreachable the container still comes up; re-run
@@ -285,22 +288,41 @@ Same caveat as Flavor A above: the published image targets the CI runner's
 architecture. If you run a different CPU arch, prefer a local build (or
 Flavor A, which builds locally by default) until multi-arch images land.
 
-### Manual live-host smoke checklist (non-gating)
+### Live-host verification
 
-The eval probe suite covers the static contract (env-var gating, compose
-shape, doc content) deterministically, without a Docker host. It cannot cover
-an actual live boot. Before relying on Flavor B in production, run this
-checklist by hand on a real host:
+The eval probe suite covers the static contract (compose shape, entrypoint flavor
+detection, the seed contract, doc content) deterministically and without a Docker
+host. It cannot cover an actual live boot, and health alone is not evidence that
+provisioning worked: the entrypoint runs `provision-defaults.sh` under `timeout`
+and, on failure, logs a warning and continues.
 
-- [ ] `docker pull ghcr.io/mifunedev/openharness:<tag built after the /opt/oh-seed change>`
-- [ ] `docker compose -f .devcontainer/docker-compose.image-only.yml up -d`
-- [ ] confirm **no build step ran** — the compose/Docker output shows a pull, not a build
-- [ ] confirm `.oh/` was seeded into the volume:
-      `docker compose -f .devcontainer/docker-compose.image-only.yml exec sandbox ls /home/sandbox/harness/.oh`
-- [ ] confirm an agent / the `oh` CLI is usable inside the container
-- [ ] edit a file under `.oh/` in the running container, then
-      `docker compose -f .devcontainer/docker-compose.image-only.yml restart`,
-      and confirm the edit is still there
+`.oh/scripts/deployment-guard.sh` is that live check. It pulls the image, runs the
+image-contract verifier, boots this flavor with no host checkout behind it, and
+asserts the seed branch, the seed marker, the default harness and tool catalogs,
+the container shape, and the `oh harness install` persist-and-install contract —
+then destroys everything it created and fails if anything leaked.
+
+```bash
+# validate the published image (~5-10 min; the boot installs defaults from upstream)
+bash .oh/scripts/deployment-guard.sh
+
+# or another ref
+bash .oh/scripts/deployment-guard.sh ghcr.io/mifunedev/openharness:0.6.0
+OH_SANDBOX_IMAGE=my-local-tag bash .oh/scripts/deployment-guard.sh
+```
+
+Every resource it creates is named from one unique run token; it aborts rather
+than reuse a token that already names something, removes only its own resources,
+and runs no `prune` verb — so it is safe on a daemon that is also running your own
+sandbox. Pass `--keep` to leave the container up for triage; it prints the exact
+cleanup command it did not run.
+
+Two consumers drive that one script, and neither adds assertions of its own:
+
+- **`/deploy-check`** — the local door. `/deploy-check [scenario] [--image <ref>]
+  [--local] [--keep]`, default scenario `provisioning`.
+- **`.github/workflows/deployment-guard.yml`** — runs after every successful
+  `Release`, and on manual dispatch against any ref.
 
 See also [the CLI path](#cli-path-recommended) above for the Flavor A
 equivalent of pulling a pinned tag.

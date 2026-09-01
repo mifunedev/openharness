@@ -11,6 +11,18 @@ INTERVAL=${BOOT_SMOKE_INTERVAL_SECONDS:-10}
 UP_ARGS=${BOOT_SMOKE_UP_ARGS:-up -d --no-build}
 DOWN_ARGS=${BOOT_SMOKE_DOWN_ARGS:-down -v --remove-orphans}
 HEALTH_CMD=${BOOT_SMOKE_HEALTH_CMD:-bash ${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh}
+# `bind` boots the checkout-bind stack; `image-only` boots a seeded home volume
+# with no host checkout behind it, so there is no host owner for
+# verify_bind_ownership to compare against. Nothing else differs between them.
+FLAVOR=${BOOT_SMOKE_FLAVOR:-bind}
+
+case "$FLAVOR" in
+  bind|image-only) ;;
+  *)
+    echo "sandbox boot smoke failed: BOOT_SMOKE_FLAVOR='$FLAVOR' is not one of: bind, image-only" >&2
+    exit 2
+    ;;
+esac
 
 compose() {
   bash "$COMPOSE" "$@"
@@ -175,7 +187,10 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      if ! verify_bind_ownership "$cid"; then
+      # Keyed on the declared flavor, never on probing for an absent checkout:
+      # a detection bug must not be able to quietly disable this check on the
+      # bind flavor, where it is the whole point.
+      if [ "$FLAVOR" = "bind" ] && ! verify_bind_ownership "$cid"; then
         status_diagnostics "$cid"
         exit 1
       fi
@@ -187,7 +202,12 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and boot-provisioned harness and tool checks"
+      if [ "$FLAVOR" = "bind" ]; then
+        ownership_note="bind-ownership, "
+      else
+        ownership_note="no bind-ownership check on this flavor, "
+      fi
+      echo "sandbox boot smoke ok [$FLAVOR]: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, ${ownership_note}and boot-provisioned harness and tool checks"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

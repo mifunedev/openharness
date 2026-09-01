@@ -106,7 +106,7 @@ init_links() {
     [ -f "$f" ] && chmod +x "$f"
   done
 
-  if [ "${INSTALL_HERMES:-false}" = "true" ]; then
+  if command -v hermes >/dev/null 2>&1; then
     link_provider "$HERMES_LINK" "$HERMES_TARGET" || true
   fi
 }
@@ -127,7 +127,7 @@ check_symlink() {
 }
 
 check_hermes_link() {
-  if [ "${INSTALL_HERMES:-false}" != "true" ] && [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ]; then
+  if [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ]; then
     return 0
   fi
   check_symlink "$HERMES_LINK" "$HERMES_TARGET"

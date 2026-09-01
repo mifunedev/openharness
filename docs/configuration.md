@@ -23,18 +23,33 @@ and `oh secret list` shows which keys hold a value with the values redacted.
 key, each pointing at the other command. Apply a change with
 `oh stop && oh sandbox`.
 
-## How `oh.json` reaches Docker Compose
+## How `oh.json` reaches the sandbox
 
-`.oh/cli/src/lib/config-render.ts` renders `oh.json` into `KEY=value` lines and
-`.oh/scripts/docker-compose.sh` passes them to Compose with `--env-file`. Every
-key also has a default baked into `.devcontainer/docker-compose.yml`, so an
-omitted field is not "unset" — it takes that default. A variable already
-exported in the shell that runs `oh` beats the value in `oh.json`.
+There are two routes, and which one a field takes follows one rule:
+
+> A value reaches the sandbox through Compose only if a process **outside** the
+> sandbox — or the entrypoint **before** the control plane is readable — must act
+> on it. Everything else is read from `oh.json` through the `oh` CLI.
+
+**Through Compose.** `.oh/cli/src/lib/config-render.ts` renders those fields into
+`KEY=value` lines and `.oh/scripts/docker-compose.sh` passes them to Compose with
+`--env-file`. Each also has a default baked into
+`.devcontainer/docker-compose.yml`, so an omitted field is not "unset" — it takes
+that default. A variable already exported in the shell that runs `oh` beats the
+value in `oh.json`.
+
+**Through the CLI.** Everything else is read inside the container at the moment
+it is needed — `.devcontainer/entrypoint.sh` calls `oh config show`,
+`.oh/scripts/provision-defaults.sh` installs from `oh harness list --json` and
+`oh tool list --json`. Adding a tool, harness, or setting therefore requires no
+Compose edit. `config-render.ts` keeps a `RETIRED_KEYS` list that throws if one
+of these is ever rendered again.
 
 ## Field reference
 
 Types are JSON types. "Compose variable" names the variable the field renders
-to; `—` means the field is consumed by the `oh` CLI itself and never rendered.
+to; `—` means the field never reaches Compose — it is read through the `oh` CLI,
+or consumed by the CLI itself.
 
 ### Identity
 
@@ -54,7 +69,9 @@ to; `—` means the field is consumed by the `oh` CLI itself and never rendered.
 
 ### Optional installs
 
-All off by default. `oh harness install <name>` flips the matching field and
+All off by default and all read through the CLI, never through Compose:
+`.oh/scripts/provision-defaults.sh` installs everything the catalogs report as
+`enabled` on every boot. `oh harness install <name>` flips the matching field and
 installs into the running sandbox with no rebuild. The four harness fields map
 to `oh harness` names: `opencode`, `grok-build`, `hermes`.
 `agentBrowser` and `tailscale` are not harnesses — `oh tool install agent-browser`
@@ -62,11 +79,11 @@ and `oh tool install tailscale` manage them.
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `install.opencode` | boolean | `false` | `INSTALL_OPENCODE` | Install the OpenCode CLI into `~/.local` at boot. `oh harness install opencode` sets it and installs now. |
-| `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
-| `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Install the Hermes CLI into `~/.local` at boot and enable its runtime wiring (skill vendoring, `auth.json`). |
-| `install.agentBrowser` | boolean | `false` | `INSTALL_AGENT_BROWSER` | Install agent-browser and Chromium (about 1 GB). |
-| `install.tailscale` | boolean | `false` | `INSTALL_TAILSCALE` | Install the Tailscale client for private remote access (userspace networking; no container capabilities). |
+| `install.opencode` | boolean | `false` | — | Install the OpenCode CLI into `~/.local` at boot. `oh harness install opencode` sets it and installs now. |
+| `install.grokBuild` | boolean | `false` | — | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
+| `install.hermes` | boolean | `false` | — | Install the Hermes CLI into `~/.local` at boot. The runtime wiring (skill vendoring, `auth.json`) keys off the binary being present, so it also runs after `oh harness install hermes`, in both sandbox flavors. |
+| `install.agentBrowser` | boolean | `false` | — | Install agent-browser and Chromium (about 1 GB). |
+| `install.tailscale` | boolean | `false` | — | Install the Tailscale client for private remote access (userspace networking; no container capabilities). |
 
 ### Access
 
@@ -75,27 +92,27 @@ and `oh tool install tailscale` manage them.
 | `access.dockerSocket` | boolean | `false` | `DOCKER_SOCKET` | Applies the `docker-compose.docker-sock.yml` overlay. Mounting `/var/run/docker.sock` is effectively HOST ROOT: an agent can start a privileged container that mounts the host filesystem. See [security considerations](security-considerations.md). |
 | `access.ssh` | boolean | `false` | `SANDBOX_SSH` | Applies the `docker-compose.ssh.yml` overlay, which runs sshd for direct container SSH. See [sshd](integrations/sshd.md). |
 | `access.sshPort` | number (1–65535) | `2222` | `SANDBOX_SSH_PORT` | Host loopback port published for SSH. |
-| `access.sshAuthorizedKeys` | string | unset | `SANDBOX_SSH_AUTHORIZED_KEYS` | One or more public keys, newline or literal `\n` separated. This is public key material, not a secret. Without a key and without password auth nobody can log in, and sshd warns loudly. |
-| `access.sshPasswordAuth` | boolean | `false` | `SANDBOX_SSH_PASSWORD_AUTH` | Enables SSH password auth, which uses the `SANDBOX_PASSWORD` secret. Never enable it on a public-facing bind while `SANDBOX_PASSWORD` is the default. |
+| `access.sshAuthorizedKeys` | string | unset | — | One or more public keys, newline or literal `\n` separated, read by `entrypoint.sh` through `oh config show`. This is public key material, not a secret. Without a key and without password auth nobody can log in, and sshd warns loudly. |
+| `access.sshPasswordAuth` | boolean | `false` | — | Enables SSH password auth, which uses the `SANDBOX_PASSWORD` secret. Never enable it on a public-facing bind while `SANDBOX_PASSWORD` is the default. |
 
 ### Hermes dashboard
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `hermesDashboard.enabled` | boolean | `false` | `HERMES_DASHBOARD` | Applies the `docker-compose.hermes-dashboard.yml` overlay and auto-starts the web dashboard. |
-| `hermesDashboard.port` | number (1–65535) | `9119` | `HERMES_DASHBOARD_PORT` | Host loopback port for the dashboard. |
+| `hermesDashboard.enabled` | boolean | `false` | — | Auto-starts the web dashboard in the `app-hermes-dashboard` tmux session, bound to container loopback. |
+| `hermesDashboard.port` | number (1–65535) | `9119` | — | Container loopback port for the dashboard. It is no longer published to the host; reach it from inside the sandbox, or over cloudflared or Tailscale. |
 
 ### Cron runtime
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `cron.agentBin` | string | `claude` | `CRON_AGENT_BIN` | Binary that fires scheduled tasks. |
+| `cron.agentBin` | string | `claude` | — | Binary that fires scheduled tasks. |
 
 ### Build behaviour
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `build.skipPnpmInstall` | boolean | `false` | `SKIP_PNPM_INSTALL` | Renders as `1`/`0`. `1` skips the entrypoint's `pnpm install`. |
+| `build.skipPnpmInstall` | boolean | `false` | — | `true` skips the entrypoint's root `pnpm install`. Use it when the dependency tree is managed outside the sandbox. |
 
 ### Prebuilt image
 
@@ -117,20 +134,21 @@ Recipe: [prebuilt-image deployment](deployment-prebuilt-image.md).
 ### Langfuse
 
 Tracing settings the Pi harness reads from its own process environment. They are
-not secrets — the Langfuse key pair is, and lives in `.env`. Compose passes both
-into the container's environment, so a value set here reaches Pi on the next
-sandbox start. An export in the sandbox shell still wins for that shell.
+not secrets — the Langfuse key pair is, and lives in `.env`. The harness does not
+project these into the container: export them in the shell that launches Pi.
+They remain settable here so a deployment can record its intended values in one
+tracked place.
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `langfuse.baseUrl` | string | unset | `LANGFUSE_BASE_URL` | Langfuse host Pi sends traces to, for example `http://langfuse-web:3000`. Takes precedence over `LANGFUSE_HOST`. |
-| `langfuse.privacyPreset` | `"metadata-only"` \| `"prompts-only"` \| `"conversations"` \| `"full-debug"` | unset (compose default `metadata-only`) | `LANGFUSE_PRIVACY_PRESET` | How much of each trace Pi captures. Prefer `metadata-only` unless a broader capture policy is approved. |
+| `langfuse.baseUrl` | string | unset | — | Langfuse host Pi sends traces to, for example `http://langfuse-web:3000`. Takes precedence over `LANGFUSE_HOST`. |
+| `langfuse.privacyPreset` | `"metadata-only"` \| `"prompts-only"` \| `"conversations"` \| `"full-debug"` | unset (compose default `metadata-only`) | — | How much of each trace Pi captures. Prefer `metadata-only` unless a broader capture policy is approved. |
 
 ### Compose overlays
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `composeOverrides` | string[] | `[]` | — | Extra `-f` overlay paths, applied after the built-in overlays selected by `access` and `hermesDashboard` (last `-f` wins). |
+| `composeOverrides` | string[] | `[]` | — | Extra `-f` overlay paths, applied after the built-in overlays selected by `access` (last `-f` wins). |
 
 ## Secrets
 

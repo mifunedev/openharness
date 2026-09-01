@@ -29,10 +29,10 @@ install:
   grok_build: true
 ```
 
-Or set the legacy flag in `.devcontainer/.env`:
+Or set it from the CLI:
 
 ```bash
-INSTALL_GROK_BUILD=true
+oh config set install.grokBuild true
 ```
 
 Either way the boot provisioner installs it on the next start — no rebuild:

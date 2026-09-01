@@ -12,7 +12,6 @@ export interface ToolEntry {
   readonly verifyArgv: readonly string[];
   readonly versionArgv?: readonly string[];
   readonly toolKey?: string;
-  readonly entrypointGuard?: string;
   readonly installArgv?: readonly string[];
   readonly installUser?: "root" | "sandbox";
   readonly downloadSize?: string;
@@ -30,7 +29,6 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     binary: "agent-browser",
     verifyArgv: Object.freeze(["bash", "-lc", "command -v agent-browser >/dev/null"]),
     toolKey: "agent_browser",
-    entrypointGuard: "INSTALL_AGENT_BROWSER",
     installArgv: Object.freeze([
       "bash",
       "-lc",
@@ -133,7 +131,6 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     verifyArgv: Object.freeze(["bash", "-lc", "command -v tailscale >/dev/null"]),
     versionArgv: Object.freeze(["tailscale", "--version"]),
     toolKey: "tailscale",
-    entrypointGuard: "INSTALL_TAILSCALE",
     installArgv: Object.freeze([
       "bash",
       "-lc",

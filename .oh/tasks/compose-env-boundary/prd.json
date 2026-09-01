@@ -1,0 +1,210 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "task/920-compose-env-boundary",
+    "description": "Make the CLI the only install/config surface - empty the compose environment: block, delete the duplicate entrypoint installers, and replace OH_IMAGE_ONLY with runtime bind detection.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Strip the eleven variables from the compose files",
+            "description": "As an operator, I want the compose environment: blocks to carry only values Docker or the pre-control-plane entrypoint must act on, so adding a tool never requires a compose edit.",
+            "acceptanceCriteria": [
+                "docker-compose.yml no longer contains XAI_API_KEY, INSTALL_AGENT_BROWSER, INSTALL_TAILSCALE, SKIP_PNPM_INSTALL, INSTALL_HERMES, HERMES_HOME, HERMES_DASHBOARD, HERMES_DASHBOARD_PORT, CRON_AGENT_BIN, LANGFUSE_BASE_URL, or LANGFUSE_PRIVACY_PRESET",
+                "docker-compose.image-only.yml no longer contains XAI_API_KEY, CRON_AGENT_BIN, LANGFUSE_BASE_URL, or LANGFUSE_PRIVACY_PRESET",
+                "docker-compose.ssh.yml retains its ports: mapping and no longer has an environment: block",
+                "docker-compose.hermes-dashboard.yml is deleted and the branch applying it in .oh/scripts/docker-compose.sh is removed",
+                "Each modified file's header comment describes the file as it now is",
+                "docker compose -f <each file> config parses without error",
+                "Typecheck passes"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Eleven keys removed from docker-compose.yml; XAI_API_KEY/CRON_AGENT_BIN/LANGFUSE_* removed from image-only.yml; ssh overlay keeps ports: and lost environment:; hermes-dashboard overlay and its docker-compose.sh branch deleted. Headers rewritten."
+        },
+        {
+            "id": "US-002",
+            "title": "Delete the duplicate agent-browser and Tailscale installers from the entrypoint",
+            "description": "As a maintainer, I want exactly one description of each tool install, so a version bump cannot leave two truths in the tree.",
+            "acceptanceCriteria": [
+                "The INSTALL_AGENT_BROWSER-guarded install block is removed from .devcontainer/entrypoint.sh",
+                "The INSTALL_TAILSCALE-guarded install block is removed, including the pinned tarball version and both sha256 literals",
+                "The ungated install -d -o sandbox -g sandbox -m 0755 /var/run/tailscale block is retained",
+                ".oh/cli/src/lib/tools/catalog.ts remains the sole location of the agent-browser and Tailscale pins",
+                "Confirmed on the merged tree before deletion that the Tailscale catalog entry is installUser: \"sandbox\"",
+                "shellcheck .devcontainer/entrypoint.sh passes with CI's invocation",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Both installers deleted; ungated /var/run/tailscale kept. Confirmed installUser:\"sandbox\" on the merged tree before deleting. shellcheck clean."
+        },
+        {
+            "id": "US-003",
+            "title": "Read oh.json from the entrypoint and presence-gate the Hermes wiring",
+            "description": "As an operator, I want the entrypoint to read settings from oh.json through the CLI, so flavor B gets the same wiring flavor A does.",
+            "acceptanceCriteria": [
+                "A fenced oh_config helper is added to .devcontainer/entrypoint.sh calling `oh config show | jq -r <filter>` as the sandbox user with a caller-supplied fallback",
+                "The helper uses oh config show, not a new verb",
+                "A missing, old, or failing CLI yields the documented default and never fails the boot",
+                "The Hermes wiring block is gated on `command -v hermes` instead of INSTALL_HERMES",
+                "HERMES_HOME is no longer a parameter; the existing ${HERMES_HOME:-$HARNESS/.hermes} fallback supplies the same value",
+                "The dashboard block reads hermesDashboard.enabled and hermesDashboard.port via oh_config",
+                "The root pnpm install gate reads build.skipPnpmInstall via oh_config",
+                "The sshd block reads access.ssh, access.sshPort, access.sshPasswordAuth, and access.sshAuthorizedKeys via oh_config; the no-key/no-password warning still fires when both are absent",
+                ".oh/scripts/link-providers.sh gates its Hermes branch on the binary's presence rather than INSTALL_HERMES",
+                "shellcheck passes on every changed shell file",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "oh_config/oh_config_truthy fenced helper added over `oh config show` with per-call fallbacks; Hermes wiring gated on `command -v hermes`; HERMES_HOME parameter dropped; dashboard, pnpm gate, and sshd read oh.json; link-providers.sh presence-gated."
+        },
+        {
+            "id": "US-004",
+            "title": "Read the cron agent binary from oh.json",
+            "description": "As an operator, I want cron.agentBin honoured without a compose hop.",
+            "acceptanceCriteria": [
+                ".oh/scripts/cron-runtime.ts resolves the agent binary from process.env.CRON_AGENT_BIN first, then the CLI's readOhConfig value, then the \"claude\" default",
+                "The env override is preserved and covered by a test",
+                ".oh/scripts/__tests__/cron-runtime.test.ts passes",
+                "Tests pass",
+                "Typecheck passes"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "resolveAgentBin(): CRON_AGENT_BIN, then cron.agentBin via `oh config show`, then \"claude\". Three precedence tests added."
+        },
+        {
+            "id": "US-005",
+            "title": "Stop rendering the retired keys and make their return impossible",
+            "description": "As a maintainer, I want the rendered .env set to be the rule expressed in code, so a re-added put() throws instead of silently restoring the pipeline.",
+            "acceptanceCriteria": [
+                "config-render.ts no longer emits the five INSTALL_* keys, HERMES_DASHBOARD, HERMES_DASHBOARD_PORT, CRON_AGENT_BIN, SKIP_PNPM_INSTALL, LANGFUSE_BASE_URL, or LANGFUSE_PRIVACY_PRESET",
+                "Every removed key is added to RETIRED_KEYS so rendering it throws",
+                "The remaining rendered set is exactly SANDBOX_NAME, TZ, OH_HOME_MOUNT, GIT_USER_NAME, GIT_USER_EMAIL, DOCKER_SOCKET, SANDBOX_SSH*, OH_SANDBOX_IMAGE, OH_PULL_POLICY",
+                "readonly entrypointGuard? and both of its uses are removed from .oh/cli/src/lib/tools/catalog.ts",
+                "oh config set install.tailscale true then oh config show round-trips with no .env projection",
+                "cd .oh/cli && npm run build && npm run typecheck passes",
+                "Typecheck passes"
+            ],
+            "priority": 5,
+            "passes": true,
+            "notes": "Ten keys plus SANDBOX_SSH_PASSWORD_AUTH/SANDBOX_SSH_AUTHORIZED_KEYS retired; RETIRED_KEYS holds all of them; entrypointGuard removed from tools/catalog.ts. Build and typecheck pass."
+        },
+        {
+            "id": "US-006",
+            "title": "Invert the two boundary probes and retarget the parity probe",
+            "description": "As a maintainer, I want the probes to assert the post-epic boundary, since they currently require the duplication and would fail the correct fix.",
+            "acceptanceCriteria": [
+                "tool-catalog-boundary.sh asserts the entrypoint contains no INSTALL_AGENT_BROWSER guard and no agent-browser@<version> pin, with the catalog as sole truth; its # desc: header is rewritten",
+                "Its disjointness, downloadSize, and --yes gating assertions are preserved",
+                "tailscale-tool-boundary.sh receives the same inversion for the guard, the version pin, and the sha256 cross-check",
+                "Every zero-exposure assertion is kept: no cap_add, devices:, privileged: true, or published 3773; no tailscaled invocation or tailscale up on boot; no Funnel; no committed auth key",
+                "The ungated /var/run/tailscale assertion is kept and retargeted",
+                "compose-config-path-parity.sh no longer keys on INSTALL_HERMES or CRON_AGENT_BIN",
+                "config-schema-parity.sh stays green and is confirmed to key off the field path, not the docs Env var column",
+                "default-provisioning.sh and sandbox-boot-guard-ci.sh are left untouched",
+                "Each inverted assertion is mutation-verified to exit 1",
+                "Typecheck passes"
+            ],
+            "priority": 6,
+            "passes": true,
+            "notes": "Both boundary probes inverted with every zero-exposure assertion kept; ungated-socket check retargeted to indentation; parity probe moved onto SANDBOX_PASSWORD/GIT_USER_NAME. Five mutations verified to exit 1."
+        },
+        {
+            "id": "US-007",
+            "title": "Add a tier-A compose-env-boundary probe",
+            "description": "As a maintainer, I want the rule enforced directly, so this class of defect cannot return through any compose file or overlay.",
+            "acceptanceCriteria": [
+                ".oh/evals/probes/compose-env-boundary.sh exists with # tier: A and a # source: line naming issue #920",
+                "It runs over every .devcontainer/docker-compose*.yml, overlays included",
+                "It fails on any INSTALL_* key and on OH_IMAGE_ONLY in any of them",
+                "Every environment: key must be in config-render.ts's rendered set or one of the documented literals",
+                "Overlay ports: and volumes: blocks are explicitly allowed",
+                "It uses the 3-state exit oracle: 0 PASS, 1 REGRESSION, 2 SKIPPED when no compose file is present",
+                "Mutation-verified: an INSTALL_FOO line, an OH_IMAGE_ONLY line, and an unlisted key each drive exit 1",
+                "bash .claude/skills/eval/run.sh --probe compose-env-boundary reports PASS",
+                "Typecheck passes"
+            ],
+            "priority": 7,
+            "passes": true,
+            "notes": "compose-env-boundary.sh added (tier A, 3-state oracle). Mutations verified: INSTALL_*, OH_IMAGE_ONLY, an unlisted key, and an overlay environment: key each exit 1; extra overlay ports stay PASS."
+        },
+        {
+            "id": "US-008",
+            "title": "Update the tests that assert the retired pipeline",
+            "description": "As a maintainer, I want the suite to describe the new boundary rather than the old one.",
+            "acceptanceCriteria": [
+                "config-render.test.ts drops assertions for the removed keys and adds RETIRED_KEYS throw cases for each",
+                "tool-catalog.test.ts no longer references entrypointGuard",
+                "entrypoint-pnpm-install.test.ts and entrypoint-pnpm-manifest-fingerprint.sh assert the oh.json read instead of the compose SKIP_PNPM_INSTALL pass-through",
+                "harness.test.ts, init.test.ts, and env-file.ts's CONFIG_FIELD_BY_ENV_KEY / INSTALL_FIELDS alias tables are updated consistently",
+                "Root npx vitest run shows no new failures beyond the known 8 environmental compose-args.test.ts failures",
+                "Tests pass",
+                "Typecheck passes"
+            ],
+            "priority": 8,
+            "passes": true,
+            "notes": "config-render, tool-catalog, harness-catalog, entrypoint-pnpm-install, sandbox-healthcheck, cron-runtime, compose-args, docs-compose-overlays updated. 976 pass; the 6 remaining compose-args failures reproduce unmodified on development."
+        },
+        {
+            "id": "US-009",
+            "title": "Update docs, templates, the wiki, and the changelog",
+            "description": "As a reader, I want the documentation to describe the CLI path, since the compose-variable instructions are now false.",
+            "acceptanceCriteria": [
+                "docs/configuration.md blanks the Env var column for every field whose projection is gone; the fields stay documented",
+                "docs/connecting.md documents oh config set install.tailscale true and oh tool install tailscale instead of the environment variable",
+                "docs/security-considerations.md, docs/harnesses/grok-build.md, docs/integrations/langfuse.md, and the Hermes dashboard docs reflect the retired variables and the removed published port",
+                ".env.example and .oh/templates/.env.example drop the retired keys",
+                ".oh/scripts/migrate-harness-yaml.sh stops mapping the retired keys in both directions; the legacy shim stays",
+                "CHANGELOG.md gains a BREAKING entry under ## [Unreleased], one sentence, <=250 characters, linking #920",
+                "bash .oh/evals/probes/changelog-entry-length.sh reports no over-length entry",
+                ".oh/skills/wiki/corpus/compose-env-boundary.md exists with valid frontmatter and body order H1, Relevant Source Files, Summary, Detail, System Relationships, See Also",
+                "Every wiki claim about repository behavior cites a source path with a line number; System Relationships carries a Mermaid diagram of the oh.json to CLI to entrypoint path",
+                "The wiki entry is <=900 words and See Also cross-links [[sandbox-dependency-installs]] and [[oh-cli-portable-lifecycle]]",
+                "sandbox-dependency-installs.md no longer claims compose passes SKIP_PNPM_INSTALL into the container, and its updated date is bumped",
+                "bash .oh/evals/probes/wiki-readme-index.sh passes with the new entry indexed in corpus/README.md",
+                "Typecheck passes"
+            ],
+            "priority": 9,
+            "passes": true,
+            "notes": "configuration.md, connecting.md, sshd.md, langfuse.md, hermes.md, grok-build.md, opencode.md, overview.md, installation.md, security-considerations.md, lifecycle-commands.md, .oh/README.md, microsandbox.md, the Hermes template README, and CHANGELOG updated. New wiki entry compose-env-boundary; sandbox-dependency-installs revised; index regenerated."
+        },
+        {
+            "id": "US-010",
+            "title": "Detect the sandbox flavor at runtime instead of reading a flag",
+            "description": "As an operator, I want the entrypoint to determine whether a checkout is bind-mounted, so compose stops narrating a fact the container can observe.",
+            "acceptanceCriteria": [
+                ".oh/.image-seeded is added to .gitignore before the detection change",
+                "entrypoint.sh replaces the OH_IMAGE_ONLY gate with mountpoint -q \"$OH_PROJECT_ROOT\", the bind-detected branch leading and the seed branch as the else",
+                "The elif [ -d \"$HARNESS_DIR\" ] existence test is dropped as subsumed",
+                "Both branch bodies are otherwise unchanged",
+                "The detected mode is logged on both paths",
+                "OH_IMAGE_ONLY is removed from docker-compose.image-only.yml and no reader of it remains in the tree",
+                "diff of the two compose files' environment: blocks is empty",
+                "This lands as a separate commit from US-001 through US-009",
+                "Typecheck passes"
+            ],
+            "priority": 10,
+            "passes": true,
+            "notes": ".gitignore first, then mountpoint-plus-.oh detection with the branches swapped and the mode logged on both paths; OH_IMAGE_ONLY dropped from image-only.yml. environment: blocks diff to empty."
+        },
+        {
+            "id": "US-011",
+            "title": "Retarget the image-only deploy probe and its documentation",
+            "description": "As a maintainer, I want the flavor-B probe to test behavior rather than documentation prose.",
+            "acceptanceCriteria": [
+                "oh-image-only-deploy.sh drops the three assertions requiring deployment-prebuilt-image.md to contain or omit particular strings",
+                "Every behavioral assertion is kept: gate ordering, the seed simulation, and the compose-shape checks",
+                "The gate check targets mountpoint-based detection rather than the retired flag",
+                "docs/deployment-prebuilt-image.md documents how flavor B is detected instead of how the flag is set, and its docker run recipe drops the corresponding -e",
+                "Mutation-verified: removing the detection from the entrypoint drives the probe to exit 1",
+                "bash .claude/skills/eval/run.sh exits 0 with no new regressions",
+                "Typecheck passes"
+            ],
+            "priority": 11,
+            "passes": true,
+            "notes": "Three prose assertions dropped; gate check retargeted to the two-condition detection; deployment-prebuilt-image.md rewritten and its docker run -e removed. Four mutations verified to exit 1."
+        }
+    ]
+}

@@ -87,17 +87,20 @@ describe("sandbox healthcheck", () => {
     expect(result.stderr).toContain("legacy tmux session present: system-cron");
   });
 
-  it("checks optional Hermes dashboard only when enabled and installed", () => {
+  it("checks optional Hermes dashboard only when enabled in oh.json and installed", () => {
     const { bin, harness, tmux } = fixture();
     const hermes = join(bin, "hermes");
     writeFileSync(hermes, "#!/usr/bin/env bash\nexit 0\n");
     chmodSync(hermes, 0o755);
+    writeFileSync(
+      join(harness, "oh.json"),
+      `${JSON.stringify({ version: 1, name: "demo", hermesDashboard: { enabled: true } })}\n`,
+    );
 
     const result = runHealthcheck({
       HARNESS: harness,
       TMUX_BIN: tmux,
       HERMES_BIN: hermes,
-      HERMES_DASHBOARD: "true",
       HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog,cron-system",
     });
 

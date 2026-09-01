@@ -9,7 +9,12 @@ const REPO_ROOT = path.resolve(__dirname, "../../..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
 const MARKDOWN_ROOT_FILES = [path.join(REPO_ROOT, "README.md")];
 
+// RFCs and preserved rationale are dated records of past decisions, not guidance:
+// rewriting a compose path inside them would falsify the history they exist to keep.
+const HISTORICAL_ROOTS = [path.join(DOCS_ROOT, "rfcs")];
+
 function markdownFiles(dir: string): string[] {
+  if (HISTORICAL_ROOTS.includes(dir)) return [];
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) return markdownFiles(full);

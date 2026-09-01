@@ -3,7 +3,9 @@
 # source: absorb .mifune submodule into .oh — the skills/agents/hooks pack is vendored
 #         directly under .oh/ (no submodule); provider symlinks resolve into it from a clean clone
 # desc: there is NO .mifune submodule; .oh/skills|agents|hooks are tracked in-repo and the
-#       provider/Hermes symlinks resolve into .oh/ with no init/network step
+#       provider symlinks resolve into .oh/ with no init/network step; the Hermes link is
+#       created when the hermes binary is on PATH and not otherwise (#920 replaced the
+#       INSTALL_HERMES flag with that presence check, so it works in both sandbox flavors)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -34,7 +36,7 @@ for link in .pi/skills .claude/skills .codex/skills .claude/agents .claude/hooks
   [ -e "$link" ] || fail "$link target does not resolve"
 done
 
-INSTALL_HERMES=false bash .oh/scripts/link-providers.sh --check >/dev/null
+bash .oh/scripts/link-providers.sh --check >/dev/null
 
 if [ "${SKILLS_VENDORED_SKIP_CLEAN_CLONE:-0}" != "1" ]; then
   tmp="$(mktemp -d)"
@@ -45,10 +47,20 @@ if [ "${SKILLS_VENDORED_SKIP_CLEAN_CLONE:-0}" != "1" ]; then
   [ -f .pi/skills/git/SKILL.md ] || fail "Pi skill symlink does not resolve in a clean clone"
   [ -f .claude/skills/spec/SKILL.md ] || fail "Claude skill symlink does not resolve in a clean clone"
   [ -f .codex/skills/git/SKILL.md ] || fail "Codex skill symlink does not resolve in a clean clone"
-  INSTALL_HERMES=false bash .oh/scripts/link-providers.sh --check >/dev/null
-  INSTALL_HERMES=false bash .oh/scripts/link-providers.sh --init >/dev/null
-  INSTALL_HERMES=true bash .oh/scripts/link-providers.sh --init >/dev/null
-  [ -f .hermes/skills/openharness/git/SKILL.md ] || fail "Hermes skill symlink missing after INSTALL_HERMES init"
+  fake_bin="$tmp/bin"
+  mkdir -p "$fake_bin"
+  bare_path="$fake_bin:/usr/bin:/bin"
+
+  PATH="$bare_path" bash .oh/scripts/link-providers.sh --check >/dev/null
+  PATH="$bare_path" bash .oh/scripts/link-providers.sh --init >/dev/null
+  [ ! -e .hermes/skills/openharness ] \
+    || fail "Hermes skill symlink created with no hermes binary on PATH — the wiring must key off the binary"
+
+  printf '#!/bin/sh\nexit 0\n' > "$fake_bin/hermes"
+  chmod +x "$fake_bin/hermes"
+  PATH="$bare_path" bash .oh/scripts/link-providers.sh --init >/dev/null
+  [ -f .hermes/skills/openharness/git/SKILL.md ] \
+    || fail "Hermes skill symlink missing after an init with hermes on PATH"
   cd "$ROOT"
 fi
 

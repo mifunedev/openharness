@@ -4,7 +4,7 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness provisions three agent CLIs into `~/.local` on first boot: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **Hermes**, and **Grok Build** are optional — install one with `oh harness install <id>`, which also sets its `install.*` key so a fresh home mount reinstalls it at boot. No harness is baked into the image. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773 and has no `INSTALL_*` key. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
+Open Harness provisions three agent CLIs into `~/.local` on first boot: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **Hermes**, and **Grok Build** are optional — install one with `oh harness install <id>`, which also sets its `install.*` key so a fresh home mount reinstalls it at boot. No harness is baked into the image. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773, and has no `install.*` key, because it is never baked into the image. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
@@ -39,9 +39,8 @@ Flags:
 | `--no-persist` | Live-install only; leave `.devcontainer/.env` unchanged (ephemeral — a container recreate loses it) |
 | `--defaults` | `list` only: restrict the listing, and the verify probes it runs, to `kind:"default"` harnesses |
 
-The manual path still works: uncomment the key in `.devcontainer/.env` (or export the
-`INSTALL_*` build flag in `.devcontainer/.env`) and run
-`oh destroy && oh sandbox`.
+The manual path still works: set the field directly with
+`oh config set install.<key> true` and run `oh stop && oh sandbox`.
 
 ## Supported agents
 

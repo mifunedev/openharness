@@ -9,11 +9,13 @@
 #         #908 additionally proved a root-installed tool is unusable from inside the
 #         sandbox: commands/tool.ts uses stdio:"inherit", so a root install becomes an
 #         interactive `sudo` and /etc/sudoers.d/sandbox has no NOPASSWD.
+#         #920 removed the duplicate boot-path installer: the tool catalog is now the
+#         only place the version and both checksums may appear.
 # desc: the Tailscale optional tool stays a zero-privilege, zero-exposure install —
-#       entrypointGuard (not buildArg) ground truth, version and both sha256 pins
-#       agreeing between the entrypoint and the tool catalog, no cap_add/devices/
-#       privileged/3773 in any compose file, no tailscaled or `tailscale up` on boot,
-#       no Funnel, no committed auth key.
+#       tools/catalog.ts is the sole owner of the version and both sha256 pins, the
+#       entrypoint holds neither a guard nor a pin, no cap_add/devices/privileged/3773
+#       in any compose file, no tailscaled or `tailscale up` on boot, no Funnel, no
+#       committed auth key.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
@@ -35,29 +37,29 @@ fi
 missing=()
 
 grep -qF 'INSTALL_TAILSCALE' "$ENTRY" \
-  || missing+=("$ENTRY: no INSTALL_TAILSCALE guard — the tool catalog's ground truth moved")
+  && missing+=("$ENTRY: INSTALL_TAILSCALE guard returned — the install belongs to the tool catalog, reached through provision-defaults.sh from oh.json")
 grep -qF 'INSTALL_TAILSCALE' "$DOCKERFILE" \
-  && missing+=("$DOCKERFILE: INSTALL_TAILSCALE appeared — a Dockerfile guard means the catalog field must be buildArg, not entrypointGuard")
+  && missing+=("$DOCKERFILE: INSTALL_TAILSCALE appeared — an image-layer install is discarded on every container recreate")
 
-mapfile -t pins < <(grep -oE 'tailscale_[0-9]+\.[0-9]+\.[0-9]+_' "$ENTRY" | sed 's/^tailscale_//; s/_$//' | sort -u)
+mapfile -t pins < <(grep -oE 'tailscale_[0-9]+\.[0-9]+\.[0-9]+_' "$CATALOG" | sed 's/^tailscale_//; s/_$//' | sort -u)
 if ((${#pins[@]} == 0)); then
-  missing+=("$ENTRY: no pinned tailscale_<x.y.z>_ tarball — the install is unpinned")
+  missing+=("$CATALOG: no pinned tailscale_<x.y.z>_ tarball — the install is unpinned")
 elif ((${#pins[@]} > 1)); then
-  missing+=("$ENTRY: per-architecture version pins disagree (${pins[*]})")
-else
-  grep -qF "tailscale_${pins[0]}_" "$CATALOG" \
-    || missing+=("$CATALOG: version pin disagrees with $ENTRY (${pins[0]})")
+  missing+=("$CATALOG: per-architecture version pins disagree (${pins[*]})")
 fi
+grep -qE 'tailscale_[0-9]+\.[0-9]+\.[0-9]+_' "$ENTRY" \
+  && missing+=("$ENTRY: pins a Tailscale version — a second copy of the pin drifts from $CATALOG")
 
-grep -qF 'sha256sum -c' "$ENTRY" \
-  || missing+=("$ENTRY: no 'sha256sum -c' verification of the Tailscale tarball")
+grep -qF 'sha256sum -c' "$CATALOG" \
+  || missing+=("$CATALOG: no 'sha256sum -c' verification of the Tailscale tarball")
 
 mapfile -t entry_shas < <(grep -iE 'tailscale|ts_sha' "$ENTRY" | grep -oE '\b[0-9a-f]{64}\b' | sort -u)
 mapfile -t catalog_shas < <(grep -iE 'tailscale' "$CATALOG" | grep -oE '\b[0-9a-f]{64}\b' | sort -u)
-if ((${#entry_shas[@]} < 2)); then
-  missing+=("$ENTRY: expected a sha256 literal per supported architecture, found ${#entry_shas[@]}")
-elif [ "${entry_shas[*]}" != "${catalog_shas[*]}" ]; then
-  missing+=("$CATALOG: sha256 literals disagree with $ENTRY (entrypoint: ${entry_shas[*]:-none} / catalog: ${catalog_shas[*]:-none})")
+if ((${#catalog_shas[@]} < 2)); then
+  missing+=("$CATALOG: expected a sha256 literal per supported architecture, found ${#catalog_shas[@]}")
+fi
+if ((${#entry_shas[@]} > 0)); then
+  missing+=("$ENTRY: carries a Tailscale sha256 literal (${entry_shas[*]}) — $CATALOG is the only place it may appear")
 fi
 
 if grep -qE '(^|[;&|]|&&|\|\||\bthen |\bdo |\bexec |\bnohup |\bsudo )[[:space:]]*("?[^[:space:]"]*/)?tailscaled\b' "$ENTRY"; then
@@ -101,8 +103,8 @@ else
     || missing+=("$CATALOG: the tailscale entry is not kind \"opt-in\" — it must never install by default")
   grep -qE 'toolKey:[[:space:]]*"tailscale"' <<<"$entry_block" \
     || missing+=("$CATALOG: the tailscale entry has no toolKey \"tailscale\" — the oh.json opt-in is not wired")
-  grep -qE 'entrypointGuard:[[:space:]]*"INSTALL_TAILSCALE"' <<<"$entry_block" \
-    || missing+=("$CATALOG: the tailscale entry has no entrypointGuard \"INSTALL_TAILSCALE\"")
+  grep -qF 'entrypointGuard' <<<"$entry_block" \
+    && missing+=("$CATALOG: the tailscale entry declares an entrypointGuard — it records a second installer that must not exist")
   # tailscaled runs fine unprivileged with --tun=userspace-networking, so nothing
   # here needs root. A root install would hang `oh tool install tailscale` on a
   # sudo password prompt no agent can answer, and would put the binary in an
@@ -130,9 +132,9 @@ socket_dir_line=$(grep -nE 'install -d .*-o sandbox .*/var/run/tailscale' "$ENTR
 if [ -z "$socket_dir_line" ]; then
   missing+=("$ENTRY: never creates /var/run/tailscale — tailscaled's default socket path is unwritable, so a bare \`tailscale status\` cannot work")
 else
-  guard_line=$(grep -nE '^if \[ "\$\{INSTALL_TAILSCALE:-false\}" = "true" \]' "$ENTRY" | head -1 | cut -d: -f1)
-  if [ -n "$guard_line" ] && [ "$socket_dir_line" -gt "$guard_line" ]; then
-    missing+=("$ENTRY: creates /var/run/tailscale inside the INSTALL_TAILSCALE guard — a later \`oh tool install tailscale\` would then need a reboot before the socket path exists")
+  socket_dir_text=$(sed -n "${socket_dir_line}p" "$ENTRY")
+  if [[ $socket_dir_text == [[:space:]]* ]]; then
+    missing+=("$ENTRY: creates /var/run/tailscale inside a conditional block — a later \`oh tool install tailscale\` would then need a reboot before the socket path exists")
   fi
 fi
 

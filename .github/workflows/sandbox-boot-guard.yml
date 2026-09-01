@@ -67,9 +67,10 @@ jobs:
       - name: Validate base compose configuration
         run: bash .oh/scripts/docker-compose.sh config --quiet
 
-      - name: Validate Hermes dashboard compose overlay
+      - name: Validate sshd compose overlay
         env:
-          HERMES_DASHBOARD: "true"
+          SANDBOX_SSH: "true"
+          SANDBOX_SSH_PORT_CHECK: "off"
         run: bash .oh/scripts/docker-compose.sh config --quiet
 
       - name: Build sandbox image locally
@@ -95,8 +96,8 @@ jobs:
       # overrun the healthcheck's ~690s unhealthy deadline and fail the boot with
       # "missing required tmux session: cron-system". Seeding node_modules here
       # moves that slow/variable install OUT of the healthcheck-timed window; the
-      # sandbox smoke step below also sets SKIP_PNPM_INSTALL=1 so the pre-seeded
-      # CI path remains an explicit boot-window escape hatch even before a marker
+      # step below also sets build.skipPnpmInstall in oh.json so the pre-seeded CI
+      # path remains an explicit boot-window escape hatch even before a marker
       # exists. The runner workspace is a named volume shared at the same path
       # with the dind daemon, so the node_modules written here is exactly what the
       # container's bind mount sees. The container's UID is synced to the
@@ -132,6 +133,17 @@ jobs:
             sh -c 'ls -la /mnt/node_modules/croner/package.json'
           echo "OK: pre-seeded node_modules is visible to the daemon that boots the sandbox"
 
+      # Deps are pre-seeded above and proven visible; build.skipPnpmInstall keeps
+      # the in-container install out of the healthcheck-timed window. This is the
+      # Option C contract: pnpm slowness can no longer trip the ~690s unhealthy
+      # deadline. entrypoint.sh reads this through `oh config show`, so it is set
+      # in oh.json rather than passed as an environment knob.
+      - name: Skip the in-container pnpm install
+        run: |
+          tmp=$(mktemp)
+          jq '.build.skipPnpmInstall = true' oh.json > "$tmp"
+          mv "$tmp" oh.json
+
       # This step is the ONLY place the boot-time harness install runs end to end.
       # It boots on a fresh home volume (the smoke tears down with `down -v`), so
       # provision-defaults.sh does real npm work every run and the smoke asserts
@@ -146,10 +158,4 @@ jobs:
           # 3x30s retry window (~690s), not just the old 300s one.
           BOOT_SMOKE_TIMEOUT_SECONDS: "1200"
           BOOT_SMOKE_INTERVAL_SECONDS: "10"
-          # Deps are pre-seeded above and proven visible; SKIP_PNPM_INSTALL=1
-          # keeps the in-container install out of the healthcheck-timed window.
-          # This is the Option C contract: pnpm slowness can no longer trip the
-          # ~690s unhealthy deadline. What remains inside that window is the
-          # cron-system spawn and the boot-time harness install.
-          SKIP_PNPM_INSTALL: "1"
         run: bash .oh/scripts/sandbox-boot-smoke.sh

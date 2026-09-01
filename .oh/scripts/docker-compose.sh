@@ -127,11 +127,6 @@ fi
 
 args+=(-f "$(compose_path ".devcontainer/docker-compose.yml")")
 
-hermes_value=${HERMES_DASHBOARD:-$(read_env_value HERMES_DASHBOARD)}
-if truthy "$hermes_value"; then
-  args+=(-f "$(compose_path ".devcontainer/docker-compose.hermes-dashboard.yml")")
-fi
-
 docker_socket_value=${DOCKER_SOCKET:-$(read_env_value DOCKER_SOCKET)}
 if truthy "$docker_socket_value"; then
   args+=(-f "$(compose_path ".devcontainer/docker-compose.docker-sock.yml")")

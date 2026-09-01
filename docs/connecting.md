@@ -118,10 +118,10 @@ This is the supported path for reaching T3 Code from a phone, and the supported 
 
 - No `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, no host socket mount. Userspace networking needs none of them, and Tailscale Serve is fully supported in that mode.
 - **No host port is published.** T3 Code stays on container loopback `127.0.0.1:3773`. Tailscale Serve inside the container proxies tailnet HTTPS to that loopback address. A device outside the tailnet has nothing to reach.
-- The only compose change is one environment variable (`INSTALL_TAILSCALE`). Node identity and daemon state live in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount, so the node does not re-authenticate on every container recreate without any per-tool volume.
+- **There is no compose change at all.** The opt-in is `install.tailscale` in `oh.json`; `.oh/scripts/provision-defaults.sh` installs from the tool catalog on every boot. Node identity and daemon state live in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount, so the node does not re-authenticate on every container recreate without any per-tool volume.
 - Because the container is the node, the MagicDNS name your phone saved does not change when you move the workspace to another VM.
 
-Installing the binary does **not** join a tailnet. The entrypoint never runs `tailscaled` and never runs `tailscale up`. Joining is an explicit human act.
+Installing the binary does **not** join a tailnet. Nothing on the boot path runs `tailscaled` or `tailscale up`. Joining is an explicit human act.
 
 ### Prerequisites
 
@@ -147,7 +147,7 @@ oh tool install tailscale
 
 This persists `install.tailscale: true` in the tracked `oh.json` so the opt-in survives container recreation, and installs the binary into a running sandbox when one is up. It is idempotent.
 
-If the sandbox was not running, the flag is persisted only. Run `oh sandbox` to recreate the container and let the entrypoint install the binary. No rebuild of the image is required — the install is an entrypoint step gated on `INSTALL_TAILSCALE`, not a build layer. Nothing about networking activates until you start the daemon in the next step.
+If the sandbox was not running, the flag is persisted only. Run `oh sandbox` to recreate the container; boot provisioning reads `install.tailscale` from `oh.json` and installs the binary from the tool catalog, which is the sole owner of the pinned version and its checksums. No image rebuild is required. Nothing about networking activates until you start the daemon in the next step.
 
 Check the state at any time:
 

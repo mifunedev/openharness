@@ -245,10 +245,10 @@ pi
 `LANGFUSE_HOST` is supported as a fallback name. For an environment-only
 configuration, `LANGFUSE_BASE_URL` wins over `LANGFUSE_HOST`.
 
-Set the host and the privacy preset in `oh.json` instead of exporting them by
-hand. `oh` renders `langfuse.baseUrl` and `langfuse.privacyPreset` into the
-Compose environment, and both compose files put them in the sandbox process
-environment, so Pi reads them on every launch:
+`langfuse.baseUrl` and `langfuse.privacyPreset` in `oh.json` record the intended
+values in one tracked place, but the harness does **not** project them into the
+container — Pi reads them from its own process environment, so export them in the
+shell that launches Pi (see the block above):
 
 ```json
 {
@@ -259,7 +259,7 @@ environment, so Pi reads them on every launch:
 }
 ```
 
-Apply the change with `oh stop && oh sandbox`. The two credentials stay secrets:
+The two credentials stay secrets:
 keep `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` in the root dotenv (`oh
 secret set`) or in the saved `~/.pi/agent/pi-langfuse/config.json`, and export
 them in the shell that launches Pi if you use the environment-only path.

@@ -102,7 +102,6 @@ lists `docker-compose.yml` and nothing else. It never runs
 
 - `access.ssh` → no `docker-compose.ssh.yml`, so no sshd and no published SSH port
 - `access.dockerSocket` → no `docker-compose.docker-sock.yml`, so no host Docker socket
-- `hermesDashboard.enabled` → no `docker-compose.hermes-dashboard.yml`, so no dashboard
 - `composeOverrides[]` → every extra overlay path is ignored
 
 Secrets still reach that container: compose auto-loads the `.devcontainer/.env`

@@ -154,8 +154,8 @@ source instead of the bundled `.oh/templates/`.
 - `.devcontainer/` — the **full devcontainer**, pinned to root by the devcontainer
   spec / `.dockerignore` / hadolint (which don't honor a symlinked directory). It
   holds the VS Code `devcontainer.json`, the user-owned `.env`, and every build
-  asset: `Dockerfile`, `docker-compose.yml` + the hermes-dashboard overlay,
-  `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
+  asset: `Dockerfile`, `docker-compose.yml` + the docker-socket and sshd
+  overlays, `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
   `seed-msg-bridge.sh`). Everything the sandbox boots from lives here, in the one
   conventional location — no split, no compat shim.
 - `oh.json` and `.env.example` — the two authored configuration surfaces, and
@@ -185,8 +185,8 @@ The harness's own devcontainer lives in the one conventional location — top-le
 **`.devcontainer/`** — rather than split across `.oh/`. It holds:
 
 - the build/bootstrap assets: `Dockerfile`, `docker-compose.yml` + the
-  `docker-compose.hermes-dashboard.yml` overlay, `entrypoint.sh`,
-  `client-slack-supervise.sh`, `seed-msg-bridge.sh`;
+  `docker-compose.docker-sock.yml` and `docker-compose.ssh.yml` overlays,
+  `entrypoint.sh`, `client-slack-supervise.sh`, `seed-msg-bridge.sh`;
 - the VS Code `devcontainer.json` (hand-maintained; its `dockerComposeFile` points
   at the same-dir `docker-compose.yml`) plus the user-owned `.env`.
 

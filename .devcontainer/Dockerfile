@@ -88,7 +88,6 @@ RUN printf '%s\n' \
       'export NPM_USER_PREFIX="/home/sandbox/.local"' \
       'export PNPM_HOME="/usr/local/share/pnpm"' \
       'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
-      '# uv/Python env written by .oh/scripts/provision-python.sh.' \
       '[ -r "$HOME/.local/share/oh/python-env.sh" ] && . "$HOME/.local/share/oh/python-env.sh"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \
  && chown sandbox:sandbox /home/sandbox/.profile /home/sandbox/.zprofile
@@ -120,7 +119,6 @@ RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness",
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-# boot (entrypoint OH_IMAGE_ONLY / seed_workspace_volume, OH_IMAGE_SEED_SRC).
 COPY --chown=sandbox:sandbox . /opt/oh-seed/
 
 COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh

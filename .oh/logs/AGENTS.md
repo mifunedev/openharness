@@ -1,5 +1,7 @@
 # `.oh/logs/`
 
+`CLAUDE.md` is a provider-compatibility symlink to this file. Edit `AGENTS.md`.
+
 Durable operational records written by unattended sessions. Everything here is
 gitignored except this file: a log is evidence for the next session and for the
 operator, never repository content.
@@ -23,6 +25,10 @@ without a parser:
 ```bash
 jq -c 'select(.ok == false)' .oh/logs/escalations.jsonl   # what never reached a human
 ```
+
+Write here only when the record must survive the session. A session that can
+still act on a finding acts on it; a session that cannot leaves the record and
+says so where a human looks.
 
 Rotation is manual. These files are small and are read by humans after something
 went wrong; truncate them when they stop being useful, and never rewrite a record

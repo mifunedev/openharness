@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
+- **BREAKING:** Move eleven settings out of the compose `environment:` block into oh.json, read through the `oh` CLI; a hand-edited `.devcontainer/.env` no longer carries them ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Make `/spec` ship by default: an unrecognized first token routes to a new `ship` node that runs `plan` then `execute`, so `/spec <plan-path>` produces a ready-for-review PR ([#914](https://github.com/mifunedev/openharness/issues/914)).
 - **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
@@ -17,12 +18,18 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
 
 ### Removed
+- **BREAKING:** Retire the `OH_IMAGE_ONLY` flag; `entrypoint.sh` detects the sandbox flavor from whether `/home/sandbox/harness` is a bind mount holding `.oh/`, and logs the detected mode ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- **BREAKING:** Retire `docker-compose.hermes-dashboard.yml` and its published `127.0.0.1:9119`; the dashboard now binds container loopback, reachable over cloudflared or Tailscale ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- Remove the duplicate agent-browser and Tailscale installers from `entrypoint.sh`; the tool catalog is the sole owner of both pins and Tailscale's two checksums ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Remove the `BAKE_HARNESSES` and `AGENTS` build args along with the image bake they gated; the harness catalog is the only source of truth for what gets installed ([#904](https://github.com/mifunedev/openharness/issues/904)).
 - Remove Cloudflare's apt repository and its bookworm-suite pin from the image; Docker's is now the only third-party apt source ([#906](https://github.com/mifunedev/openharness/issues/906)).
 - Remove the four optional-harness build args and the dead `buildArg` catalog field; the `install.*` keys keep working and now drive boot provisioning ([#908](https://github.com/mifunedev/openharness/issues/908)).
 - **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
 - **BREAKING:** Retire Prime Agent and its `.prime/agent/` provider surface; `oh harness install prime-agent` is no longer available ([#918](https://github.com/mifunedev/openharness/issues/918)).
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
+
+### Changed
+- `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
 
 ### Added
 - Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))

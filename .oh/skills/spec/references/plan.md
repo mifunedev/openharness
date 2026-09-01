@@ -44,6 +44,26 @@ folder for `/spec execute` to consume.
 
 ---
 
+## Architecture-significance check
+
+Before deriving the slug, judge once whether the topic is architecture-significant
+— it materially changes system or module boundaries, the execution or ownership
+model, persistent state, a security or isolation boundary, a public API or
+compatibility contract, a lifecycle, provider portability, shared vocabulary,
+cross-skill control-plane behavior, or introduces or retires a reusable
+abstraction.
+
+- **Not significant** (the common case): continue straight into the pipeline. Most
+  changes are ordinary and need no architecture pass.
+- **Significant**: run `/architect <topic>` inline in this session first, then plan
+  against its accepted recommendation. `/architect` decides what the system should
+  become; `plan` turns that direction into the task folder.
+
+This is a one-line judgment, not a phase. `/architect` is never mandatory, never
+spawns a session, and never owns the build.
+
+---
+
 ## The pipeline
 
 Run these in order; each is an existing primitive — compose, don't re-derive.
@@ -131,7 +151,7 @@ Reuse these block shapes verbatim — `/spec execute`'s gates read them.
 `Base commit` is load-bearing: `/spec execute` diffs it against the execution
 base to decide whether the plan's assumptions still hold. `Grounded against`
 lists the authoritative sources step 3 actually opened — it is the list the
-execution Advisor re-reads, so an unchecked claim left off this list is a claim
+execution owner re-reads, so an unchecked claim left off this list is a claim
 nobody verifies twice.
 
 #### `## Expected Knowledge Impact` — the planner's prediction
@@ -204,7 +224,7 @@ Write `.oh/tasks/<slug>/progress.txt` with the `# progress` header, then append
 one dated plan-phase line recording the base commit, the queries run, and the
 slugs read. A resumed session recovers from that line instead of re-deriving it.
 
-**There is no `prompt.md`.** The Advisor launch prompt is rendered at execution
+**There is no `prompt.md`.** The task prompt is rendered at execution
 time from `.oh/skills/spec/templates/task-prompt.md` plus `prd.md` and
 `prd.json`; persisting a generated copy of a template only lets it drift from the
 template.

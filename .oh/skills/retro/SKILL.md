@@ -56,7 +56,7 @@ With `--task <slug>`, gather signals primarily from that unit's own artifacts:
   grounding changed;
 - `prd.json` — the task graph and which stories passed;
 - `progress.txt` — what actually shipped, in order, with the run's own notes;
-- `evidence.md` — the divergences and the gaps the Advisor recorded;
+- `evidence.md` — the divergences and the gaps the implementation owner recorded;
 - the `implementation ⇄ audit` history — how many FAIL→build cycles, and why.
 
 If `.oh/tasks/<slug>/` has no `prd.md`, there is no build to reflect on: say so

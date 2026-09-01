@@ -1,11 +1,13 @@
 ---
 name: builder
 description: |
-  Author and refine provider-portable agents, reference skills, task-style command
-  skills, and path-scoped rules using one repository-grounded workflow. TRIGGER
-  when: asked to create, build, scaffold, convert, review, or update an agent,
-  skill, command, workflow, rule, coding standard, or contextual instruction.
-argument-hint: "agent|skill|command|rule <name-or-request>"
+  Author and refine reference skills, task-style command skills, and path-scoped
+  rules using one repository-grounded workflow. TRIGGER when: asked to create,
+  build, scaffold, convert, review, or update a skill, command, workflow, rule,
+  coding standard, or contextual instruction. Skills are the canonical primitive
+  for a reusable role, procedure, or body of judgment — there is no project-agent
+  artifact type.
+argument-hint: "skill|command|rule <name-or-request>"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
@@ -25,7 +27,6 @@ Arguments received: `$ARGUMENTS`
 
    | Type | Read and follow |
    |------|-----------------|
-   | `agent` | `references/agent.md` |
    | `skill` | `references/skill.md` |
    | `command` | `references/command.md` |
    | `rule` | `references/rule.md` |
@@ -35,8 +36,12 @@ Arguments received: `$ARGUMENTS`
    modifying files:
 
    ```text
-   Usage: /builder <agent|skill|command|rule> <name-or-request>
+   Usage: /builder <skill|command|rule> <name-or-request>
    ```
+
+   `agent` is not an artifact type. A reusable role, procedure, or specialist
+   judgment is authored as a skill; a bounded isolated worker context is an
+   execution choice made by `/delegate`, not a repository artifact.
 
 4. Read the selected reference completely, then execute its protocol against the
    remainder of `$ARGUMENTS`. The selected reference is authoritative for artifact
@@ -53,8 +58,8 @@ steps.
   through the target directory. More local instructions win; in one directory,
   `AGENTS.md` is canonical.
 - Identify the source-of-truth artifact directory. In Open Harness and equipped
-  projects, edit `.oh/agents/` or `.oh/skills/`; provider directories such as
-  `.claude/`, `.codex/`, and `.pi/` are generated or symlinked exposure surfaces.
+  projects, edit `.oh/skills/`; provider directories such as `.claude/`,
+  `.codex/`, and `.pi/` are generated or symlinked exposure surfaces.
 - Outside an Open Harness layout, follow the target project's documented canonical
   path rather than creating `.oh/` speculatively.
 - Inspect two or three nearby artifacts of the same type. Reuse their naming,
@@ -106,9 +111,10 @@ or create unsafe side effects. Otherwise use the request and repository evidence
   behavior; key design choices; and validation evidence. Never claim a check ran if
   it did not.
 - Append a `PROPOSED` record to `.oh/evals/decisions/skill-impact.md` when a skill
-  or agent edit lands: the next `SI-nnnn` id, the one-sentence proposal, the single
+  edit lands: the next `SI-nnnn` id, the one-sentence proposal, the single
   target artifact, the motivating pattern slugs, and the unified diff scoped to that
   target path. `motivating patterns: none (direct request)` is a legitimate value —
-  record it rather than inventing a pattern to cite. Force-add the ledger
-  (`git add -f`) and report the allocated id. Never edit an existing record.
+  record it rather than inventing a pattern to cite. Stage the ledger
+  (`.oh/evals/decisions/` is tracked, so a plain `git add`) and report the
+  allocated id. Never edit an existing record.
 

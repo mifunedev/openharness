@@ -27,9 +27,7 @@ provider_links=(
   ".pi/skills|../.oh/skills"
   ".claude/skills|../.oh/skills"
   ".codex/skills|../.oh/skills"
-  ".claude/agents|../.oh/agents"
   ".claude/hooks|../.oh/hooks"
-  ".codex/agents|../.claude/agents"
 )
 
 HERMES_LINK=".hermes/skills/openharness"
@@ -147,7 +145,7 @@ check_protected_paths() {
     entry="$(printf '%s' "$entry" | xargs)"
     [ -n "$entry" ] || continue
     case "$entry" in
-      .oh/skills/*|.oh/agents/*|.oh/hooks/*)
+      .oh/skills/*|.oh/hooks/*)
         [ -e "$entry" ] || fail "protected pack path missing: $entry"
         ;;
     esac

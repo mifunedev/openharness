@@ -40,11 +40,19 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
 - **BREAKING:** Retire Prime Agent and its `.prime/agent/` provider surface; `oh harness install prime-agent` is no longer available ([#918](https://github.com/mifunedev/openharness/issues/918)).
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
+- **BREAKING:** Retire `.oh/agents/` with its `.claude/agents` and `.codex/agents` provider symlinks; the `oh` payload manifest no longer ships an `agents/**` pack ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- **BREAKING:** Retire `/builder agent` and its authoring reference; `/builder` now dispatches `skill`, `command`, and `rule` only ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Remove the stale `implementer`/`critic`/`pm`/`council` worker types from `/delegate` and the dangling expert, council, and critic agent paths from `/strategic-proposal` ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Retire `rl-delegation-write-worker.sh`; `delegate-worker-boundary.sh` carries its read-only-worker lesson forward ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Retire the last `Advisor` role noun from `/blog`, which told the reader to "use Advisor" for a role that no longer exists; the briefing is `/delegate`'s ([#929](https://github.com/mifunedev/openharness/issues/929)).
 
 ### Changed
 - `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
 - **BREAKING:** `/spec execute` no longer launches a coding agent; the agent that runs it is the single implementation owner through the final PR gates ([#928](https://github.com/mifunedev/openharness/issues/928)).
 - Task identity and `RUNNING` state depend on `.oh/tasks/<slug>/` alone, never on a terminal session, tab, or pane ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- `/delegate` keeps work in the active session when phases share substantial context and spawns provider-native workers only for self-contained, isolated, or parallel work ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- `/spec plan` judges architecture significance once and routes a significant topic through `/architect` before planning ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- `docs/glossary.md` defines coding agent, skill, worker/subagent, rule, and RFC/ADR as five distinct terms ([#929](https://github.com/mifunedev/openharness/issues/929)).
 
 ### Removed
 - **BREAKING:** Retire the automated `/spec` Advisor handoff — detached tmux launch, `agent-spec-*` sessions and their sweep kill, pane logging, runner fallbacks ([#928](https://github.com/mifunedev/openharness/issues/928)).
@@ -64,6 +72,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add a `--patterns` mode to `/wiki query` that filters on `kind:`, reads up to five pattern entries, and ranks them by term-hit count before recency. ([#916](https://github.com/mifunedev/openharness/pull/916))
 - Add a fault-injection requirement to the probe contract: a probe is not green until its REGRESSION branch has been driven against a broken input. ([#916](https://github.com/mifunedev/openharness/pull/916))
 - Add capability task `CB-005` scoring whether a lesson reaches a validated skill change; two runs score 0.67 then 1.33, moving the suite mean to 1.44 over a changed task set. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add `/architect`, an inline architecture-decision skill that classifies significance, grounds analysis in repository sources, and returns one Architecture Brief ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Add six tier-A probes covering the `/architect` contract, roles-as-skills, the retired builder agent type, the `/delegate` worker boundary, the absent agent catalog, and RFC/ADR reuse ([#929](https://github.com/mifunedev/openharness/issues/929)).
 
 ### Fixed
 - Fix `/wiki lint` generating the corpus index from the working tree instead of the git-tracked set, which made any untracked scratch entry a `wiki-readme-index.sh` regression. ([#916](https://github.com/mifunedev/openharness/pull/916))

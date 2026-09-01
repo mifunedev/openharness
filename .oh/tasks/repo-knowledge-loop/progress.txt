@@ -42,3 +42,12 @@
   development merges (#930, #931, #934) reconciled during the tail; the #930
   collision with #926's pinned execution comment is flagged for the operator on
   the PR as a decision, not silently resolved.
+
+2026-09-01 ac-closeout — Orchestrator verification found #926's final acceptance
+  criterion unmet: evidence.md named the openharness-web follow-up but no issue
+  existed. Filed mifunedev/openharness-web#37 naming the two published pages that
+  carry live drift (docs/harnesses/deepagents.md:154,156,164,180 — the retired
+  Advisor session-ownership model; blog/2026-07-07-open-harness-demo-guide.md:131
+  — .oh/memory as current architecture) and the one hit deliberately excluded
+  (docs/integrations/pi-autoresearch.md:65 cites .auto/prompt.md, Pi's own file).
+  Linked from evidence.md section 5 and the PR body. Criterion now met.

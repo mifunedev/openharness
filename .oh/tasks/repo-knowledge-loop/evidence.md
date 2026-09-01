@@ -447,10 +447,28 @@ Both planning probes were rewritten to assert the block by exact line
   migration landed in two PRs leaves a window with two writable knowledge
   locations, which is the acceptance criterion's explicit failure case. Flagged,
   not fixed, so the reviewer decides with the reason in front of them.
-- **Public-documentation mirror to `mifunedev/openharness-web`** is not done here.
-  Repository docs (`docs/oh-directory-layout.md`, `docs/glossary.md`, the RFCs,
-  `.oh/README.md`) are updated in this change; the external site mirror is the
-  separate follow-up the issue's last acceptance criterion asks for.
+- **Public-documentation mirror to `mifunedev/openharness-web`** — the repo half is
+  done here (`docs/oh-directory-layout.md`, `docs/glossary.md`, the RFCs,
+  `.oh/README.md`, `.oh/tasks/README.md`); the site half is filed as
+  **[mifunedev/openharness-web#37](https://github.com/mifunedev/openharness-web/issues/37)**,
+  which is what the issue's last acceptance criterion asks for. The criterion is
+  therefore **met**, not deferred: it requires a separate follow-up issue, not a
+  site change in this PR.
+
+  Two published pages carry live drift, both found by grepping the site rather
+  than assumed:
+  - `docs/harnesses/deepagents.md:154,156,164,180` — describes `/spec execute` as
+    owning implementation "in one Advisor session" and "the Advisor-owned task
+    session". Both the role name and the session-ownership model are retired.
+  - `blog/2026-07-07-open-harness-demo-guide.md:131` — lists `.oh/memory/` as
+    "session logs and durable lessons", i.e. as current architecture.
+
+  Checked and deliberately **excluded**: `docs/integrations/pi-autoresearch.md:65`
+  cites `.auto/prompt.md`, which is Pi autoresearch's own file and unrelated to the
+  retired `.oh/tasks/<slug>/prompt.md`. The four repo docs this PR changes are not
+  published on the site, so they carry no mirror obligation. The site has no page
+  describing the knowledge surface at all, which is a coverage gap rather than a
+  contradiction and is recorded in #37 as optional.
 
 ---
 

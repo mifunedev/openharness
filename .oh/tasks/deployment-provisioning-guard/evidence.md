@@ -297,7 +297,36 @@ that basis. Running them for real changed the outcome:
 |---|---|---|
 | `/audit pr 938` | `audit-20260901T042757Z-2363846` | **PR-AUDIT-PROMOTABLE** — `promotable: true`, `evidenceComplete: true`; confirmed the hand classification |
 | `/audit implementation` (1st) | `audit-20260901T042753Z-2363518` | **AUDIT-FAIL (gate 2)** — the PR was returned to draft |
+| `/audit implementation` (2nd, clean root) | `audit-20260901T043443Z-2414777` | **AUDIT-PASS** — gate 1 9/9 · gate 2 rc=0, 139 probes, zero REGRESSION · gate 3 `promotable: true` · gate 4 n/a · gate 5 no blocking finding (`netAdded 1742`, rounds=0) |
 | `/spec retro` | — | RETRO-DONE, 8 hypotheses, 1 promotion (`pattern-shared-runner-owns-teardown`) |
+| `/benchmark` | — | **NOT-BENEFICIAL** — see below |
+
+### `/benchmark` — NOT-BENEFICIAL, and it is right
+
+- **Signal 1 (regression floor): CLEAR.** `eval-result.json` records `a6b8d18c`
+  while HEAD is `a01b744b`, so the record was correctly not inherited; the suite
+  was re-run at HEAD in a clean root — 139 probes, exit 0, zero REGRESSION rows.
+- **Signal 2 (capability ceiling): FLAT.** `suite score = 1.44` on this branch and
+  `1.44` on `development`. No capability task credits this change: CB-001 scores
+  unattended autopilot, CB-002 the `/spec` pipeline to a ready PR, CB-005 the
+  retro→pattern→probe loop. None covers deployment readiness.
+
+Per the rubric, *"score flat AND the change only added machinery with no capability
+task crediting it"* → **NOT-BENEFICIAL — machinery without benchmark movement.**
+
+This is reported as the gate found it, not softened. The honest reading is that it
+is a **gap in the instrument, not a claim that the change is worthless**: the
+benchmark has no task that exercises "can the harness tell whether its own
+published artifact works", so the axis this change moves is unmeasured — which is
+precisely the `CB-004` failure mode the scoreboard already records, where machinery
+stood for two months at `Δ +0.00` because no measurement was ever taken. Adding
+such a task is the named follow-on; asserting a hold without one would be exactly
+the Goodharting the gate exists to prevent.
+
+`/benchmark` is read-only and names the remediation rather than performing it:
+`git revert a01b744b..084dfaa0` is the revert command for this change, and the
+call is the operator's. Note also that `/audit eval-quality` grooming was **not**
+run this cycle, so the instrument's own sharpness was not checked.
 
 The `AUDIT-FAIL` was correct and caught two things the hand check did not:
 

@@ -3,7 +3,7 @@
 # source: issue #937 — gate the published sandbox image on a live provisioning guard
 # desc: guards the deployment-guard INSTRUMENT's wiring and host-safety invariants,
 #   never the deployment itself — the live boot takes minutes and cannot run under the
-#   30s probe cap. Asserts that /deploy-check and the post-release workflow both invoke
+#   30s probe cap. Asserts that /deploy-check invokes
 #   .oh/scripts/deployment-guard.sh; that the guard still runs verify-sandbox-image.sh
 #   and sandbox-boot-smoke.sh with BOOT_SMOKE_FLAVOR=image-only; that the guard traps
 #   EXIT INT TERM and contains no prune verb or bulk force-remove; that the image-only
@@ -21,7 +21,6 @@ set -euo pipefail
 
 ROOT="${DEPLOY_GUARD_PROBE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
 
-WORKFLOW="$ROOT/.github/workflows/deployment-guard.yml"
 GUARD="$ROOT/.oh/scripts/deployment-guard.sh"
 DRIVER="$ROOT/.oh/scripts/deployment-compose.sh"
 SMOKE="$ROOT/.oh/scripts/sandbox-boot-smoke.sh"
@@ -41,7 +40,6 @@ read_or_miss() {
   cat "$path"
 }
 
-workflow="$(read_or_miss "$WORKFLOW" "the deployment guard workflow")"
 guard="$(read_or_miss "$GUARD" "the deployment guard script")"
 driver="$(read_or_miss "$DRIVER" "the image-only compose driver")"
 smoke="$(read_or_miss "$SMOKE" "the sandbox boot smoke")"
@@ -61,19 +59,14 @@ has_line() { grep -qxF -- "$2" <<<"$1" || missing+=("$3"); }
 has_re() { grep -Eq -- "$2" <<<"$1" || missing+=("$3"); }
 hasnt_re() { ! grep -Eq -- "$2" <<<"$(code_only "$1")" || missing+=("$3"); }
 
-# ── The two consumers both go through the one script ────────────────────────
-has "$workflow" 'bash .oh/scripts/deployment-guard.sh' \
-  "the workflow no longer invokes .oh/scripts/deployment-guard.sh"
+# ── The door goes through the one script ────────────────────────────────────
 has "$skill" 'bash .oh/scripts/deployment-guard.sh' \
-  "the /deploy-check skill no longer invokes .oh/scripts/deployment-guard.sh — the local door must not fork the mechanism"
+  "the /deploy-check skill no longer invokes .oh/scripts/deployment-guard.sh — the door must not fork the mechanism"
 
-# ── Triggers: post-release, plus a manual dispatch ──────────────────────────
-has "$workflow" 'workflows: ["Release"]' \
-  "the workflow no longer triggers on the Release workflow's completion"
-has_re "$workflow" '^[[:space:]]*workflow_dispatch:' \
-  "the workflow has no manual dispatch trigger"
-hasnt_re "$workflow" 'docker[[:space:]]+push|docker/login-action|packages:[[:space:]]*write' \
-  "the workflow pushes, logs in, or requests packages: write — it only reads a published image"
+# ── This instrument has no CI leg, deliberately ─────────────────────────────
+if [[ -e "$ROOT/.github/workflows/deployment-guard.yml" ]]; then
+  missing+=("a deployment-guard CI workflow is back — this instrument is the parent-sandbox QA door, run on demand against a child sandbox, and a CI leg was removed as machinery ahead of its use")
+fi
 
 # ── The guard still composes the pieces it is supposed to reuse ─────────────
 has "$guard" 'verify-sandbox-image.sh' \
@@ -110,5 +103,5 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS deployment guard instrument: /deploy-check and the post-release workflow both drive .oh/scripts/deployment-guard.sh, which reuses the image verifier and the image-only boot smoke, traps EXIT INT TERM, prunes nothing, and leaves the bind-flavor ownership check intact" >&2
+echo "PASS deployment guard instrument: /deploy-check drives .oh/scripts/deployment-guard.sh, which reuses the image verifier and the image-only boot smoke, traps EXIT INT TERM, prunes nothing, and leaves the bind-flavor ownership check intact; no CI leg has reappeared" >&2
 exit 0

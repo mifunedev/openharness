@@ -300,6 +300,33 @@ that basis. Running them for real changed the outcome:
 | `/audit implementation` (2nd, clean root) | `audit-20260901T043443Z-2414777` | **AUDIT-PASS** — gate 1 9/9 · gate 2 rc=0, 139 probes, zero REGRESSION · gate 3 `promotable: true` · gate 4 n/a · gate 5 no blocking finding (`netAdded 1742`, rounds=0) |
 | `/spec retro` | — | RETRO-DONE, 8 hypotheses, 1 promotion (`pattern-shared-runner-owns-teardown`) |
 | `/benchmark` | — | **NOT-BENEFICIAL** — see below |
+| `/audit implementation` (3rd, after the CI removal and the repair) | `audit-20260901T185327Z-1047052` | **AUDIT-FAIL (gate 5)** — 3 blocking simplifications, ~117 removable lines |
+
+### Gate 5 round 1 — the simplify loop
+
+The audit was right and all three findings were applied without argument.
+
+- **F1 — 98 explanatory comment lines against `AGENTS.md` non-negotiable #5.** The
+  three new scripts ran a 21% comment ratio where `docker-compose.sh` has 0 in 180
+  lines. Removed, plus the same violation in the three files this branch modified,
+  which the finding did not name but the constraint covers. What survives is the
+  probe's machine-read `# tier:`/`# source:`/`# desc:` header (read by
+  `eval/run.sh:50,108`) and a usage/env line per script. No invariant was lost with
+  them: each is stated in an `ok:`/`fail:` message, and the rationale lives in the
+  commit messages, this document, and the skill.
+- **F2 — the three-scope Docker enumeration appeared four times.** Replaced by
+  `docker_names()` over a `container|volume|network` case plus
+  `names_matching_run()` driven by one `SCOPES` list, so the collision check and
+  the leak check are now provably the same query rather than two hand-kept copies.
+- **F3 — three one-line `printf` functions called 9 times in a subshell.** Now
+  three plain variables.
+
+`netAdded` **1830 → 1711**, a strict reduction, so the monotone stop rule does not
+end the loop; `deployment-guard.sh` went 363 → 307 lines with comments 56 → 4.
+Re-verified after the rewrite: **16/16 fault injections caught** with a green
+baseline (the workflow injections replaced by one asserting a CI leg cannot
+reappear), shellcheck clean, both healthcheck marker branches exercised, and
+`/eval` 139 probes with no new green→red.
 
 ### `/benchmark` — NOT-BENEFICIAL, and it is right
 

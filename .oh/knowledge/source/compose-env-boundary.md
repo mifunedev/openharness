@@ -14,7 +14,7 @@ sources:
   - .oh/cli/src/lib/config-render.ts
   - .oh/scripts/provision-defaults.sh
   - .oh/evals/probes/compose-env-boundary.sh
-verified_at: 1c5f37230822ec2bbc5ed316be92ad295722b693
+verified_at: 084dfaa0
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: confirmed
 ---

@@ -286,3 +286,35 @@ honest (cover `INT`/`TERM`, and assert the leak).
 - **Eval floor:** see `.oh/tasks/deployment-provisioning-guard/eval-result.json`
   for the suite result keyed to the commit it ran against, including any
   pre-existing red carried forward.
+
+## 5. The gates, and what running them properly caught
+
+The first pass through this build performed `/audit implementation`, `/audit pr`,
+`/retro`, and `/benchmark` by hand rather than invoking them, and reported READY on
+that basis. Running them for real changed the outcome:
+
+| Gate | Run id | Verdict |
+|---|---|---|
+| `/audit pr 938` | `audit-20260901T042757Z-2363846` | **PR-AUDIT-PROMOTABLE** — `promotable: true`, `evidenceComplete: true`; confirmed the hand classification |
+| `/audit implementation` (1st) | `audit-20260901T042753Z-2363518` | **AUDIT-FAIL (gate 2)** — the PR was returned to draft |
+| `/spec retro` | — | RETRO-DONE, 8 hypotheses, 1 promotion (`pattern-shared-runner-owns-teardown`) |
+
+The `AUDIT-FAIL` was correct and caught two things the hand check did not:
+
+1. **`eval-result.json` was stale** — it records `084dfaa0` while HEAD was
+   `8d5fce99`, so gate 2 could not inherit it and ran the 139-probe suite itself.
+   This is `[[pattern-spec-self-staling-reuse-record]]` behaving exactly as that
+   page describes: the record is valid only for readers running before it is
+   committed, and a reader that finds it stale is behaving normally.
+2. **A real defect in this branch.** `compose-env-boundary.md`'s `verified_at`
+   bump to `084dfaa0` was edited into the working tree but **never staged**, so
+   commit `084dfaa0` carried the old `1c5f3723` while this document already
+   claimed the bump had landed. The evidence doc was wrong about the diff. Fixed
+   in the follow-up commit. Nothing in the hand-run gates would have caught it —
+   only re-deriving the state from the committed tree did.
+
+Gate 2's remaining finding is the `compose-config-path-parity` red, which the
+audit independently attributed to the authoring checkout's untracked machine-local
+root dotenv rather than to the branch — the same conclusion reached by the worktree
+test above, reached independently. It still failed closed, which is the correct
+behavior for a dirty audit root.

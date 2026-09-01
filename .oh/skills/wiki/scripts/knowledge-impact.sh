@@ -16,11 +16,10 @@ set -euo pipefail
 
 usage() {
   cat >&2 <<'EOF'
-usage: knowledge-impact.sh [--verified] [--since <ref>] [--changed <path>...]
+usage: knowledge-impact.sh [--verified] [--changed <path>...]
                            [--root <dir>] [--format tsv|slugs]
 
   --verified          (default) per page, diff its own verified_at against HEAD
-  --since <ref>       diff <ref>..HEAD once and apply it to every page
   --changed <path>... use this explicit changed-path set (the actual diff).
                       MUST BE LAST — it consumes every remaining argument, so
                       put --root/--format before it.
@@ -35,7 +34,6 @@ EOF
 }
 
 MODE=verified
-SINCE=""
 ROOT=""
 FORMAT=tsv
 CHANGED=()
@@ -43,7 +41,6 @@ CHANGED=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verified) MODE=verified; shift ;;
-    --since) MODE=since; SINCE="${2:-}"; [ -n "$SINCE" ] || usage; shift 2 ;;
     --changed) MODE=changed; shift; CHANGED=("$@"); break ;;
     --root) ROOT="${2:-}"; [ -n "$ROOT" ] || usage; shift 2 ;;
     --format) FORMAT="${2:-}"; shift 2 ;;
@@ -91,10 +88,6 @@ dep_matches() {
   esac
   return 1
 }
-
-if [ "$MODE" = since ]; then
-  mapfile -t CHANGED < <(git -C "$ROOT" diff --name-only "$SINCE" HEAD)
-fi
 
 emit() {
   if [ "$FORMAT" = slugs ]; then

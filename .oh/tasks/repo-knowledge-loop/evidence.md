@@ -246,6 +246,13 @@ oracle was **not** widened to exempt `evidence.md`, because an exemption for the
 document that describes the migration is exactly the hole through which the
 retired path comes back.
 
+**The simplify gate deleted a mode nobody called.** `/audit implementation`
+gate 5 found `knowledge-impact.sh --since <ref>` with zero call sites, contradicting
+the script's own stated contract of two consumers. The Advisor deleted the branch
+rather than arguing for it (round 1 of 3): 179 → 172 lines, and `--since` is now
+rejected with the usage line. `--verified` and `--changed` are unchanged and still
+exercised by `knowledge-source-freshness.sh` and `spec-execute-knowledge-impact.sh`.
+
 **Fault injection changed the work, which is the point.** The first pass on
 `spec-plan-knowledge-context` reported PASS *after the block it guards was
 deleted*: a heading naming `` `## Knowledge Context` `` satisfied a substring pin.

@@ -198,18 +198,14 @@ background-shell launch, and no runner selection. There is **no fallback runner 
 is no handoff step**. The agent that reached this line implements the task itself and carries
 it through every gate below.
 
-**Build worktree — reuse vs. create.** Isolation stays. When `$CRON_WORKTREE` is set (a
-`worktree: true` cron's default), this run is ALREADY inside an isolated worktree that step 2
-put on the feature branch, so **reuse it** — do NOT create a second worktree (a second
-`git worktree add` for the same branch would nest under the cron worktree via the relative
-path, or fail with `branch already checked out`). Standalone (no `$CRON_WORKTREE`), create
+**Build worktree — reuse vs. create.** Isolation stays. When this run is ALREADY inside an
+isolated worktree that step 2 put on the feature branch, **reuse it** — do NOT create a second
+worktree (a second `git worktree add` for the same branch would nest under the current worktree
+via the relative path, or fail with `branch already checked out`). Otherwise create
 `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and work there:
 
 ```bash
-WT="${CRON_WORKTREE:-}"                       # set by the cron runtime in worktree mode
-if [ -n "$WT" ]; then
-  cd "$WT"                                    # already on <prefix>/<N>-<slug>
-else
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "<prefix>/<N>-<slug>" ]; then
   git worktree add ".worktrees/<prefix>/<N>-<slug>" "<prefix>/<N>-<slug>"
   cd ".worktrees/<prefix>/<N>-<slug>"
 fi

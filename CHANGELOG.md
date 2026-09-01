@@ -18,6 +18,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
 
 ### Removed
+- **BREAKING:** Retire cron worktree isolation — the `worktree:` frontmatter key, `.worktrees/cron/` per-fire worktrees, the `CRON_WORKTREE` export, and every `*_WORKTREE*` log state are gone; crons fire in the shared root under the id lock.
 - **BREAKING:** Retire the `OH_IMAGE_ONLY` flag; `entrypoint.sh` detects the sandbox flavor from whether `/home/sandbox/harness` is a bind mount holding `.oh/`, and logs the detected mode ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - **BREAKING:** Retire `docker-compose.hermes-dashboard.yml` and its published `127.0.0.1:9119`; the dashboard now binds container loopback, reachable over cloudflared or Tailscale ([#920](https://github.com/mifunedev/openharness/issues/920)).
 - Remove the duplicate agent-browser and Tailscale installers from `entrypoint.sh`; the tool catalog is the sole owner of both pins and Tailscale's two checksums ([#920](https://github.com/mifunedev/openharness/issues/920)).

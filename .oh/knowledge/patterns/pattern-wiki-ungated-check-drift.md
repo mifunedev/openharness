@@ -4,9 +4,11 @@ slug: pattern-wiki-ungated-check-drift
 kind: pattern
 tags: [wiki, lint, evals, probes, report-only, drift, gating]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 sources:
-  - .oh/knowledge/source/recursive-language-models.md@8fab04ab
+  - .oh/knowledge/source/recursive-language-models.md@786920fd
+  - .oh/skills/wiki/references/lint.md@786920fd
+  - .oh/tasks/repo-knowledge-loop/progress.txt@786920fd
   - .oh/skills/wiki/references/lint.md@8fab04ab
   - .oh/evals/probes/wiki-readme-index.sh@8fab04ab
 confidence: provisional
@@ -53,6 +55,16 @@ becomes documentation of the same rule rather than its only enforcement. Do not
 answer this pattern by re-adding the check to a per-cycle tail — that restores the
 cost the removal was right to avoid, and still depends on someone reading advisory
 output.
+
+Corroborated at scale by issue #926, which applied the workaround to the whole
+check list rather than to one finding. `/wiki lint` was reduced to six checks and
+each was given a named oracle in a table the reference now carries
+(`.oh/skills/wiki/references/lint.md:23-33`), so no surviving check depends on
+being run. The same pass retired the two checks that had no oracle and no
+consequence — orphan detection and the 90-day age rule
+(`.oh/skills/wiki/references/lint.md:40-52`) — which is the other half of the
+lesson: a report-only check that nobody gates on and that nothing can enforce is
+not underused, it is not a check.
 
 ## See Also
 - [[wikiskill-experience-compilation]]

@@ -4,13 +4,13 @@ slug: document-ingestion
 kind: repo
 tags: [wiki, ingestion, markitdown, documents, provenance, security]
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-09-01
 sources:
   - raw/2026-07-18-markitdown.md
   - .oh/skills/wiki/references/ingest.md
   - .oh/evals/probes/markitdown-wiki-ingest.sh
   - .oh/tasks/markitdown-wiki-pilot/smoke-evidence.md@0fd2efcb
-verified_at: 0fd2efcbdb3db70c294b998fa9110676cafed691
+verified_at: 786920fd10cc8317e0328047b2ca12599c7f3d7b
 related: [sandbox-dependency-installs]
 confidence: provisional
 ---

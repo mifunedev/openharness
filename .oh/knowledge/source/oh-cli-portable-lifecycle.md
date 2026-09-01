@@ -4,7 +4,7 @@ slug: oh-cli-portable-lifecycle
 kind: repo
 tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
 created: 2026-07-03
-updated: 2026-08-27
+updated: 2026-09-01
 sources:
   - .oh/cli/src/cli.ts
   - .oh/cli/src/commands/init.ts
@@ -22,7 +22,7 @@ sources:
   - .oh/README.md
   - docs/oh-directory-layout.md
   - docs/rfcs/rfc-brain-hands-boundary.md
-verified_at: af16fc85be4468a5681ba87b0d27b371cbd54db2
+verified_at: 786920fd10cc8317e0328047b2ca12599c7f3d7b
 related: [fresh-machine-setup]
 confidence: provisional
 ---
@@ -48,7 +48,7 @@ Issue #738 historically added `docs/**` to the `.oh/manifest.json` include list.
 ## Detail
 **Payload sourcing (`oh init`)** — precedence `--from <dir>` > `--from-remote` > the CLI's own bundled payload (`cli.ts:139-141`; the two flags conflict, `cli.ts:305-308`). With no source flag and no bundled payload — the installed-binary case, detected via the `manifest.json` marker (`cli.ts:464-469`) — `resolveInitSource` auto-falls back to a remote fetch with a one-line notice naming URL and ref (`cli.ts:498-534`). `--from` sets only the payload source; `--from-remote` sets BOTH payload and templates from the fetched checkout (`cli.ts:478-484`). `oh update` never falls back: it requires `--from` or `--from-remote` (`cli.ts:383-388`) and upgrades only `.oh/` (`cli.ts:110-111`).
 
-**Manifest delivery** — `.oh/manifest.json` defines POSIX globs relative to `.oh/` (`manifest.ts:4-8`). `shouldShip()` requires an include match and rejects an exclude match (`manifest.ts:59-70`). The current source manifest omits both `docs/**` and `patches/**` (`.oh/manifest.json:1-23`).
+**Manifest delivery** — `.oh/manifest.json` defines POSIX globs relative to `.oh/` (`manifest.ts:4-8`). `shouldShip()` requires an include match and rejects an exclude match (`manifest.ts:59-70`). The current source manifest omits both `docs/**` and `patches/**`, and since issue #926 ships `knowledge/**` — the durable repository-knowledge surface — alongside `skills/**` (`.oh/manifest.json:1-24`). Knowledge used to reach a consumer only because it sat inside `skills/**`; moving it out without the explicit include would have silently stopped shipping it.
 
 `copyOhPayload()` walks only the source `.oh/` tree and writes only below the target `.oh/` (`vendor.ts:76-85`, `vendor.ts:17-21,119-120`). Root `docs/` is therefore outside both the source walk and the destination guard. The init/update integration tests prove that an existing target `docs/` file remains unchanged (`init.test.ts`, `manifest.test.ts`). This entry cites the RFC and does not restate its decisions.
 

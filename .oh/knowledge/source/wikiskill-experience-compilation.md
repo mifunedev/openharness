@@ -4,7 +4,7 @@ slug: wikiskill-experience-compilation
 kind: external
 tags: [skill-evolution, persistent-knowledge, continual-learning, harness-evolution, self-improvement, wiki, ablation, skill-transfer]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 sources:
   - raw/2026-08-31-wikiskill-experience-compilation.md
 related: [recursive-self-improvement-survey, molt-agentic-reinforcement-learning, audit-architecture]
@@ -61,10 +61,14 @@ when a skill encodes model-specific low-level workarounds.
 injected wholesale); strict gating rejects neutral proposals the authors admit
 could pay off later; there is no wiki pruning; long-horizon tasks are uncovered.
 
-**Local reading.** The harness already has raw snapshots, a generated index, a
-proposer, and a two-signal validation metric. It lacks the pattern layer, the
-impact ledger, and any wiki read on the proposer path — the three parts the
-ablation credits.
+**Local reading.** All three parts the ablation credits now exist. Issue #916
+added the pattern layer and the impact ledger; issue #926 added the read on the
+proposer path — `/spec plan` queries tracked knowledge and then `--patterns`
+before the PRD is written, and `/spec execute` deliberately does not, which is the
+asymmetry the ablation measured. The layers map onto
+`.oh/knowledge/{raw,source,patterns}` with the ledger moved out to
+`.oh/evals/decisions/skill-impact.md`, because a record of accepted and rejected
+proposals is a decision history rather than synthesis about a topic.
 
 ## System Relationships
 ```mermaid

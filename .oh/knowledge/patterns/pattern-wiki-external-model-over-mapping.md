@@ -4,9 +4,11 @@ slug: pattern-wiki-external-model-over-mapping
 kind: pattern
 tags: [wiki, ingest, architecture, external-sources, scope-creep, design-review]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 sources:
-  - .oh/knowledge/source/wikiskill-experience-compilation.md@933f6741
+  - .oh/knowledge/source/wikiskill-experience-compilation.md@786920fd
+  - .oh/skills/wiki/references/schema.md@786920fd
+  - .oh/tasks/repo-knowledge-loop/progress.txt@786920fd
   - .oh/skills/wiki/references/compile.md@c841e567
   - .oh/skills/wiki/references/schema.md@c841e567
 confidence: provisional
@@ -48,11 +50,21 @@ artifact carried the mapping's exclusion.
 *not* transfer and write the refusal into the local contract in the local
 vocabulary, at the same time as the structures that do. The mapping is complete only
 when its exclusions are written down. Both
-`.oh/skills/wiki/references/compile.md:113-116` and
-`.oh/skills/wiki/references/schema.md:167-171` now state the prohibition explicitly,
+`.oh/skills/wiki/references/compile.md:130-134` and
+`.oh/skills/wiki/references/schema.md:220-224` now state the prohibition explicitly,
 each naming the removed tier and the report-only contract, so the next reader
 deriving a design from the same paper meets the exclusion inside the local
 documents rather than having to remember it.
+
+Applied again in issue #926, where the same paper's layer model drove a knowledge
+surface. Two exclusions were written down at the same time as the structures that
+transferred: a repository-derived page never snapshots this repository's own
+source into `raw/`, which the external model would have implied
+(`.oh/skills/wiki/references/schema.md:157-160`), and a bare upstream URL is
+recorded as a legacy provenance form rather than an option, so the weaker shape
+cannot spread (`.oh/skills/wiki/references/schema.md:311-316`). The mapping is
+complete only when its exclusions are written down — this run treated that as the
+exit condition rather than as review feedback.
 
 ## See Also
 - [[wikiskill-experience-compilation]]

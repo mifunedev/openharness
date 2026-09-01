@@ -188,10 +188,15 @@ basename in that commit's tree:
 ```bash
 if ! git cat-file -e "${sha}:${path}" 2>/dev/null; then
   tree="$(git ls-tree -r --name-only "$sha" 2>/dev/null || true)"
-  grep -qE "(^|/)$(basename "$path")\$" <<<"$tree" \
-    || echo "  - $slug: pinned source $path@$sha does not resolve"
+  hits=$(grep -cE "(^|/)$(basename "$path")\$" <<<"$tree")
+  [ "$hits" = 1 ] || echo "  - $slug: pinned source $path@$sha does not resolve ($hits basename hits)"
 fi
 ```
+
+A basename matching **more than one** path at that revision proves nothing about
+which file the pin meant, so an ambiguous fallback is a finding, not a hit. A pin
+whose path predates a rename and whose basename is ambiguous is repaired by
+re-pinning to a revision where the cited path is real.
 
 Capture the tree before matching. A `git ls-tree | grep -q` pipeline SIGPIPEs
 `git` the moment `grep` finds its match, and under `pipefail` that turns a

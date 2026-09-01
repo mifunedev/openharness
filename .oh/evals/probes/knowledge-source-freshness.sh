@@ -50,9 +50,11 @@ resolve_sources() {
           # `git ... | grep -q` would SIGPIPE git and trip pipefail on a MATCH,
           # so capture the tree first and match against the captured text.
           tree="$(git -C "$ROOT" ls-tree -r --name-only "$sha" 2>/dev/null || true)"
-          grep -qxF "$path" <<<"$tree" \
-            || grep -qE "(^|/)$(basename "$path" | sed 's/[].[^$*\\]/\\&/g')\$" <<<"$tree" \
-            || failures+=("$rel: pinned source does not resolve at $sha: $dep")
+          # A basename that matches more than one path proves nothing about WHICH
+          # file the pin meant, so an ambiguous fallback is a failure, not a hit.
+          hits="$(grep -cE "(^|/)$(basename "$path" | sed 's/[].[^$*\\]/\\&/g')\$" <<<"$tree" || true)"
+          [[ "$hits" == "1" ]] \
+            || failures+=("$rel: pinned source does not resolve at $sha (basename hits: $hits): $dep")
         fi
         ;;
       *)

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # tier: A
-# source: agent-browser's exclusion from the harness catalog (#821) and the
-#         three-catalog split introduced with `oh tool`
-# desc: the harness/runtime/tool catalogs stay disjoint; agent-browser's ground truth stays
-#       .devcontainer/entrypoint.sh and NOT the Dockerfile; the ~1 GB download stays gated
-#       and fails closed without --yes.
+# source: agent-browser's exclusion from the harness catalog (#821), the three-catalog
+#         split introduced with `oh tool`, and #920 — the CLI is the only install
+#         surface, so a second installer on the boot path is a second unverified
+#         description of the same pin.
+# desc: the harness/runtime/tool catalogs stay disjoint; agent-browser's ground truth is
+#       tools/catalog.ts alone — no guard and no pin in .devcontainer/entrypoint.sh, the
+#       Dockerfile, or compose; the ~1 GB download stays gated and fails closed without
+#       --yes.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -29,24 +32,25 @@ strip_comments() {
   perl -0pe 's{/\*.*?\*/}{}gs; s{(^|[^:])//[^\n]*}{$1}gm' "$1"
 }
 
-if ! grep -qF 'INSTALL_AGENT_BROWSER' "$ENTRY"; then
-  missing+=("entrypoint.sh: no INSTALL_AGENT_BROWSER guard — the tool catalog's ground truth moved")
+if grep -qF 'INSTALL_AGENT_BROWSER' "$ENTRY"; then
+  missing+=("entrypoint.sh: INSTALL_AGENT_BROWSER guard returned — the install belongs to the tool catalog, reached through provision-defaults.sh from oh.json")
 fi
 if grep -qF 'INSTALL_AGENT_BROWSER' "$DOCKERFILE"; then
-  missing+=("Dockerfile: INSTALL_AGENT_BROWSER appeared — agent-browser now has a build arg, so buildArg is the right field, not entrypointGuard")
+  missing+=("Dockerfile: INSTALL_AGENT_BROWSER appeared — an image-layer install is discarded on every container recreate")
 fi
-if ! grep -qF 'entrypointGuard' "$TOOLS"; then
-  missing+=("tools/catalog.ts: no entrypointGuard field — the entrypoint install shape is unrecorded")
+if grep -qF 'entrypointGuard' "$TOOLS"; then
+  missing+=("tools/catalog.ts: entrypointGuard returned — it records a second installer that must not exist")
 fi
 if grep -qE '\bbuildArg\b' <<<"$(strip_comments "$TOOLS")"; then
   missing+=("tools/catalog.ts: uses buildArg — that field carries a Dockerfile invariant this catalog cannot satisfy")
 fi
 
-pin=$(grep -oE 'agent-browser@[0-9]+\.[0-9]+\.[0-9]+' "$ENTRY" | head -1 || true)
+pin=$(grep -oE 'agent-browser@[0-9]+\.[0-9]+\.[0-9]+' "$TOOLS" | head -1 || true)
 if [[ -z $pin ]]; then
-  missing+=("entrypoint.sh: no pinned agent-browser version found")
-elif ! grep -qF "$pin" "$TOOLS"; then
-  missing+=("tools/catalog.ts: version pin disagrees with entrypoint.sh ($pin)")
+  missing+=("tools/catalog.ts: no pinned agent-browser version found — the catalog is the only place that may hold it")
+fi
+if grep -qE 'agent-browser@[0-9]+\.[0-9]+\.[0-9]+' "$ENTRY"; then
+  missing+=("entrypoint.sh: pins an agent-browser version — a second copy of the pin drifts from tools/catalog.ts")
 fi
 
 if grep -qE 'harnessKey: *"agent_browser"' "$HARNESSES"; then

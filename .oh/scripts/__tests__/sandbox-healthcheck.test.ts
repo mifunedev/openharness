@@ -87,17 +87,20 @@ describe("sandbox healthcheck", () => {
     expect(result.stderr).toContain("legacy tmux session present: system-cron");
   });
 
-  it("checks optional Hermes dashboard only when enabled and installed", () => {
+  it("checks optional Hermes dashboard only when enabled in oh.json and installed", () => {
     const { bin, harness, tmux } = fixture();
     const hermes = join(bin, "hermes");
     writeFileSync(hermes, "#!/usr/bin/env bash\nexit 0\n");
     chmodSync(hermes, 0o755);
+    writeFileSync(
+      join(harness, "oh.json"),
+      `${JSON.stringify({ version: 1, name: "demo", hermesDashboard: { enabled: true } })}\n`,
+    );
 
     const result = runHealthcheck({
       HARNESS: harness,
       TMUX_BIN: tmux,
       HERMES_BIN: hermes,
-      HERMES_DASHBOARD: "true",
       HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog,cron-system",
     });
 
@@ -135,8 +138,14 @@ describe("sandbox healthcheck", () => {
     const compose = readFileSync(COMPOSE, "utf8");
 
     expect(compose).toContain("healthcheck:");
-    expect(compose).toContain("${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh");
-    expect(compose).toContain("start_period: 300s");
+    expect(compose).toContain("/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh");
+    // Boot installs the default harnesses into the home mount (#904), bounded
+    // by OH_PROVISION_DEFAULTS_TIMEOUT (240s). The start period has to cover
+    // that plus the rest of boot, so assert the floor rather than a literal
+    // that a reduction could slip past.
+    const startPeriod = /start_period: (\d+)s/.exec(compose);
+    expect(startPeriod, "compose declares no healthcheck start_period").not.toBeNull();
+    expect(Number(startPeriod![1])).toBeGreaterThanOrEqual(600);
   });
 
   it("delegates tmux checks to the sandbox user when Docker invokes as root", () => {

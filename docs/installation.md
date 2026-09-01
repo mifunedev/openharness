@@ -276,11 +276,34 @@ Project-local Pi packages are loaded from `.pi/settings.json`; the defaults incl
 
 Debian Trixie (slim), the current Debian stable. The `sandbox` user has passwordless sudo.
 
-Docker's apt repository tracks the `trixie` suite. Cloudflare's stays on `bookworm`: Cloudflare publishes no Trixie suite (`pkg.cloudflare.com/cloudflared/dists/trixie` returns HTTP 404) and its Bookworm `cloudflared` package runs on Trixie.
+Docker's apt repository tracks the `trixie` suite, and it is now the only third-party apt source in the image. cloudflared used to force a `bookworm` suite here because Cloudflare publishes no Trixie suite (`pkg.cloudflare.com/cloudflared/dists/trixie` returns HTTP 404); moving it to a pinned, checksum-verified binary in the tool catalog removed that exception.
 
 ### AI agent CLIs
 
-Default CLIs are always present. Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
+Default CLIs are not baked into the image. The entrypoint runs
+`.oh/scripts/provision-defaults.sh` on every boot, which installs any missing
+default **harness** (Claude Code, Codex, Pi) and default **tool** (Herdr,
+cloudflared) into `~/.local` — inside the home mount — as the `sandbox` user.
+That is what makes `oh harness install <id>` and `oh tool install <id>` able to
+upgrade one in place: a copy in a root-owned system path is unwritable from a
+running sandbox. Consequences worth knowing:
+
+- A **first boot on a fresh home mount needs network**. Measured at 21s on a
+  GitHub Actions runner; budget 60–180s on a slower link. The compose
+  healthcheck's `start_period` is 600s to cover it.
+- If the network is unreachable the sandbox still comes up as a usable shell,
+  with a warning and no agent CLIs — **and no Herdr**, so `oh shell` lands you in
+  a plain shell and `tmux` is the fallback multiplexer. Re-run
+  `bash .oh/scripts/provision-defaults.sh` once you have network.
+- An existing install is never replaced, so the provisioner is a no-op on every
+  boot after the first. Upgrade deliberately with `oh harness install <id>` or
+  `oh tool install <id>`.
+- Every download is pinned and `sha256sum`-verified before it is installed.
+- npm's cache now lives in the home mount at `~/.npm` and grows across upgrades.
+  `npm cache clean --force` reclaims it.
+- Set `OH_PROVISION_DEFAULTS=false` to skip the step entirely.
+
+Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
 
 | Tool | Command | Source | Status |
 |------|---------|--------|--------|
@@ -288,10 +311,27 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 | OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) | default |
 | Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) | default |
 | OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | optional: `oh harness install opencode` |
-| DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) | optional: `oh harness install deepagents` |
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: `oh harness install hermes` |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: `oh harness install grok-build` |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `oh tool install agent-browser` |
+| Tailscale | `tailscale` | Private tailnet access for remote/mobile T3 Code (userspace networking; no container capabilities) | optional: `oh tool install tailscale` |
+
+Two tools are **not** baked in and install on demand with `oh tool install <name>`:
+`agent-browser` and `tailscale`. `oh tool install` persists the opt-in in the
+tracked `oh.json` (`install.agentBrowser`, `install.tailscale`) so it survives
+container recreation, and installs into a running sandbox when one is up. Both
+installs are idempotent. If no sandbox is running, only the flag is persisted —
+run `oh sandbox` and the entrypoint installs the tool on boot. Neither needs an
+image rebuild.
+
+Installing `tailscale` places the `tailscale` and `tailscaled` binaries in
+`~/.local/bin` and nothing more. It starts no daemon and joins no tailnet.
+Networking activates only when a human starts `tailscaled` in
+userspace-networking mode and runs `tailscale up` interactively — see
+[Connecting → Mobile access over Tailscale](connecting.md#mobile-access-over-tailscale).
+Its node identity and daemon state live in `~/.tailscale`, inside the single
+`/home/sandbox` mount, so the node does not re-authenticate on every container
+recreate.
 
 ### Runtimes & package managers
 
@@ -305,15 +345,17 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 ### DevOps & infrastructure
 
 `oh tool list` reports which of these are present, and `oh tool status <name>`
-adds a version where the tool has a verified version flag. They are baked into
-the image, so there is nothing to install.
+adds a version where the tool has a verified version flag. Herdr and cloudflared
+are `kind: "default"` — provisioned into `~/.local/bin` at boot from a pinned,
+checksum-verified binary, and upgradeable in place. The rest are baked into the
+image, so there is nothing to install.
 
 | Tool | Purpose |
 |------|---------|
-| Herdr (`herdr`) | Default multi-agent terminal workspace; state persists across rebuilds in dedicated volumes |
+| Herdr (`herdr`) | Default multi-agent terminal workspace; provisioned at boot, state and binary both persist in the home mount |
 | Docker CLI + Compose | Container management from inside the sandbox (host docker socket bind-mounted by the base compose) |
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
-| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill) |
+| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill); provisioned at boot |
 | tmux | Detachable terminal sessions for long-running agents |
 | croner | Markdown-frontmatter cron scheduler for autonomous agent tasks |
 
@@ -341,24 +383,77 @@ claude  → claude --dangerously-skip-permissions
 codex   → codex --dangerously-bypass-approvals-and-sandbox
 ```
 
-### Persistent volumes
+### Persistent storage
 
-Auth credentials and Herdr workspace state survive container rebuilds via named Docker volumes:
+Everything under the sandbox user's home directory — every agent login, the
+GitHub CLI token, the SSH keys, shell history, and any state a tool writes
+anywhere in `~` — persists through a **single mount at `/home/sandbox`**.
 
-- `claude-auth` → `~/.claude` (Claude Code OAuth)
-- `codex-auth` → `~/.codex` (Codex OAuth)
-- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`)
-- `pi-auth` → `~/.pi` (Pi Agent OAuth)
-- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions; used when DeepAgents is enabled (`install.deepagents: true` in `oh.json`)). Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
-- `hermes-auth` → `~/.hermes` (Hermes auth only; non-auth runtime state defaults to project-local `~/harness/.hermes` when Hermes is enabled (`install.hermes: true` in `oh.json`))
-- `grok-auth` → `~/.grok` (all Grok Build user state: auth, config, sessions, memory, skills/plugins, logs; mounted alongside the other agent auth volumes and used by Grok Build when `install.grokBuild: true` in `oh.json`). Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`; if an API key seems ignored, run `grok logout` or reset the volume.
-- `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
-- `ssh-config` → `~/.ssh` (user SSH keys / known_hosts; entrypoint enforces `chmod 700`)
-- `config-dir` → `~/.config` (all XDG tool config, including the GitHub CLI tokens under `~/.config/gh` and Herdr settings)
-- `herdr-data` → `~/.herdr` (Herdr-created worktrees and related data; session metadata is under `~/.config/herdr`)
+By default Docker manages it as the named volume `<sandbox-name>_workspace`.
+Set `storage.homePath` in `oh.json` to an absolute **host** path and the same
+mount becomes a bind, so you can back the sandbox home up, inspect it, or move
+it between machines:
 
-Hermes is split: when Hermes is enabled (`install.hermes: true` in `oh.json`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint links `.hermes/skills/openharness` to the tracked shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as Claude, Codex, and Pi without copying them into runtime state. Project-local runtime contents are gitignored except `.hermes/README.md`; `oh destroy` removes the auth volume but not the bind-mounted project runtime directory.
+```bash
+oh config set storage.homePath /srv/openharness-home
+```
 
-`oh destroy` and `docker compose down -v` remove named volumes, including Herdr state and provider credentials; use `oh stop` when you want them to survive.
+`oh init` asks for this path during the Project step; leave it blank to keep the
+Docker-managed volume. Use a **dedicated, empty** directory — the sandbox takes
+ownership of everything in it, so never point it at your own host `$HOME`.
+
+The repository checkout is bind-mounted at `/home/sandbox/harness`, nested
+inside that mount. Its location is fixed, not configurable.
+
+The image ships its baked home at `/opt/home-seed`. On every boot the entrypoint
+copies in each **top-level** entry the mount does not already have, and never
+touches one it does — not even its permissions. A fresh mount comes up complete;
+an image upgrade adds whatever new top-level entries it introduced (a new agent
+CLI's `~/.newtool`, say) and leaves everything you already have alone. It does
+not merge new files into a directory the mount already has, which is what the
+per-tool volumes did before.
+
+Hermes is split: when the `hermes` binary is present (`install.hermes: true` in
+`oh.json`, or `oh harness install hermes`), `HERMES_HOME` is the project-local
+bind-mounted `~/harness/.hermes/` directory. The entrypoint links `.hermes/skills/openharness` to the tracked
+shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as
+Claude, Codex, and Pi without copying them into runtime state. Project-local
+runtime contents are gitignored except `.hermes/README.md`.
+
+`oh destroy` and `docker compose down -v` delete the named volume and everything
+in it — provider credentials included; use `oh stop` when you want them to
+survive. When `storage.homePath` points at a host bind, `down -v` cannot remove
+it, and `oh destroy` says so.
+
+#### Migrating from the per-tool volumes
+
+Releases before this change kept eleven separate volumes (`claude-auth`,
+`config-dir`, `ssh-config`, and so on). They are not migrated automatically.
+**Before** upgrading, copy the old home out of the still-running container:
+
+```bash
+mkdir -p /srv/openharness-home
+docker cp <sandbox-name>:/home/sandbox/. /srv/openharness-home
+rm -rf /srv/openharness-home/harness
+oh config set storage.homePath /srv/openharness-home
+```
+
+The trailing `/.` matters: without it `docker cp` places the copy at
+`/srv/openharness-home/sandbox/` instead of unpacking its contents, and the
+sandbox comes up freshly seeded as though nothing was migrated. The `rm -rf`
+drops the copy of the repository checkout — `docker cp` reads through the bind
+mount, so the archive includes `harness/` with its `.git` and `node_modules`,
+which can be several GB and is shadowed by the checkout bind at runtime anyway.
+
+Then rebuild. To stay on a Docker-managed volume instead, copy that directory
+into the new volume once:
+
+```bash
+docker run --rm -v <sandbox-name>_workspace:/to -v /srv/openharness-home:/from \
+  alpine cp -a /from/. /to/
+```
+
+Skipping this loses every agent login and the SSH keys; nothing else breaks, and
+you simply sign in again.
 
 Downstream harness packs and Pi extensions can introduce additional volumes or bind-mount overlays by adding paths to `composeOverrides[]` in the tracked `oh.json`. That list is the one place overlay paths live, and only `oh` applies it: VS Code "Reopen in Container" reads `.devcontainer/docker-compose.yml` alone and applies [no overlays at all](lifecycle-commands.md#vs-code-reopen-in-container-applies-no-overlays).

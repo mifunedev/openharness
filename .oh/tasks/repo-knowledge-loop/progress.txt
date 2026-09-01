@@ -1,0 +1,84 @@
+# progress
+
+2026-09-01 plan — Read issue #926 body + pinned execution-requirement comment in full.
+  Grounded against .oh/skills/spec/**, .oh/skills/wiki/**, .oh/evals/probes/**,
+  .gitignore, .oh/README.md, .oh/tasks/README.md, .oh/manifest.json,
+  crons/cleanup-tasks.md, .github/workflows/ci-harness.yml, docs/**,
+  .claude/protected-paths.txt, .oh/scripts/link-providers.sh at base ecc49800.
+  Recalled 3 tracked source pages + 5 pattern pages; 4 conflicts recorded in
+  prd.md ## Knowledge Context. Wrote prd.md (new contract: Knowledge Context,
+  Expected Knowledge Impact, Plan Reconciliation), prd.json (7 stories), this file.
+  No generated prompt.md — the contract this task builds retires it.
+
+2026-09-01 implementation — US-001..US-007 landed in one atomic change.
+  Migration: git mv corpus -> .oh/knowledge/{source,patterns,raw}, skill-impact ->
+  .oh/evals/decisions/, new local/ scratch tier; 41 files path-rewritten; .gitignore,
+  .oh/manifest.json (knowledge/**), ci-harness.yml (both path lists).
+  Schema: kind repo|external|pattern, sources: as the single dependency declaration,
+  verified_at pins; new .oh/skills/wiki/scripts/knowledge-impact.sh (--verified | --changed
+  | --since). Rewrote schema/query/lint; updated compile/ingest/SKILL.
+  Spec: rewrote SKILL.md (3 nodes + approved-plan default), plan.md (recall->ground->plan),
+  execute.md (re-ground, RUNNING status file, Actual Knowledge Impact gate, new tail order),
+  retro.md -> /retro --task wrapper; deleted ship.md; task-prompt.md is render-time only.
+  /retro gained --task <slug>. Retired STATUS: COMPLETE and generated prompt.md.
+  Probes: 10 new tier-A + 8 existing updated (readme-index, kind-schema, query-isolation,
+  related-slugs, pattern-persistence, skill-impact-append-only, spec-family-contract,
+  retro-deterministic-contract). Repaired 3 pages with unresolvable provenance.
+  Delegated one bounded worker for the peripheral consumer sweep (.oh/README.md,
+  .oh/tasks/README.md, manifest, CI, cleanup cron, docs, RFC); reconciled and corrected
+  its glossary 'loop' entry. CHANGELOG entries added.
+
+2026-09-01 terminal — READY. PR #927 marked ready for review after a fresh
+  PR-AUDIT-PROMOTABLE (audit-20260901T024245Z-1853136): CI green on all four
+  checks, MERGEABLE, CLEAN, evidence.md present and tracked. Never merged.
+  Gate record: /audit implementation AUDIT-PASS with SIMPLICITY-RESIDUAL: 0
+  (audit-20260901T022121Z-1697369, after four cycles: gate 1 task graph, gate 2
+  evidence.md re-introducing the retired path, gate 5 dead --since mode, then
+  PASS). /eval 136 probes exit 0, zero green->red. All ten required probes
+  fault-injected; two were found silently inert and rewritten. Knowledge impact
+  resolved to 5 UPDATED / 1 REVERIFIED / 1 NOT-AFFECTED. /retro -> 9 hypotheses,
+  2 new pattern pages compiled, 2 existing patched. /benchmark BENEFICIAL
+  (justified hold) with a REDIRECT-FLAG on the missing capability axis. Three
+  development merges (#930, #931, #934) reconciled during the tail; the #930
+  collision with #926's pinned execution comment is flagged for the operator on
+  the PR as a decision, not silently resolved.
+
+2026-09-01 ac-closeout — Orchestrator verification found #926's final acceptance
+  criterion unmet: evidence.md named the openharness-web follow-up but no issue
+  existed. Filed mifunedev/openharness-web#37 naming the two published pages that
+  carry live drift (docs/harnesses/deepagents.md:154,156,164,180 — the retired
+  Advisor session-ownership model; blog/2026-07-07-open-harness-demo-guide.md:131
+  — .oh/memory as current architecture) and the one hit deliberately excluded
+  (docs/integrations/pi-autoresearch.md:65 cites .auto/prompt.md, Pi's own file).
+  Linked from evidence.md section 5 and the PR body. Criterion now met.
+
+2026-09-01 undraft-gate — Fixed the ordering gap in the contract rather than only
+  disclosing it. execute.md step 10 now confirms the PR headRefOid equals local
+  HEAD before reading the promotable classification, states that the gate re-opens
+  on every push after the undraft (with gh pr ready --undo as the way back to
+  draft), and notes that finishing the tail before undrafting avoids the extra CI
+  cycles. spec-ready-finalization.sh gained three assertions over that section;
+  all three fault-injected and fire. Also removed a stray root file named "2" — a
+  &>2 typo in a sed invocation had redirected a probe's PASS line into it and a
+  later git add -A tracked it.
+
+2026-09-01 stray-file-root-cause — Deleting the "2" file was not the fix: a sed
+  had rewritten >&2 to &>2 inside spec-execute-running-contract.sh, so the probe
+  re-created the file on every suite run and the first deletion was undone by the
+  next /eval. Repaired at the source and guarded:
+  eval-contract-text-20260831.sh now fails any probe containing &>[0-9], with the
+  reason spelled out. Fault-injected and fires. plan-vs-built-reconciliation
+  re-verified against the new execute.md anchors; verified_at advanced.
+
+2026-09-01 probes-minted — Minted both probes the session-scoped /retro nominated.
+  evals-20260901-suite-tree-clean: no probe redirects into the repository (&>N, or
+  a redirect targeting $ROOT/$HARNESS) and no redirect residue is tracked at the
+  root; the mid-session &>[0-9] check moved out of eval-contract-text-20260831.sh
+  so one rule has one owner. A first draft flagging any relative-path redirect
+  produced 46 false findings and was narrowed.
+  docs-20260901-followup-artifact-cited: reviewer-evidence-doc.md gained the
+  "Follow-ups are cited, not named" rule, and the probe requires every tracked
+  evidence.md bullet tying a criterion to a follow-up to carry an issue/PR URL.
+  All five branches across the two probes fault-injected and fire, including a
+  reconstruction of this run's own uncited-follow-up defect.
+  138 probes, runner exit 0, zero green->red.

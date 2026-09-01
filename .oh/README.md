@@ -19,12 +19,12 @@ This **supersedes** the earlier "earned by EXPORT only" rule *and* the later
 is obsolete):
 
 - **`.oh/`** — *OpenHarness's own machinery* as one unit, including the
-  provider-portable *primitives* — `skills/`, `agents/`, `hooks/` (+ `skills.lock`)
+  provider-portable *primitives* — `skills/`, `hooks/` (+ `skills.lock`)
   — exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
   `.pi/`, `.hermes/`): the `oh` CLI (`cli/`), installer + lifecycle scripts
   (`scripts/`), container-install inputs (`install/`), the
-  regression/capability eval suite (`evals/`), the long-term memory + session
-  logs (`memory/`), user-local deploy
+  regression/capability eval suite (`evals/`), the durable repository-knowledge
+  surface (`knowledge/`), user-local deploy
   config (`config.json`),
   and the Ralph/spec task workdirs (`tasks/` — ephemeral build scratch, now at
   `.oh/tasks/`). The former top-level `packages/` folder
@@ -36,8 +36,9 @@ is obsolete):
   devcontainer spec + Docker COPY, `package.json`, `pnpm-*.yaml`, `.github/`,
   `.husky/`). The scheduled-agent cron definitions live at the repo root in
   `crons/` — operator schedule content, not shipped machinery. The
-  eval suite stays under `.oh/evals/`, and the Ralph/spec task workdirs under
-  `.oh/tasks/`. The worktree root (`.worktrees/`) and the project-clone root
+  eval suite stays under `.oh/evals/`, durable repository knowledge under
+  `.oh/knowledge/`, and the Ralph/spec task workdirs under `.oh/tasks/`. The
+  worktree root (`.worktrees/`) and the project-clone root
   (`projects/`) sit at the repo root, because a repository keeps its worktrees at
   its own root and a project clone is a peer repo, not control-plane machinery;
   the rendered docs site and the `blog/` archive
@@ -45,7 +46,7 @@ is obsolete):
 
 ### Relocated into `.oh/` (no back-compat symlinks)
 
-The runtime-machinery directories (`scripts/`, `install/`, `evals/`, `memory/`) moved into `.oh/`
+The runtime-machinery directories (`scripts/`, `install/`, `evals/`) moved into `.oh/`
 **without** back-compat symlinks at the old root paths — every consumer was
 repointed to the real `.oh/…` location:
 
@@ -74,8 +75,7 @@ a symlink and nothing reads the bare `tasks/` path anymore.
 
 The ignored worktree root briefly lived at `.oh/worktrees/` and moved back **out**
 to the repo root as `.worktrees/`, with no back-compat symlink in either
-direction. The location is a fixed convention rather than a setting, and cron
-worktree isolation uses `.worktrees/cron/`.
+direction. The location is a fixed convention rather than a setting.
 Clones of non-harness repositories, formerly `.oh/worktrees/project/<owner>/<repo>/`,
 now live at `projects/<owner>/<repo>/`, and
 each keeps its own worktrees at `projects/<owner>/<repo>/.worktrees/`. Both roots
@@ -104,7 +104,7 @@ root `docs/` (Markdown only — no build machinery; guarded by
 
 ## How the skill pack is wired
 
-The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/agents`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh init`/`oh update` lay the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
+The shared skills and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh init`/`oh update` lay the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
 
 `.pi/` remains the Pi provider surface in v1; its `.pi/skills` is one of the symlinks into `.oh/skills`.
 
@@ -117,6 +117,7 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (no symlink — repointed). |
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (no symlink — repointed). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (no symlink — repointed). |
+| `knowledge/` | Durable repository knowledge — `source/` and `patterns/` entity pages, `raw/` immutable external snapshots, gitignored `local/` scratch, and the generated `README.md` index. The `/wiki` skill owns the procedure; this directory owns the data. |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 
@@ -147,15 +148,15 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the fitness-function eval suite (`.oh/evals/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus the scheduled-agent cron definitions (`crons/`), and surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the fitness-function eval suite (`.oh/evals/`), the durable repository-knowledge surface (`.oh/knowledge/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus the scheduled-agent cron definitions (`crons/`), and surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) |
 
 ### Why these specifically stay at root
 
 - `.devcontainer/` — the **full devcontainer**, pinned to root by the devcontainer
   spec / `.dockerignore` / hadolint (which don't honor a symlinked directory). It
   holds the VS Code `devcontainer.json`, the user-owned `.env`, and every build
-  asset: `Dockerfile`, `docker-compose.yml` + the hermes-dashboard overlay,
-  `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
+  asset: `Dockerfile`, `docker-compose.yml` + the docker-socket and sshd
+  overlays, `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
   `seed-msg-bridge.sh`). Everything the sandbox boots from lives here, in the one
   conventional location — no split, no compat shim.
 - `oh.json` and `.env.example` — the two authored configuration surfaces, and
@@ -170,12 +171,14 @@ source instead of the bundled `.oh/templates/`.
 
 ## Project-root seam
 
-`OH_PROJECT_ROOT` (default `/home/sandbox/harness`) is the single source of truth for
-the container workspace path. All devcontainer and `.oh/scripts` consumers derive their
-paths from `${OH_PROJECT_ROOT:-/home/sandbox/harness}` rather than the bare literal.
-`HARNESS` is kept as a back-compat alias (`HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"`);
-prefer `$OH_PROJECT_ROOT` in new code. This is Phase 1 of [#531](https://github.com/mifunedev/openharness/issues/531) toward `oh init`.
-The seam contract is guarded by `.oh/evals/probes/project-root-seam.sh`.
+`OH_PROJECT_ROOT` is `/home/sandbox/harness`, fixed. It is no longer configurable:
+the sandbox home is one mount at `/home/sandbox` and the checkout is nested inside
+it, so a relocatable project root buys nothing ([#898](https://github.com/mifunedev/openharness/issues/898)).
+The image pins it (`ENV OH_PROJECT_ROOT=/home/sandbox/harness`), and devcontainer
+and `.oh/scripts` consumers keep reading `${OH_PROJECT_ROOT:-/home/sandbox/harness}`
+rather than the bare literal. `HARNESS` remains a back-compat alias
+(`HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"`); prefer `$OH_PROJECT_ROOT` in new code.
+The fixed definition is guarded by `.oh/evals/probes/worktrees-layout.sh`.
 
 ## devcontainer layout
 
@@ -183,8 +186,8 @@ The harness's own devcontainer lives in the one conventional location — top-le
 **`.devcontainer/`** — rather than split across `.oh/`. It holds:
 
 - the build/bootstrap assets: `Dockerfile`, `docker-compose.yml` + the
-  `docker-compose.hermes-dashboard.yml` overlay, `entrypoint.sh`,
-  `client-slack-supervise.sh`, `seed-msg-bridge.sh`;
+  `docker-compose.docker-sock.yml` and `docker-compose.ssh.yml` overlays,
+  `entrypoint.sh`, `client-slack-supervise.sh`, `seed-msg-bridge.sh`;
 - the VS Code `devcontainer.json` (hand-maintained; its `dockerComposeFile` points
   at the same-dir `docker-compose.yml`) plus the user-owned `.env`.
 
@@ -274,7 +277,7 @@ the top-level directories its own patterns name — never the whole repo root.
 patterns are relative to `.oh/`, and the existing path-escape guard (writes land
 only under `<target>/.oh/`) is **unchanged** — the manifest *narrows* the
 payload, it never widens the write surface. The vendored skill pack
-(`skills/**`, `agents/**`, `hooks/**`, `skills.lock`) ships through this same
+(`skills/**`, `hooks/**`, `skills.lock`) ships through this same
 manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/`.
 
 > **`oh init` seam:** both `oh init` and `oh update` honor this manifest — they
@@ -285,4 +288,4 @@ manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/
 ## Pointers
 
 - `.oh/skills/harness-context/references/directory-readme.md` — the README-as-directory-anchor convention this file follows.
-- `.oh/skills/` — the vendored provider-portable primitive pack (skills/agents/hooks), absorbed from the former `.mifune` submodule.
+- `.oh/skills/` — the vendored provider-portable primitive pack (skills/hooks), absorbed from the former `.mifune` submodule.

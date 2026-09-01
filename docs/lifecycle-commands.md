@@ -67,12 +67,16 @@ configuration, so they stay host-only rather than failing halfway.
 
 ## `oh destroy` and its confirmation policy
 
-`down -v` wipes the named volumes, and those volumes hold provider
+`down -v` wipes the sandbox home volume, and that volume holds provider
 authentication. `oh destroy` is therefore the only lifecycle verb that asks
 before it runs. It names the volumes it is about to delete — read from
 `.devcontainer/docker-compose.yml`, not hardcoded — then requires you to type
 the sandbox name. A blank line, a wrong name, or anything else aborts with a
 non-zero exit and removes nothing.
+
+When `storage.homePath` points the home mount at a host path, `down -v` cannot
+delete it. `oh destroy` says so and leaves the directory in place; remove it
+yourself if you want it gone.
 
 Non-interactive use is gated on an explicit flag. When stdin is not a terminal
 and `--yes` is absent, `oh destroy` refuses outright rather than assume consent.
@@ -98,7 +102,6 @@ lists `docker-compose.yml` and nothing else. It never runs
 
 - `access.ssh` → no `docker-compose.ssh.yml`, so no sshd and no published SSH port
 - `access.dockerSocket` → no `docker-compose.docker-sock.yml`, so no host Docker socket
-- `hermesDashboard.enabled` → no `docker-compose.hermes-dashboard.yml`, so no dashboard
 - `composeOverrides[]` → every extra overlay path is ignored
 
 Secrets still reach that container: compose auto-loads the `.devcontainer/.env`
@@ -106,6 +109,16 @@ beside the compose file, and that file is a symlink to the root `.env`.
 Non-secret `oh.json` settings only reach compose when `oh` renders them, so on
 this path each variable falls back to its default in
 `.devcontainer/docker-compose.yml`.
+
+:::danger `storage.homePath` is ignored on this path
+`OH_HOME_MOUNT` is one of those rendered-only variables, so *Reopen in
+Container* falls back to the Docker-managed `<name>_workspace` volume even when
+`storage.homePath` points the sandbox home at a host directory. That is a
+**second, separate home**: agent logins made through `oh sandbox` are not there,
+and the two diverge silently from then on.
+
+If you set `storage.homePath`, always provision with `oh sandbox` and attach.
+:::
 
 If you need any overlay, provision with `oh sandbox` and then use *Dev
 Containers: Attach to Running Container* instead of *Reopen in Container*.

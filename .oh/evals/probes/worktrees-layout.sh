@@ -55,8 +55,8 @@ for sample in ".worktrees/feat/1-probe" "projects/an-owner/a-repo"; do
   fi
 done
 
-if ! grep -Fq 'const WORKTREES_DIR = ".worktrees";' .oh/scripts/cron-runtime.ts; then
-  echo "REGRESSION: cron-runtime.ts does not pin WORKTREES_DIR to the .worktrees constant" >&2
+if grep -Fq 'WORKTREES_DIR' .oh/scripts/cron-runtime.ts; then
+  echo "REGRESSION: cron-runtime.ts references a worktree root it no longer owns" >&2
   exit 1
 fi
 if ! grep -Fq 'const CRONS_DIR = path.resolve("crons");' .oh/scripts/cron-runtime.ts; then
@@ -103,8 +103,8 @@ if bash .oh/scripts/oh-path definitely-not-a-harness-dir --no-create >/dev/null 
   exit 1
 fi
 
-if ! grep -Fq 'OH_PROJECT_ROOT' .devcontainer/docker-compose.yml; then
-  echo "REGRESSION: OH_PROJECT_ROOT was swept up with the retired layout knobs" >&2
+if ! grep -Fq 'ENV OH_PROJECT_ROOT=/home/sandbox/harness' .devcontainer/Dockerfile; then
+  echo "REGRESSION: OH_PROJECT_ROOT lost its fixed image-level definition" >&2
   exit 1
 fi
 

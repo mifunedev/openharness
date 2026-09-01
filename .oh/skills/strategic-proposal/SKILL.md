@@ -25,7 +25,7 @@ Use this variant when the user asks for a council to define a V2MOM, operating m
    - **Council decision**: Vision, Values, Methods, Obstacles, Measures.
    - **Wiki plan**: exact target entry, draft frontmatter/body, verification, and rejected scope.
 5. Prefer one bounded provisional wiki entry first. Extra positioning/docs-IA entries are premature unless they hold distinct durable facts.
-6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `.oh/skills/wiki/corpus/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
+6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `.oh/knowledge/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
 7. Add explicit approval gates for contested strategic wording (e.g. tagline, key nouns, whether a constraint is too narrow) before implementing file changes.
 
 Session example and final V2MOM synthesis: `references/open-harness-v2mom-council.md`.
@@ -121,21 +121,25 @@ Assemble a structured markdown briefing to pass to ALL 5 experts:
 
 Launch 5 Agent tool calls **in a single message** for parallel execution:
 
-| Expert | Agent file | Perspective | Model |
-|--------|-----------|-------------|-------|
-| **Product** | `.claude/agents/expert-product.md` | Data models, APIs, features | sonnet |
-| **Docs** | `.claude/agents/expert-docs.md` | Documentation, fork showcase UX | sonnet |
-| **Security** | `.claude/agents/expert-security.md` | Auth, headers, access control | sonnet |
-| **Registry** | `.claude/agents/expert-registry.md` | Docker registry, licensing | sonnet |
-| **Agent Systems** | `.claude/agents/expert-agent-systems.md` | Agent autonomy, Ralph loop | sonnet |
+| Expert | Perspective | Model |
+|--------|-------------|-------|
+| **Product** | Data models, APIs, features | sonnet |
+| **Docs** | Documentation, fork showcase UX | sonnet |
+| **Security** | Auth, headers, access control | sonnet |
+| **Registry** | Docker registry, licensing | sonnet |
+| **Agent Systems** | Agent autonomy, Ralph loop | sonnet |
 
-Pass each expert the Current State Briefing + instruction to read their agent definition file and follow its output format.
+Each expert is a **prompt for a bounded provider-native worker**, not a repository
+agent definition. Use `subagent_type: general-purpose` (or a read-only built-in when
+the expert only reads) and put the perspective, the Current State Briefing, and the
+required output format in the prompt itself. There is no `.claude/agents/` file to
+read — this repository authors no project agents.
 
 Experts operate **independently** — they do NOT see each other's proposals.
 
 ### 5. Strategic Council DRAFT
 
-Launch a single Agent tool call using the council agent (`.claude/agents/strategic-council.md`):
+Launch a single Agent tool call for the council worker — a provider-native worker whose prompt carries the council role:
 
 Pass the council:
 - All 5 expert proposals
@@ -147,7 +151,7 @@ Save the council's draft output for the next step.
 
 ### 6. Strategic Critic review
 
-Launch a single Agent tool call using the strategic critic (`.claude/agents/strategic-critic.md`):
+Launch a single Agent tool call for the strategic critic — a provider-native worker whose prompt carries the adversarial role:
 
 Pass the critic:
 - The council's DRAFT roadmap
@@ -159,7 +163,7 @@ The critic provides **adversarial backpressure** — its job is to find what's w
 
 ### 7. Strategic Council FINAL
 
-Launch a second Agent tool call using the council agent (`.claude/agents/strategic-council.md`):
+Launch a second Agent tool call for the council worker, reusing the same council role prompt:
 
 Pass the council:
 - Its own DRAFT roadmap from step 5
@@ -204,12 +208,10 @@ gh issue edit <NUMBER> --repo mifunedev/openharness --body "<council output>"
 
 ### Key Resources
 
-| Resource | Path |
-|----------|------|
-| Expert: Product | `.claude/agents/expert-product.md` |
-| Expert: Docs | `.claude/agents/expert-docs.md` |
-| Expert: Security | `.claude/agents/expert-security.md` |
-| Expert: Registry | `.claude/agents/expert-registry.md` |
-| Expert: Agent Systems | `.claude/agents/expert-agent-systems.md` |
-| Strategic Council | `.claude/agents/strategic-council.md` |
-| Strategic Critic | `.claude/agents/strategic-critic.md` |
+| Resource | Where it lives |
+|----------|----------------|
+| Expert roles (Product, Docs, Security, Registry, Agent Systems) | Prompts written inline in step 4 of this skill |
+| Strategic Council role | Prompt written inline in steps 5 and 7 of this skill |
+| Strategic Critic role | Prompt written inline in step 6 of this skill |
+| Worker type for every role above | A provider built-in (`general-purpose`, or a read-only built-in) — no repository agent file backs any of them |
+| Worker boundary policy | `/delegate` — **When a worker is justified** |

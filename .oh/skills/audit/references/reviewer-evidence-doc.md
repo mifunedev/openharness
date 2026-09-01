@@ -47,6 +47,13 @@ report-only contract.
 - **Tracked**: `.oh/tasks/` is gitignored, so the file must be added with `git add -f`.
   An untracked `evidence.md` exists on disk and is **absent from the PR diff** — from
   the reviewer's seat that is identical to not having written it at all.
+- **Follow-ups are cited, not named**: an acceptance criterion recorded as satisfied
+  by work outside this repository — a mirror issue, a downstream PR, a tracked
+  follow-up — is met only when that artifact **exists** and the doc carries its
+  resolvable URL. Naming a follow-up in prose is a plan, and a plan reads as
+  satisfaction to every reader who does not go looking. File it, then cite it. No
+  gate here can see an artifact in another repository, so this line is the only
+  thing standing between "deferred" and "done".
 - **Answers back to the plan**: the five sections below are not optional prose. Three of
   them — *why this is better*, *divergence* and *unverified* — are the things a reviewer cannot reconstruct
   from the diff, so an empty one is written as `None` / `Nothing` explicitly. Omitting
@@ -71,8 +78,9 @@ Every doc answers these, in this order, before the per-gate proof:
    plan: a criterion satisfied differently, a deliberate deviation, a mid-build scope
    call. Explicitly `None` when there was none.
 4. **What remains unverified** — skipped gates, criteria argued rather than observed,
-   pre-existing reds carried forward, anything a reviewer must check by hand.
-   Explicitly `Nothing` when there is none.
+   pre-existing reds carried forward, a `SIMPLICITY-RESIDUAL` list the simplify loop
+   ended on, anything a reviewer must check by hand. Explicitly `Nothing` when there is
+   none.
 
 **Why question 0 is first and separate.** Questions 1–4 prove the change is *correct*.
 None of them establishes it was *worth making*. A doc can pass every gate, diverge nowhere,
@@ -121,6 +129,7 @@ forward, anything needing a hand check — or "Nothing".>
 | Regression floor | `/eval` runner exit + delta | `rc=0`, no new green→red | PASS |
 | Promotable / CI | focused classifier JSON | `promotable=true`, `evidenceComplete=true` | PASS |
 | UI | browser criteria | n/a — no story declares browser verification | N/A |
+| Slop | net lines + changed-function CCN | `+<netAdded>/-<netRemoved>`, `<n>` over CCN <max> | PASS |
 
 ## Observed output
 

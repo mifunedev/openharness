@@ -23,6 +23,7 @@ cloudflared
 agent-browser
 prd
 ralph
+architect
 audit
 delegate
 strategic-proposal
@@ -30,7 +31,9 @@ spec
 eval
 health-check
 retro
+t3
 # --- Orchestrator scripts (.oh/scripts/) ---
+.oh/skills/wiki/scripts/knowledge-impact.sh
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh
 .oh/scripts/link-providers.sh

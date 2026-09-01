@@ -41,7 +41,7 @@ templates are committed.
   - `**/auth.json` and `**/.credentials.json` (`.gitignore:63-64`) — provider auth blobs.
 - **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.env.example`](../.env.example) and `.claude/.example.env.claude`. The operator copies `.env.example` to the real (gitignored, mode-`0600`) root `.env`; `install.sh` seeds it and `oh secret set <KEY>` edits one key. `.devcontainer/.env` is a symlink to that file, so VS Code "Reopen in Container" reads the same one. The `.env.example` header spells this out, including the warning that the compose default for `SANDBOX_PASSWORD` (`test1234`) is weak and public and must be overridden on any network-reachable deployment.
 - **Split by kind:** non-secret settings live in the *tracked* [`oh.json`](../oh.json), never in `.env`. The split is enforced in code — `.oh/cli/src/lib/secrets.ts` owns the secret allow-list and `.oh/cli/src/lib/config-render.ts` refuses to render an allow-listed secret into the compose environment. See [Configuration](configuration.md).
-- **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `ssh-config`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../.devcontainer/docker-compose.yml).
+- **In the sandbox:** auth/state persists in the single `/home/sandbox` mount — the named volume `<sandbox-name>_workspace`, or a host path when `storage.homePath` is set — not in the repo. See [`.devcontainer/docker-compose.yml`](../.devcontainer/docker-compose.yml).
 
 **What this does not do:** it does not scan commit *contents* for
 secrets pasted into a tracked file by mistake. That is the job of the
@@ -147,6 +147,42 @@ expose to whichever trust level you choose.
   to create a container on a port already in use, so enabling SSH or adding a tenant
   can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:
   [Integrations → SSH](integrations/sshd.md).
+
+- **Caveat 4 — the optional Tailscale tool (opt-in, private-by-default).** Installing
+  `tailscale` (`oh tool install tailscale`, persisted as `install.tailscale` in the
+  tracked `oh.json`) adds **no container capability**: `tailscaled` runs inside the
+  sandbox in **userspace-networking** mode as the unprivileged `sandbox` user, so
+  there is no `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, and no host
+  socket mount. There is no compose addition at all — the opt-in lives in
+  `oh.json` and boot provisioning installs from the tool catalog; daemon state
+  lives in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount. **No host port is published** — T3 Code stays on
+  container loopback `127.0.0.1:3773` and Tailscale Serve proxies tailnet HTTPS to
+  it, so a device outside the tailnet has nothing to reach. The posture:
+  - **Private tailnet only. Tailscale Funnel is never enabled by default and the
+    harness ships no Funnel command or flag.** Funnel would publish a tailnet
+    service to the internet; if you want that, you are configuring it yourself,
+    outside this tree. For a deliberately *public* preview, use `cloudflared`
+    instead and understand that the URL is the only credential.
+  - **Installation never joins a tailnet.** The entrypoint installs the binaries and
+    stops. It never runs `tailscaled` and never runs `tailscale up`. Joining is an
+    explicit interactive human act.
+  - **Never print or commit a reusable Tailscale auth key.** The documented and
+    supported setup is interactive `tailscale up` with a browser login. If an
+    operator insists on auth-key automation, the key is a secret and belongs in the
+    gitignored mode-`0600` root `.env` via the §1 secret channel — never in
+    `oh.json`, a script, or a log.
+  - **Pairing URLs and tokens are secrets.** T3 Code's pairing URL carries a
+    single-use token in its fragment. The `/t3` skill keeps the server log under
+    `/tmp/agent-t3code.log` and writes no URL into a tracked file. Do not paste a
+    pairing URL into an issue, a pull request, a commit message, or chat.
+  - **Two revocation paths, both required.** `t3 auth` issues, inspects, and revokes
+    T3 sessions and pairing credentials. `tailscale serve --https=443 off` withdraws
+    the Serve mapping, which otherwise persists after T3 Code stops.
+    `tailscale logout` signs the node out, and the Tailscale admin console deletes
+    the device. Revoking one does not revoke the other.
+
+  Setup, lifecycle, and troubleshooting: [Connecting → Mobile access over
+  Tailscale](connecting.md#mobile-access-over-tailscale).
 
 ## 5. Human merge gate / no auto-merge — **ENFORCED (process) · RECOMMENDED (hard gate)**
 

@@ -357,7 +357,7 @@ export async function runInit(
     prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded an empty tasks/");
     prompt.ok("Copied the full .devcontainer/ (local image build)");
     prompt.ok(
-      "Configured 5 provider surfaces (.claude .codex .pi .prime .hermes) → vendored .oh/skills",
+      "Configured 4 provider surfaces (.claude .codex .pi .hermes) → vendored .oh/skills",
     );
   }
   if (force && totalOverwritten > 0) {
@@ -492,11 +492,8 @@ const PROVIDER_LINKS: [string, string][] = [
   [".pi/skills", "../.oh/skills"],
   [".claude/skills", "../.oh/skills"],
   [".codex/skills", "../.oh/skills"],
-  [".claude/agents", "../.oh/agents"],
   [".claude/hooks", "../.oh/hooks"],
-  [".codex/agents", "../.claude/agents"],
   [".codex/specs", "../.claude/specs"],
-  [".prime/agent/skills", "../../.oh/skills"],
 ];
 
 function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
@@ -641,9 +638,6 @@ const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
   TZ: (c, v) => {
     c.timezone = v;
   },
-  OH_PROJECT_ROOT: (c, v) => {
-    c.projectRoot = v;
-  },
   GIT_USER_NAME: (c, v) => {
     section(c, "git").userName = v;
   },
@@ -656,14 +650,14 @@ const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
   INSTALL_GROK_BUILD: (c, v) => {
     section(c, "install").grokBuild = asBool(v);
   },
-  INSTALL_DEEPAGENTS: (c, v) => {
-    section(c, "install").deepagents = asBool(v);
-  },
   INSTALL_HERMES: (c, v) => {
     section(c, "install").hermes = asBool(v);
   },
   INSTALL_AGENT_BROWSER: (c, v) => {
     section(c, "install").agentBrowser = asBool(v);
+  },
+  INSTALL_TAILSCALE: (c, v) => {
+    section(c, "install").tailscale = asBool(v);
   },
   SANDBOX_SSH: (c, v) => {
     section(c, "access").ssh = asBool(v);
@@ -763,13 +757,31 @@ async function runWizard(
   const gitEmail = await askFn("Git user email:");
   if (gitEmail) section(config, "git").userEmail = gitEmail;
 
+  prompt.info("");
+  prompt.info("The sandbox home holds every agent login, the gh token, and the SSH keys.");
+  prompt.info("Give an absolute HOST path to keep it somewhere you can back up.");
+  prompt.info("Use a dedicated empty directory — the sandbox takes ownership of it.");
+  prompt.info(`Leave blank and Docker manages it as \`${config.name ?? "<name>"}_workspace\`.`);
+  const homePath = (await askFn("Persistent home host path [blank = Docker-managed volume]:")).trim();
+  if (homePath !== "") {
+    if (homePath.startsWith("/")) {
+      section(config, "storage").homePath = homePath;
+    } else {
+      prompt.warn(`Ignoring "${homePath}" — it must be an absolute host path starting with /.`);
+    }
+  }
+
   prompt.step(2, 5, "Optional installs");
   const installs: { key: string; field: string; desc: string }[] = [
     { key: "opencode", field: "opencode", desc: "OpenCode TUI coding agent" },
-    { key: "deepagents", field: "deepagents", desc: "DeepAgents multi-agent runtime" },
     { key: "hermes", field: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
     { key: "grok_build", field: "grokBuild", desc: "Grok build tooling" },
     { key: "agent_browser", field: "agentBrowser", desc: "agent-browser + Chromium (~1 GB)" },
+    {
+      key: "tailscale",
+      field: "tailscale",
+      desc: "Tailscale (userspace) — private remote access for T3 Code",
+    },
   ];
   for (const inst of installs) {
     const yes = await confirmWith(askFn, `Install ${inst.key} — ${inst.desc}?`, false);

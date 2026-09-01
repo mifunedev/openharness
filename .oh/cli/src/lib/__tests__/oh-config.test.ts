@@ -105,7 +105,16 @@ describe("validateOhConfig", () => {
   const cases: Array<[string, unknown, RegExp]> = [
     ["name", { name: 1 }, /^oh\.json: name must be a string$/],
     ["timezone", { timezone: true }, /^oh\.json: timezone must be a string$/],
-    ["projectRoot", { projectRoot: [] }, /^oh\.json: projectRoot must be a string$/],
+    [
+      "storage.homePath",
+      { storage: { homePath: [] } },
+      /^oh\.json: storage\.homePath must be a string$/,
+    ],
+    [
+      "storage.homePath relative",
+      { storage: { homePath: "oh-home" } },
+      /^oh\.json: storage\.homePath must be an absolute host path$/,
+    ],
     ["git", { git: "me" }, /^oh\.json: git must be an object$/],
     ["git.userName", { git: { userName: 7 } }, /^oh\.json: git\.userName must be a string$/],
     ["git.userEmail", { git: { userEmail: 7 } }, /^oh\.json: git\.userEmail must be a string$/],
@@ -118,6 +127,11 @@ describe("validateOhConfig", () => {
       "install.agentBrowser",
       { install: { agentBrowser: 1 } },
       /^oh\.json: install\.agentBrowser must be a boolean$/,
+    ],
+    [
+      "install.tailscale",
+      { install: { tailscale: 1 } },
+      /^oh\.json: install\.tailscale must be a boolean$/,
     ],
     ["access.ssh", { access: { ssh: "yes" } }, /^oh\.json: access\.ssh must be a boolean$/],
     ["access.sshPort", { access: { sshPort: "2222" } }, /^oh\.json: access\.sshPort must be a number$/],

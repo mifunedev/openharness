@@ -1,0 +1,112 @@
+# progress
+
+2026-08-31 — US-001 Strip the eleven variables from the compose files — PASS
+  Files: .devcontainer/docker-compose.yml, docker-compose.image-only.yml,
+         docker-compose.ssh.yml, docker-compose.hermes-dashboard.yml (deleted),
+         .oh/scripts/docker-compose.sh
+  Commit: 4425329d
+  Result: docker-compose.yml lost eleven environment: lines; image-only.yml lost four;
+  the sshd overlay kept its ports: and lost its environment: block; the Hermes dashboard
+  overlay and the docker-compose.sh branch that applied it are gone.
+  Learning: the sshd overlay was the same defect one level down — four keys restating
+  access.ssh* that config-render.ts already rendered.
+
+2026-08-31 — US-002 Delete the duplicate installers — PASS
+  Files: .devcontainer/entrypoint.sh
+  Commit: 4425329d
+  Result: ~75 lines removed, including the Tailscale version and both sha256 literals.
+  The ungated `install -d /var/run/tailscale` is kept, so `oh tool install tailscale`
+  still needs no reboot.
+  Learning: the plan's risk item was real and checkable — the catalog entry is
+  installUser:"sandbox" on the merged tree, so removing the entrypoint fallback does not
+  strand the install behind #907's stdio:"inherit" sudo hazard. Verified before deleting.
+
+2026-08-31 — US-003 Read oh.json from the entrypoint — PASS
+  Files: .devcontainer/entrypoint.sh, .oh/scripts/link-providers.sh,
+         .oh/scripts/sandbox-healthcheck.sh, .oh/install/banner.sh
+  Commit: 4425329d
+  Result: oh_config caches one `oh config show` and answers jq filters from it;
+  oh_config_truthy wraps the boolean case. Hermes wiring, the dashboard launch, the pnpm
+  gate, and the sshd block all read oh.json.
+  Learning: presence-gating check_hermes_link on `command -v hermes` was wrong — a
+  worktree has no .hermes/, so the check fired where the old flag had skipped it. The
+  right gate is "verify the link if it exists"; the write path already keys on the binary.
+  Two consumers outside the entrypoint (sandbox-healthcheck.sh, banner.sh) also read
+  HERMES_DASHBOARD from the environment and would have gone silently always-false; both
+  now read oh.json with jq.
+
+2026-08-31 — US-004 Cron agent binary from oh.json — PASS
+  Files: .oh/scripts/cron-runtime.ts, .oh/scripts/__tests__/cron-runtime.test.ts
+  Commit: 4425329d
+  Result: resolveAgentBin() with env > oh.json > "claude", cached, plus
+  resetAgentBinCache() for tests. Three precedence tests.
+  Learning: importing the CLI's readOhConfig directly is not safe here — cron-runtime.ts
+  runs under `node --experimental-strip-types` and the CLI's ESM imports carry .js
+  specifiers that would not resolve. Shelling `oh config show` keeps it CLI-mediated.
+
+2026-08-31 — US-005 Stop rendering the retired keys — PASS
+  Files: .oh/cli/src/lib/config-render.ts, .oh/cli/src/lib/tools/catalog.ts
+  Commit: 4425329d
+  Result: rendered set is exactly the ten host-side keys; RETIRED_KEYS holds eighteen.
+  Learning: SANDBOX_SSH_PASSWORD_AUTH and SANDBOX_SSH_AUTHORIZED_KEYS also had to go —
+  the plan's "SANDBOX_SSH*" glob would have kept two projections nothing reads.
+
+2026-08-31 — US-006 Invert the boundary probes — PASS
+  Files: .oh/evals/probes/tool-catalog-boundary.sh, tailscale-tool-boundary.sh,
+         compose-config-path-parity.sh
+  Commit: 4425329d
+  Result: guard, pin, and sha checks reversed onto the catalog; every zero-exposure
+  assertion kept. Mutations verified: guard back (both probes), pin back, sha back,
+  socket-dir indented, catalog entrypointGuard back — all exit 1.
+  Learning: `x=$(... | grep -c ...)` under `set -e` aborts the probe silently when the
+  count is 0, because grep exits 1. A `[[ $var == [[:space:]]* ]]` test is the safe form.
+
+2026-08-31 — US-007 Tier-A compose-env-boundary probe — PASS
+  Files: .oh/evals/probes/compose-env-boundary.sh
+  Commit: 531425f5 (see divergence note in evidence.md)
+  Result: derives the allowed set from config-render.ts's put() calls plus four
+  documented literals, and walks every environment: block by indentation. Mutations
+  verified: INSTALL_FOO, OH_IMAGE_ONLY, an unlisted key, and an overlay environment:
+  key each exit 1; adding an overlay port stays PASS.
+
+2026-08-31 — US-008 Update the tests — PASS
+  Files: eight test files under .oh/cli and .oh/scripts
+  Commit: 4425329d
+  Result: 976 passing. The 6 remaining compose-args failures reproduce unmodified on
+  development, so they are environmental, not caused here. Retargeting those tests onto
+  the sshd overlay incidentally fixed 2 of the 8 that were failing before.
+
+2026-08-31 — US-009 Docs, templates, wiki, changelog — PASS
+  Files: 14 docs, .oh/README.md, .oh/templates/full/.hermes/README.md, CHANGELOG.md,
+         .oh/knowledge/{compose-env-boundary.md,sandbox-dependency-installs.md,README.md}
+  Commit: 4425329d
+  Result: the configuration.md "Compose variable" column is `—` for every retired field,
+  and the section above it now states the rule. New wiki entry at 596 words with
+  line-cited claims and a Mermaid route diagram; index regenerated; probe passes.
+  Learning: docs-compose-overlays.test.ts scans docs/rfcs/, which holds dated records —
+  preserved-changelog-rationale.md quotes a changelog entry verbatim. Rewriting a compose
+  path inside it would falsify the history it exists to keep, so the test now skips that
+  root. .env.example needed no change: it is secrets-only and already described the
+  Langfuse non-secrets as shell exports.
+
+2026-08-31 — US-010 Detect the sandbox flavor — PASS
+  Files: .gitignore, .devcontainer/entrypoint.sh, .devcontainer/docker-compose.image-only.yml
+  Commit: 531425f5
+  Result: `mountpoint -q "$HARNESS_DIR" && [ -d "$HARNESS_DIR/.oh" ]`, branches swapped,
+  mode logged on both paths. The two environment: blocks diff to empty.
+  Learning: `mountpoint -q` alone was not enough. docs/runtimes/microsandbox.md mounts a
+  fresh host directory straight at /home/sandbox/harness — a mountpoint with no checkout —
+  which the single test would have sent down the UID-sync path and never seeded. The .oh/
+  conjunct fixes that; the mountpoint conjunct is still needed, or a seeded no-bind volume
+  would take the sync path on its second boot. Simulated all three cases.
+
+2026-08-31 — US-011 Retarget the flavor probe and its doc — PASS
+  Files: .oh/evals/probes/oh-image-only-deploy.sh, docs/deployment-prebuilt-image.md,
+         docs/runtimes/microsandbox.md
+  Commit: 531425f5
+  Result: the three prose assertions are gone; gate ordering, the seed simulation, and
+  every compose-shape check are kept, plus new assertions for the gitignored marker and
+  the logged mode. Mutations verified: detection removed, mode log removed, gitignore
+  rule removed, flag re-added — all exit 1.
+
+STATUS: COMPLETE

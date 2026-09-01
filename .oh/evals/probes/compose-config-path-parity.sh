@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
+# source: PR #833 (remove harness.yaml — the wrapper and VS Code "Reopen in Container" paths must resolve the same service) 2026-08-26
 # desc: the wrapper path and the VS Code "Reopen in Container" path resolve the same service — the parity harness.yaml made impossible
 set -euo pipefail
 
@@ -52,11 +53,11 @@ rm -f "$work/.oh/config.json"
 {
   printf 'SANDBOX_NAME=parityprobe\n'
   printf 'TZ=America/Denver\n'
-  printf 'INSTALL_HERMES=true\n'
-  printf 'CRON_AGENT_BIN=codex\n'
+  printf 'SANDBOX_PASSWORD=parityprobepw\n'
+  printf 'GIT_USER_NAME=Parity Probe\n'
 } > "$work/.devcontainer/.env"
 
-clear_ambient=(env -u SANDBOX_NAME -u TZ -u INSTALL_HERMES -u CRON_AGENT_BIN)
+clear_ambient=(env -u SANDBOX_NAME -u TZ -u SANDBOX_PASSWORD -u GIT_USER_NAME)
 
 via_wrapper="$(cd "$work" && "${clear_ambient[@]}" bash "$work/.oh/scripts/docker-compose.sh" --repo-dir "$work" config 2>/dev/null || true)"
 via_vscode="$(cd "$work/.devcontainer" && "${clear_ambient[@]}" docker compose -f "$work/.devcontainer/docker-compose.yml" config 2>/dev/null || true)"
@@ -71,7 +72,7 @@ if [[ -z "$via_wrapper" || -z "$via_vscode" ]]; then
   exit 2
 fi
 
-for pair in "container_name: parityprobe" "TZ: America/Denver" "INSTALL_HERMES" "CRON_AGENT_BIN: codex"; do
+for pair in "container_name: parityprobe" "TZ: America/Denver" "SANDBOX_PASSWORD: parityprobepw" "GIT_USER_NAME: Parity Probe"; do
   grep -qF "$pair" <<<"$via_wrapper" || fails+=("wrapper path did not resolve '$pair' from .devcontainer/.env")
   grep -qF "$pair" <<<"$via_vscode"  || fails+=("VS Code path did not resolve '$pair' from .devcontainer/.env")
 done

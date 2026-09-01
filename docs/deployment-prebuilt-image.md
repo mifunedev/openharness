@@ -147,27 +147,41 @@ is a standalone compose file — no `..:` bind mount, no `build:` stanza:
 docker compose -f .devcontainer/docker-compose.image-only.yml up -d
 ```
 
-This pulls and runs the published image with **no clone and no build**. The
-workspace and control plane live entirely in the named `oh_workspace` volume
-declared in that file, mounted at `$OH_PROJECT_ROOT`.
+This pulls and runs the published image with **no clone and no build**.
+Everything the sandbox persists — the workspace and control plane at
+`/home/sandbox/harness` included — lives in the single `/home/sandbox` mount
+declared in that file: the named volume `<sandbox-name>_workspace` by default,
+or an absolute host path when `OH_HOME_MOUNT` is set.
 
-### `OH_IMAGE_ONLY=1`
+### How the flavor is detected
 
-The compose file sets `OH_IMAGE_ONLY=1` in the container environment. This is
-the entrypoint flag that switches `entrypoint.sh` into **no-bind mode**:
+Nothing declares the flavor. `entrypoint.sh` asks whether
+`/home/sandbox/harness` is a bind mount **and** already holds a `.oh/` directory,
+and reads the answer from the kernel and the filesystem:
 
-- the host UID/GID sync block is skipped (there is no host directory to read
-  ownership from)
-- the workspace mount is `chown`'d to the sandbox user instead
-- the first-boot seed (below) runs before `link-providers`, the root
-  `pnpm install`, and cron tmux setup, so those steps see a populated `.oh/`
+- **checkout bind present** (Flavor A) — sync the sandbox UID/GID to the host
+  directory's owner, and never seed.
+- **anything else** (this flavor, and a runtime that mounts a fresh empty host
+  directory at the project root) — skip the UID/GID sync, since there is no host
+  directory to read ownership from; `chown` the workspace to the sandbox user;
+  and run the first-boot seed (below) before `link-providers`, the root
+  `pnpm install`, and cron tmux setup, so those steps see a populated `.oh/`.
 
-Prebuilt-image mode (Flavor A) never sets this flag — it always keeps the bind
-mount, so its host-UID-sync path is unchanged.
+The detected mode is logged on both paths, so a wrong detection is visible in
+`oh logs` rather than silent:
+
+```
+[entrypoint] checkout bind detected at /home/sandbox/harness — syncing host UID/GID
+[entrypoint] no checkout bind at /home/sandbox/harness — seeding from /opt/oh-seed
+```
+
+Three independent guards keep a misdetection from seeding over a real checkout:
+`mountpoint -q` is a kernel fact rather than a heuristic, `seed_workspace_volume`
+refuses when `.oh/` already exists, and `.oh/.image-seeded` is gitignored.
 
 ### Seed-to-volume persistence
 
-On the **first boot** against an empty `oh_workspace` volume, the entrypoint
+On the **first boot** against an empty home mount, the entrypoint
 seeds the baked control plane — from the image's `/opt/oh-seed` — into the
 volume, then writes the marker `.oh/.image-seeded`. From that point on, the
 **volume is authoritative**: it is the operator-editable copy of `.oh/` (and
@@ -207,20 +221,14 @@ NAME=openharness
 
 # ── 1. Clear previous state ── DESTRUCTIVE: wipes the seeded workspace ──
 docker rm -f "$NAME" 2>/dev/null || true
-docker volume rm oh_workspace 2>/dev/null || true   # the seeded .oh/ control plane
+docker volume rm "${NAME}_workspace" 2>/dev/null || true   # the whole sandbox home
 
 # ── 2. Fresh run (no bind mount, no build) ─────────────────────────
 docker run -d --name "$NAME" --restart unless-stopped --init \
-  -e OH_IMAGE_ONLY=1 \
-  -e OH_PROJECT_ROOT=/home/sandbox/harness \
   -e GIT_USER_NAME="ryaneggz" \
   -e GIT_USER_EMAIL="kre8mymedia@gmail.com" \
   -e GH_TOKEN="${GH_TOKEN:-}" \
-  -v oh_workspace:/home/sandbox/harness \
-  -v claude-auth:/home/sandbox/.claude \
-  -v config-dir:/home/sandbox/.config \
-  -v herdr-data:/home/sandbox/.herdr \
-  -v ssh-config:/home/sandbox/.ssh \
+  -v "${NAME}_workspace":/home/sandbox \
   "$IMAGE" sleep infinity
 
 # ── 3. Verify the seed + provider wiring ───────────────────────────
@@ -233,13 +241,20 @@ docker exec "$NAME" bash -lc '
 ```
 
 A healthy boot ends with `Providers OK: …` and `SEED_OK`, and the logs show
-**no** `protected-paths.txt is missing`. The `oh_workspace` volume is now
+**no** `protected-paths.txt is missing`. The home mount is now
 authoritative — later boots see the `.oh/.image-seeded` marker and skip
 re-seeding, so your in-container edits persist.
 
+The same first boot also installs the default harnesses (Claude Code, Codex, Pi)
+into `/home/sandbox/.local`; they are not baked into the image. Expect the boot
+to run 60–180s longer than the `sleep 8` above and to need network — check with
+`docker exec "$NAME" bash -lc 'oh harness list --defaults'`. If the registry was
+unreachable the container still comes up; re-run
+`docker exec "$NAME" bash -lc 'bash /home/sandbox/harness/.oh/scripts/provision-defaults.sh'`.
+
 ```bash
 # ── 4. Attach an interactive shell (once the container is stable) ──
-# Optional: block until the healthcheck reports healthy (start_period ~300s).
+# Optional: block until the healthcheck reports healthy (start_period ~600s).
 until [ "$(docker inspect -f '{{.State.Health.Status}}' "$NAME" 2>/dev/null)" = healthy ]; do
   echo "waiting for $NAME to become healthy…"; sleep 5
 done

@@ -1,18 +1,21 @@
 # `.oh/tasks/`
 
 Spec task workdirs. Each `<slug>/` subfolder is one `/spec execute` task's
-four-file contract, created by `/spec plan` (the `/ralph` skill produces the
-`prd.json` inside it) and implemented by the single Advisor session.
+three-file contract, created by `/spec plan` (the `/ralph` skill produces the
+`prd.json` inside it) and implemented by that task's single implementation owner —
+the agent that runs `/spec execute`. Ownership is a role, not a terminal session:
+a task folder's identity and state never depend on a session, tab, or pane.
 
 A task directory typically contains:
 
-| File           | Purpose                                                  |
-| -------------- | -------------------------------------------------------- |
-| `prd.json`     | Ralph-formatted PRD — the Advisor's authoritative task graph |
-| `prd.md`       | Human-readable PRD that `prd.json` was generated from    |
-| `prompt.md`    | Task-specific instructions for the Advisor's implementation |
-| `progress.txt` | Advisor's running log; ends with `STATUS: COMPLETE` on done |
-| `critique.md`  | Optional critic notes from PRD review                    |
+| File               | Purpose                                                  |
+| ------------------ | -------------------------------------------------------- |
+| `prd.json`         | Ralph-formatted PRD — the owner's authoritative task graph, and the structured completion state (`userStories[].passes`) |
+| `prd.md`           | Human-readable PRD that `prd.json` was generated from    |
+| `progress.txt`     | The implementation owner's running execution narrative and resume evidence — what was attempted, what landed, and where a resumed session picks up. Carries no completion sentinel |
+| `evidence.md`      | The implementation's answer back to the approved plan, written after implementation; required before the PR leaves draft |
+| `eval-result.json` | The commit-keyed probe-suite result for the task's HEAD, when a probe suite applies |
+| `critique.md`      | Optional critic notes from PRD review                    |
 
 ## Conventions
 
@@ -20,18 +23,21 @@ A task directory typically contains:
   segment when the task corresponds to a harness branch.
 - **This whole directory is gitignored** (`.gitignore`: `.oh/tasks/*` with
   `!.oh/tasks/README.md`), so only this guide is tracked by default. Task files a PR
-  must carry — `prd.md`, `prd.json`, `prompt.md`, `progress.txt`, `evidence.md`,
+  must carry — `prd.md`, `prd.json`, `progress.txt`, `evidence.md`,
   `eval-result.json` — are added explicitly with **`git add -f`**. A bare
   `git add .oh/tasks/<slug>/` stages nothing and commits silently without them, which
   is the same as never having written them from a reviewer's seat.
-- **Do not edit `progress.txt` by hand** — the Advisor appends to it.
+- **Do not edit `progress.txt` by hand** — the implementation owner appends to it.
 
 ## Lifecycle
 
 - Tasks are created under `.oh/tasks/<taskdesc>/`.
-- The weekly `cleanup-tasks` cron (`crons/cleanup-tasks.md`) sweeps any
-  task whose `progress.txt` ends with `STATUS: COMPLETE` into
-  `.oh/tasks/archive/<YYYY-MM-DD>/<taskdesc>/`.
+- The weekly `cleanup-tasks` cron (`crons/cleanup-tasks.md`) archives a task
+  into `.oh/tasks/archive/<YYYY-MM-DD>/<taskdesc>/` when every user story in
+  its `prd.json` has passed — that is, when
+  `jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/<slug>/prd.json`
+  exits 0. A task folder with no readable `prd.json` is not complete: it stays
+  in place and is noted.
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 

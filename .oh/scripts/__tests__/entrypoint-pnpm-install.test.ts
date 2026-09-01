@@ -13,13 +13,13 @@ const entrypoint = readFileSync(ENTRYPOINT, "utf-8");
 const compose = readFileSync(COMPOSE, "utf-8");
 
 describe("devcontainer entrypoint pnpm install", () => {
-  it("keeps the explicit SKIP_PNPM_INSTALL opt-out", () => {
-    expect(entrypoint).toContain("SKIP_PNPM_INSTALL=1");
-    expect(entrypoint).toContain('${SKIP_PNPM_INSTALL:-0}');
+  it("reads the opt-out from oh.json through the CLI, not from the environment", () => {
+    expect(entrypoint).toContain("oh_config_truthy '.build.skipPnpmInstall'");
+    expect(entrypoint).not.toContain("SKIP_PNPM_INSTALL");
   });
 
-  it("passes the SKIP_PNPM_INSTALL opt-out through compose", () => {
-    expect(compose).toContain("SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}");
+  it("keeps the opt-out out of compose", () => {
+    expect(compose).not.toContain("SKIP_PNPM_INSTALL");
   });
 
   it("uses an Open Harness marker stored under node_modules", () => {

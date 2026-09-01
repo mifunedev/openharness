@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
+# source: PR #833 (one schema file — DOCKER_SOCKET, SANDBOX_SSH, OH_SANDBOX_IMAGE, OH_PULL_POLICY, SKIP_PNPM_INSTALL were consumed but undocumented); rewritten for the oh.json/secrets split by PR #887
 # desc: the oh.json/.env split loses no variable — every compose-interpolated var is either a documented oh.json field or an allow-listed secret, and neither surface holds the other's keys
 set -euo pipefail
 

@@ -118,8 +118,8 @@ Env vars:
                        same name is already running (default: refuse, so a live
                        sandbox is never overwritten)
   INSTALL_HERMES=true  Enable an optional agent non-interactively. Also:
-                       INSTALL_OPENCODE, INSTALL_DEEPAGENTS, INSTALL_GROK_BUILD,
-                       INSTALL_AGENT_BROWSER
+                       INSTALL_OPENCODE, INSTALL_GROK_BUILD,
+                       INSTALL_AGENT_BROWSER, INSTALL_TAILSCALE
   DOCKER_SOCKET=true   Mount the host Docker socket into the sandbox
                        non-interactively. OFF by default (socket access is
                        effectively host root). Otherwise you're prompted (TTY),
@@ -438,9 +438,9 @@ _opt_install() {
 }
 _opt_install HERMES        install.hermes      "Hermes — Nous self-improving agent CLI"
 _opt_install OPENCODE      install.opencode    "OpenCode — OpenAI-OAuth terminal agent"
-_opt_install DEEPAGENTS    install.deepagents  "DeepAgents — LangChain multi-provider agent"
 _opt_install GROK_BUILD    install.grokBuild   "Grok Build — xAI terminal agent"
 _opt_install AGENT_BROWSER install.agentBrowser "agent-browser + Chromium (~1 GB)"
+_opt_install TAILSCALE      install.tailscale   "Tailscale — private remote access for T3 Code (userspace)"
 
 banner "Host Docker socket (off by default)"
 if [ "$(_config_get access.dockerSocket)" = "true" ]; then
@@ -492,9 +492,9 @@ printf "  ${CYAN}Optional capabilities${NC}  (installed live — no rebuild)\n"
 printf "  ──────────────────────────────────────\n"
 printf "       oh harness install hermes        — Hermes agent (then 'hermes setup'; optional dashboard)\n"
 printf "       oh harness install opencode      — OpenCode terminal agent\n"
-printf "       oh harness install deepagents    — LangChain DeepAgents\n"
 printf "       oh harness install grok-build    — xAI Grok Build\n"
 printf "       oh tool install agent-browser    — headless Chromium for screenshots / previews (~1 GB)\n"
+printf "       oh tool install tailscale        — private tailnet access for remote / mobile T3 Code\n"
 printf "                                          (each flips the matching install.* flag in oh.json)\n"
 printf "\n"
 printf "  ${CYAN}Messaging gateways${NC}\n"

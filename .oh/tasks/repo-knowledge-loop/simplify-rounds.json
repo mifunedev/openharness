@@ -1,0 +1,8 @@
+{
+  "rounds": 2,
+  "netAdded": 4496,
+  "prevNetAdded": 4112,
+  "lastCommit": "29d3dafca5e43feab8d5a8c1bf10b5b3ea572c01",
+  "finding": "round 1 deleted knowledge-impact.sh --since (zero call sites); round 2 found no blocking finding (SIMPLICITY-RESIDUAL: 0)",
+  "growthSince": "the increase over round 1 is the development merge, not unsimplified new work: 537 of the 733 added lines are PR #930's four new probes and the /spec, /delegate, /rlm, /ste, /t3, /audit, capability, crons and docs surfaces it rewrote, plus this run's two compiled pattern pages"
+}

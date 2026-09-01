@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
+# source: PR #833 (migrate-harness-yaml.sh — append / uncomment-in-place / preserve / overwrite, plus a silent no-op second run) 2026-08-26
 # desc: migrate-harness-yaml.sh carries a live harness.yaml into the oh.json/root-dotenv split — non-secret settings land as oh.json fields (never .devcontainer/.env or the retired .oh/config.json), the file is renamed, and the second run is a no-op
 set -euo pipefail
 

@@ -36,7 +36,7 @@ change agent-owned files after initial scaffolding.
 ### 2. Coding-harness choice does not change the workspace
 
 Claude Code, Codex, Pi, and other coding harnesses use the same project state and
-shared primitives. Canonical agents, task procedures, and hooks live under `.oh/`.
+shared primitives. Canonical skills, task procedures, and hooks live under `.oh/`.
 Compatibility directories expose those primitives through symlinks. Change the
 canonical `.oh/` source. Do not patch a generated mirror.
 
@@ -141,8 +141,8 @@ silently skip a surface.
 ## How to work in this repository
 
 This file is the only always-on context. A nested `AGENTS.md` exists only in
-`.worktrees/`, `projects/`, and `crons/`, whose contents run or are checked
-out apart from it. Every other directory uses a `README.md`.
+`.worktrees/`, `projects/`, `crons/`, and `.oh/logs/`, whose contents are
+produced apart from it. Every other directory uses a `README.md`.
 
 Use the lifecycle in this order:
 
@@ -174,7 +174,7 @@ The repository has one sandbox definition and four control-plane areas:
   This directory stays outside the `.oh/` control plane.
 - `.oh/scripts/`, `.oh/install/`, and `.oh/cli/` implement lifecycle and runtime
   behavior.
-- `.oh/skills/`, `.oh/agents/`, and `.oh/hooks/` hold portable agent primitives.
+- `.oh/skills/` and `.oh/hooks/` hold portable primitives; skills encode roles.
 - `.oh/tasks/` holds task-specific plans, graphs, progress, and evidence.
 - `.oh/evals/` holds regression probes and capability benchmarks.
 

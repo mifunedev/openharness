@@ -11,33 +11,50 @@ function entrypoint(): string {
   return readFileSync(ENTRYPOINT, "utf8");
 }
 
-describe("devcontainer entrypoint auth volume ownership", () => {
-  it("repairs auth mounts with the sandbox user's current numeric uid/gid", () => {
+describe("devcontainer entrypoint home mount ownership", () => {
+  it("repairs the whole home mount with the sandbox user's current numeric uid/gid", () => {
     const text = entrypoint();
 
     expect(text).toContain("sandbox_ownership()");
     expect(text).toContain('$(id -u sandbox)');
     expect(text).toContain('$(id -g sandbox)');
     expect(text).toContain('owner="$(sandbox_ownership)"');
-    expect(text).toContain('chown -hR "$owner" "/home/sandbox/$dir"');
-    expect(text).toContain(".local/share/opencode");
-    expect(text).toContain("/home/sandbox/.hermes");
-    expect(text).toContain("Do not recurse\n  # into $HERMES_HOME when it points at the bind-mounted checkout");
+    expect(text).toContain('find /home/sandbox -path "$OH_PROJECT_ROOT" -prune -o');
+    expect(text).toContain('-exec chown -h "$owner" {} +');
+    expect(text).toContain("chmod 700 /home/sandbox/.ssh");
   });
 
-  it("runs auth mount repair before and after host UID reconciliation", () => {
+  it("prunes the checkout rather than relying on -xdev, which the home mount defeats", () => {
     const text = entrypoint();
-    const firstRepair = text.indexOf("repair_home_mount_ownership\n\n# ─── Host UID reconciliation");
-    const uidSync = text.indexOf("usermod -u \"$HOST_UID\" sandbox");
-    const secondRepair = text.indexOf("# UID/GID reconciliation can change");
 
-    expect(firstRepair).toBeGreaterThan(-1);
-    expect(uidSync).toBeGreaterThan(firstRepair);
+    expect(text).not.toContain("-xdev");
+    expect(text).not.toContain('chown -hR "$owner" "/home/sandbox/$dir"');
+  });
+
+  it("seeds the home mount from the image before host UID reconciliation", () => {
+    const text = entrypoint();
+    const seedFn = text.indexOf("# >>> seed_home >>>");
+    const seedCall = text.indexOf("seed_home /home/sandbox");
+    const uidSync = text.indexOf("usermod -u \"$HOST_UID\" sandbox");
+
+    expect(seedFn).toBeGreaterThan(-1);
+    expect(text).toContain('if [ -e "$dest/$name" ] || [ -L "$dest/$name" ]; then');
+    expect(text).toContain('find . -mindepth 1 -maxdepth 1');
+    expect(text).toContain('${OH_HOME_SEED_SRC:-/opt/home-seed}');
+    expect(seedCall).toBeGreaterThan(seedFn);
+    expect(uidSync).toBeGreaterThan(seedCall);
+  });
+
+  it("runs home mount repair after host UID reconciliation", () => {
+    const text = entrypoint();
+    const uidSync = text.indexOf("usermod -u \"$HOST_UID\" sandbox");
+    const secondRepair = text.indexOf('PW="${SANDBOX_PASSWORD:-test1234}"');
+
     expect(secondRepair).toBeGreaterThan(uidSync);
     const postUidSync = text.slice(secondRepair);
     const secondRepairCall = postUidSync.indexOf("repair_home_mount_ownership");
     const linkProviders = postUidSync.indexOf('bash "$HARNESS/.oh/scripts/link-providers.sh" --init');
-    const hermesBlock = postUidSync.indexOf("# Hermes keeps all runtime state");
+    const hermesBlock = postUidSync.indexOf('if command -v hermes >/dev/null 2>&1; then');
     expect(secondRepairCall).toBeGreaterThan(-1);
     expect(linkProviders).toBeGreaterThan(secondRepairCall);
     expect(hermesBlock).toBeGreaterThan(linkProviders);
@@ -46,13 +63,16 @@ describe("devcontainer entrypoint auth volume ownership", () => {
   it("does not swallow host UID reconciliation failures", () => {
     const text = entrypoint();
     const block = text.slice(
-      text.indexOf("# ─── Host UID reconciliation"),
-      text.indexOf("# UID/GID reconciliation can change"),
+      text.indexOf("uid_reconcile_step() {"),
+      text.indexOf('PW="${SANDBOX_PASSWORD:-test1234}"'),
     );
 
     expect(block).toContain("uid_reconcile_step()");
     expect(block).toContain("WARNING: failed to");
-    const reconBranch = block.slice(block.indexOf('elif [ -d "$HARNESS_DIR" ]'));
+    const reconBranch = block.slice(
+      block.indexOf('if mountpoint -q "$HARNESS_DIR" 2>/dev/null && [ -d "$HARNESS_DIR/.oh" ]; then'),
+      block.indexOf('echo "[entrypoint] no checkout bind at $HARNESS_DIR'),
+    );
     expect(reconBranch).not.toContain("2>/dev/null || true");
     expect(reconBranch).not.toContain("groupmod -g \"$HOST_GID\" sandbox 2>/dev/null");
     expect(reconBranch).not.toContain("usermod -u \"$HOST_UID\" sandbox 2>/dev/null");
@@ -61,17 +81,15 @@ describe("devcontainer entrypoint auth volume ownership", () => {
   it("prints UID sync success only after reconciliation commands report success", () => {
     const text = entrypoint();
     const block = text.slice(
-      text.indexOf("# ─── Host UID reconciliation"),
-      text.indexOf("# UID/GID reconciliation can change"),
+      text.indexOf("uid_reconcile_step() {"),
+      text.indexOf('PW="${SANDBOX_PASSWORD:-test1234}"'),
     );
     const usermod = block.indexOf("uid_reconcile_step \"set sandbox UID to host UID $HOST_UID\" usermod -u \"$HOST_UID\" sandbox");
-    const chown = block.indexOf("uid_reconcile_step \"repair sandbox-owned files after UID/GID sync\" find /home/sandbox");
     const success = block.indexOf("sandbox UID synced to host");
     const incomplete = block.indexOf("sandbox UID/GID reconciliation incomplete");
 
     expect(usermod).toBeGreaterThan(-1);
-    expect(chown).toBeGreaterThan(usermod);
-    expect(success).toBeGreaterThan(chown);
+    expect(success).toBeGreaterThan(usermod);
     expect(incomplete).toBeGreaterThan(success);
     expect(block).toContain("if [ \"$UID_GID_SYNC_OK\" = \"true\" ]; then");
   });

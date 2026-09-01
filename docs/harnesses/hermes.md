@@ -10,8 +10,8 @@ skills from experience, scheduled task automation, sub-agent delegation,
 container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
-Hermes is an **optional image-level runtime** in Open Harness. When enabled (set `INSTALL_HERMES=true` in `.devcontainer/.env`), it sits alongside `claude`, `codex`,
-`pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. See the
+Hermes is an **optional harness** in Open Harness. Install it with `oh harness install hermes` (or set `install.hermes` in `oh.json`, which the boot provisioner honours); it then sits alongside `claude`, `codex`,
+`pi`, and `opencode` as a sandbox CLI primitive. See the
 upstream documentation below for canonical facts about Hermes.
 
 ## Purpose
@@ -41,32 +41,33 @@ See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only
 
 ### Manual path
 
-Hermes is disabled by default. To install it into the sandbox image, uncomment
-the key in `.devcontainer/.env`:
+Hermes is disabled by default. To have boot provisioning install it, set the
+field in the tracked `oh.json`:
 
 ```bash
-INSTALL_HERMES=true
+oh config set install.hermes true
 ```
 
-Then rebuild/restart the sandbox:
+Then restart the sandbox:
 
 ```bash
 oh stop && oh sandbox
 ```
 
-The executable is installed during image build, not at container boot, so
-an enabled sandbox has `hermes` on PATH immediately:
+The executable is installed by `oh harness install hermes`, or at boot on a
+fresh home mount when `install.hermes` is true. Once installed it persists in
+the home mount, so later boots find it on PATH immediately:
 
 ```bash
 hermes --version
 ```
 
-At image build time, Open Harness runs the official installer with setup
-and browser installation disabled:
+Open Harness runs the official installer as the `sandbox` user with setup and
+browser installation disabled, directing it into the home mount:
 
 ```bash
 curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-  | bash -s -- --skip-setup --skip-browser
+  | HERMES_INSTALL_DIR="$HOME/.local/lib/hermes-agent" bash -s -- --skip-setup --skip-browser
 ```
 
 Review-first equivalent for manual inspection:
@@ -92,15 +93,17 @@ hermes setup --portal   # Nous Portal OAuth integration
 hermes doctor           # health check
 ```
 
-Config, memory, runtime skills, and sessions write to `~/harness/.hermes/`
-through `HERMES_HOME=/home/sandbox/harness/.hermes`. On boot with
-Hermes enabled, the entrypoint links `.hermes/skills/openharness` to the
-tracked shared skills directory (`.oh/skills/`), making the same harness
-skills used by Claude, Codex, and Pi visible to Hermes by default.
+Config, memory, runtime skills, and sessions write to `~/harness/.hermes/`,
+which the entrypoint sets as `HERMES_HOME`. On every boot where the `hermes`
+binary is present — the wiring keys off the binary, not off a flag, so it runs
+identically in both sandbox flavors — the entrypoint links
+`.hermes/skills/openharness` to the tracked shared skills directory
+(`.oh/skills/`), making the same harness skills used by Claude, Codex, and Pi
+visible to Hermes by default.
 
 Auth lives directly inside `HERMES_HOME` (`~/harness/.hermes/auth.json`).
 No symlink or named volume is involved: an earlier design symlinked
-`auth.json` into a home-scoped `hermes-auth` Docker volume, but that
+`auth.json` into a home-scoped Docker volume of its own, but that
 volume sits on a different filesystem from the bind-mounted checkout and
 caused Hermes' atomic-replace writes to fail with `EXDEV`. Keeping auth
 on the same bind-mount device fixes this; the entrypoint heals any
@@ -122,10 +125,11 @@ secrets from this directory.
 the bind-mounted `.hermes/` directory from the checkout. Remove that
 directory manually if you want a full Hermes project-state reset.
 
-The Hermes binary itself is installed in the image when
-`INSTALL_HERMES=true` is set in `.devcontainer/.env`, under the installer's root Linux FHS layout
-(`/usr/local/lib/hermes-agent` with a `/usr/local/bin/hermes` launcher).
-Disabling the flag on a future rebuild omits the executable; project-local
+The Hermes binary is installed into the home mount by `oh harness install hermes`
+— at `~/.local/lib/hermes-agent` with a `~/.local/bin/hermes` launcher — and the
+boot provisioner reinstalls it on a fresh home mount whenever `install.hermes` is
+true. Nothing about it lives in the image. Disabling the flag stops the
+reinstall but leaves an existing install in place; project-local
 state remains in `.hermes/` until removed.
 
 ## Common usage
@@ -191,33 +195,31 @@ It is **disabled by default** and opt-in per sandbox.
 
 ### Enabling
 
-In `.devcontainer/.env`, set alongside `INSTALL_HERMES=true`:
+Set the fields in the tracked `oh.json`:
 
 ```bash
-HERMES_DASHBOARD=true
-HERMES_DASHBOARD_PORT=9119   # optional; 9119 is the default
+oh config set hermesDashboard.enabled true
+oh config set hermesDashboard.port 9119   # optional; 9119 is the default
 ```
 
-Then rebuild:
+Then restart:
 
 ```bash
 oh stop && oh sandbox
 ```
 
-`HERMES_DASHBOARD` requires `INSTALL_HERMES=true` to take effect: the dashboard
-overlay is applied whether or not Hermes is installed, but there is nothing for
-it to serve without the binary.
+The dashboard needs the `hermes` binary; without it there is nothing to serve and
+the entrypoint skips the launch.
 
 ### What auto-launches
 
-When both `INSTALL_HERMES=true` and `HERMES_DASHBOARD=true` are set (or
-the equivalent legacy env vars), the entrypoint starts the dashboard in a
-named tmux session:
+When `hermesDashboard.enabled` is true and `hermes` is installed, the entrypoint
+starts the dashboard in a named tmux session:
 
 - **tmux session**: `app-hermes-dashboard`
-- **Container bind**: `0.0.0.0:<port>` (all container interfaces — required so Docker's published port can reach the process; set via `HERMES_DASHBOARD_HOST=0.0.0.0` and `HERMES_DASHBOARD_INSECURE=true` in the compose overlay)
-- **Host publish**: `127.0.0.1:9119 → container:9119` (loopback-only on the host)
-- **URL** (from the host browser): `http://127.0.0.1:9119`
+- **Container bind**: `127.0.0.1:<port>` — container loopback only
+- **Host publish**: none. The dashboard is no longer published to the host.
+- **URL** (from inside the sandbox): `http://127.0.0.1:9119`
 
 ### Inspect and restart
 
@@ -231,31 +233,28 @@ tail -f /tmp/app-hermes-dashboard.log
 # Restart (kill session, then relaunch manually or rebuild sandbox)
 tmux kill-session -t app-hermes-dashboard
 tmux new-session -d -s app-hermes-dashboard \
-  "hermes dashboard --port ${HERMES_DASHBOARD_PORT:-9119} --host 0.0.0.0 --insecure --no-open 2>&1 | tee /tmp/app-hermes-dashboard.log"
+  "hermes dashboard --port 9119 --host 127.0.0.1 --no-open 2>&1 | tee /tmp/app-hermes-dashboard.log"
 ```
 
 ### Security
 
-The dashboard reads and writes `.env` secrets and `config.yaml`. The
-compose overlay intentionally binds the **in-container** process to
-`0.0.0.0` (via `HERMES_DASHBOARD_HOST=0.0.0.0` and
-`HERMES_DASHBOARD_INSECURE=true`) — this non-loopback container bind is
-required for Docker's port publishing mechanism to forward traffic from
-the host into the container. The **host-side** publish is loopback-only
-(`127.0.0.1:9119`), so the port is never reachable from the LAN.
+The dashboard reads and writes `.env` secrets and `config.yaml`, and it binds to
+**container loopback** only. Nothing publishes it to the host, so it is reachable
+from inside the sandbox and from an explicit tunnel — never from the LAN, and not
+from the host browser without one.
 
-Because only processes on the local machine can reach `127.0.0.1:9119`,
-**no additional authentication is required** — access is equivalent to
-existing host-shell access and does not widen the attack surface.
+Because only processes inside the container can reach `127.0.0.1:9119`,
+**no additional authentication is required** by default.
 
-Do **not** change the host bind to `0.0.0.0` — that would expose the
-dashboard (and the `.env` secrets it reads) to the LAN without auth.
+Do **not** change the bind to `0.0.0.0` — that would expose the dashboard (and
+the `.env` secrets it reads) to anything that can route to the container.
 
 ### Remote access
 
 To reach the dashboard from another machine, use `/cloudflared 9119` to
-start a Cloudflared tunnel for the loopback bind. The tunnel handles TLS;
-the dashboard itself stays on loopback.
+start a Cloudflared tunnel for the loopback bind, or reach it over the tailnet
+with `oh tool install tailscale`. The tunnel handles TLS; the dashboard itself
+stays on loopback.
 
 For sensitive dashboards, add Cloudflare Access or another authentication
 gate before sharing the URL. If you intentionally change Hermes to a
@@ -276,7 +275,7 @@ vars — see upstream Hermes documentation for the full list.
 
 The sandbox onboarding banner reports Hermes as:
 
-- `❌ not installed` — set `INSTALL_HERMES=true` in `.devcontainer/.env` and rebuild — when the binary is absent from PATH.
+- `❌ not installed` — run `oh harness install hermes` — when the binary is absent from PATH.
 - `✅ installed — run: hermes setup` — when the binary is on PATH but
   `~/.hermes/auth.json` is absent or empty.
 - `✅ authenticated` — when `~/.hermes/auth.json` exists and is

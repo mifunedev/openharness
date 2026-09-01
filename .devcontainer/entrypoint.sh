@@ -17,31 +17,7 @@ sandbox_ownership() {
 repair_home_mount_ownership() {
   local owner
   owner="$(sandbox_ownership)"
-  echo "[entrypoint] repairing sandbox auth mount ownership as $owner"
-
-  for dir in .claude .codex .pi .prime .grok .deepagents .herdr .cloudflared .config .cc-safety-net .ssh; do
-    if [ -d "/home/sandbox/$dir" ]; then
-      chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
-      [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
-    fi
-  done
-
-  # Legacy Hermes home state may exist from earlier layouts. Do not recurse
-  # into $HERMES_HOME when it points at the bind-mounted checkout; that
-  if [ -d "/home/sandbox/.hermes" ]; then
-    chown -hR "$owner" "/home/sandbox/.hermes" 2>/dev/null || true
-  fi
-
-  for parent in /home/sandbox/.local /home/sandbox/.local/share /home/sandbox/.config; do
-    if [ -d "$parent" ]; then
-      chown -h "$owner" "$parent" 2>/dev/null || true
-    fi
-  done
-
-  OPENCODE_STATE="/home/sandbox/.local/share/opencode"
-  if [ -d "$OPENCODE_STATE" ]; then
-    chown -hR "$owner" "$OPENCODE_STATE" 2>/dev/null || true
-  fi
+  echo "[entrypoint] repairing sandbox home mount ownership as $owner"
 
   install -d -o sandbox -g sandbox \
     /home/sandbox/.local/share/uv \
@@ -49,12 +25,30 @@ repair_home_mount_ownership() {
     /home/sandbox/.local/share/uv/python \
     /home/sandbox/.cache \
     /home/sandbox/.cache/uv 2>/dev/null || true
-  for uv_dir in /home/sandbox/.local/share/uv /home/sandbox/.cache/uv; do
-    if [ -d "$uv_dir" ]; then
-      chown -hR "$owner" "$uv_dir" 2>/dev/null || true
-    fi
-  done
+
+  find /home/sandbox -path "$OH_PROJECT_ROOT" -prune -o \
+    -exec chown -h "$owner" {} + 2>/dev/null || true
+
+  if [ -d /home/sandbox/.ssh ]; then
+    chmod 700 /home/sandbox/.ssh 2>/dev/null || true
+  fi
 }
+
+# >>> seed_home >>>
+seed_home() {
+  local dest="${1:-/home/sandbox}"
+  local src="${OH_HOME_SEED_SRC:-/opt/home-seed}"
+  [ -d "$src" ] || return 0
+  mkdir -p "$dest" || return 1
+  local name
+  while IFS= read -r -d '' name; do
+    if [ -e "$dest/$name" ] || [ -L "$dest/$name" ]; then
+      continue
+    fi
+    cp -a "$src/$name" "$dest/$name" || return 1
+  done < <(cd "$src" && find . -mindepth 1 -maxdepth 1 -printf '%P\0')
+}
+# <<< seed_home <<<
 
 # >>> seed_workspace_volume >>>
 seed_workspace_volume() {
@@ -85,11 +79,31 @@ seed_workspace_volume() {
 }
 # <<< seed_workspace_volume <<<
 
-repair_home_mount_ownership
+# >>> oh_config >>>
+OH_CONFIG_JSON=""
+oh_config() {
+  local filter="$1" fallback="${2-}" out
+  command -v jq >/dev/null 2>&1 || { printf '%s' "$fallback"; return 0; }
+  if [ -z "$OH_CONFIG_JSON" ]; then
+    OH_CONFIG_JSON="$(cd "$HARNESS" 2>/dev/null && gosu sandbox "${OH_BIN:-oh}" config show 2>/dev/null)" || OH_CONFIG_JSON=""
+    [ -n "$OH_CONFIG_JSON" ] || OH_CONFIG_JSON="{}"
+  fi
+  out="$(printf '%s' "$OH_CONFIG_JSON" | jq -r "$filter" 2>/dev/null)" || out=""
+  if [ -z "$out" ] || [ "$out" = "null" ]; then printf '%s' "$fallback"; else printf '%s' "$out"; fi
+}
 
-# ─── Host UID reconciliation ────────────────────────────────────────
+oh_config_truthy() {
+  case "$(printf '%s' "$(oh_config "$1" "${2:-false}")" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+# <<< oh_config <<<
+
 OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
+
+seed_home /home/sandbox || echo "[entrypoint] WARNING: home seed incomplete; some baked dotfiles may be missing" >&2
 
 uid_reconcile_step() {
   local description="$1"
@@ -104,16 +118,8 @@ uid_reconcile_step() {
 }
 
 HARNESS_DIR="$OH_PROJECT_ROOT"
-if [ "${OH_IMAGE_ONLY:-}" = "1" ]; then
-  echo "[entrypoint] OH_IMAGE_ONLY=1 — no-bind mode; skipping host UID/GID sync"
-  seed_workspace_volume "$OH_PROJECT_ROOT"
-  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
-    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
-    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
-  else
-    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
-  fi
-elif [ -d "$HARNESS_DIR" ]; then
+if mountpoint -q "$HARNESS_DIR" 2>/dev/null && [ -d "$HARNESS_DIR/.oh" ]; then
+  echo "[entrypoint] checkout bind detected at $HARNESS_DIR — syncing host UID/GID"
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
@@ -131,12 +137,20 @@ elif [ -d "$HARNESS_DIR" ]; then
   fi
   if [ "$HOST_UID" != "$SANDBOX_UID" ]; then
     uid_reconcile_step "set sandbox UID to host UID $HOST_UID" usermod -u "$HOST_UID" sandbox || UID_GID_SYNC_OK=false
-    uid_reconcile_step "repair sandbox-owned files after UID/GID sync" find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + || UID_GID_SYNC_OK=false
     if [ "$UID_GID_SYNC_OK" = "true" ]; then
       echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
     else
       echo "[entrypoint] WARNING: sandbox UID/GID reconciliation incomplete; continuing with current ownership" >&2
     fi
+  fi
+else
+  echo "[entrypoint] no checkout bind at $HARNESS_DIR — seeding from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+  seed_workspace_volume "$OH_PROJECT_ROOT"
+  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
+    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  else
+    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
   fi
 fi
 
@@ -144,7 +158,6 @@ PW="${SANDBOX_PASSWORD:-test1234}"
 echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox password" >&2
 unset PW
 
-# UID/GID reconciliation can change the numeric identity behind the sandbox
 repair_home_mount_ownership
 
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
@@ -156,6 +169,14 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   fi
 fi
 
+if [ "${OH_PROVISION_DEFAULTS:-true}" = "true" ] \
+   && [ -x "$HARNESS/.oh/scripts/provision-defaults.sh" ]; then
+  if ! OH_EXECUTION_TARGET=local timeout "${OH_PROVISION_DEFAULTS_TIMEOUT:-240}" bash "$HARNESS/.oh/scripts/provision-defaults.sh"; then
+    echo "[entrypoint] WARNING: default provisioning did not complete; run: bash .oh/scripts/provision-defaults.sh" >&2
+    echo "[entrypoint] WARNING: herdr may be unavailable — 'tmux' still works as a fallback multiplexer" >&2
+  fi
+fi
+
 if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
    && [ -x "$HARNESS/.oh/scripts/provision-python.sh" ]; then
   if ! bash "$HARNESS/.oh/scripts/provision-python.sh"; then
@@ -163,9 +184,8 @@ if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
   fi
 fi
 
-# Hermes keeps all runtime state — including auth.json — inside the
-if [ "${INSTALL_HERMES:-false}" = "true" ]; then
-  HERMES_RUNTIME="${HERMES_HOME:-$HARNESS/.hermes}"
+if command -v hermes >/dev/null 2>&1; then
+  HERMES_RUNTIME="$HARNESS/.hermes"
   HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
 
   mkdir -p "$HERMES_RUNTIME"
@@ -200,23 +220,17 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     [ -d "$d" ] && chown -hR "$(sandbox_ownership)" "$d" 2>/dev/null || true
   done
 
-  if [ "${HERMES_DASHBOARD:-false}" = "true" ] && command -v hermes &>/dev/null \
-     && command -v tmux &>/dev/null; then
-    _dash_port="${HERMES_DASHBOARD_PORT:-9119}"
+  if oh_config_truthy '.hermesDashboard.enabled' && command -v tmux &>/dev/null; then
+    _dash_port="$(oh_config '.hermesDashboard.port' 9119)"
     case "$_dash_port" in
       *[!0-9]|"")
-        echo "[entrypoint] HERMES_DASHBOARD_PORT='${_dash_port}' is not numeric — skipping dashboard launch"
+        echo "[entrypoint] hermesDashboard.port='${_dash_port}' is not numeric — skipping dashboard launch"
         ;;
       *)
         if ! gosu sandbox tmux has-session -t app-hermes-dashboard 2>/dev/null; then
-          _dash_host="${HERMES_DASHBOARD_HOST:-127.0.0.1}"
-          _dash_insecure=""
-          case "${HERMES_DASHBOARD_INSECURE:-}" in
-            [Tt][Rr][Uu][Ee]|1|[Yy][Ee][Ss]|[Oo][Nn]) _dash_insecure=" --insecure" ;;
-          esac
           gosu sandbox tmux new-session -d -s app-hermes-dashboard \
-            "hermes dashboard --no-open --host \"${_dash_host}\" --port \"${_dash_port}\"${_dash_insecure} 2>&1 | tee /tmp/app-hermes-dashboard.log"
-          echo "[entrypoint] starting Hermes dashboard on ${_dash_host}:${_dash_port}"
+            "hermes dashboard --no-open --host 127.0.0.1 --port \"${_dash_port}\" 2>&1 | tee /tmp/app-hermes-dashboard.log"
+          echo "[entrypoint] starting Hermes dashboard on 127.0.0.1:${_dash_port}"
         else
           echo "[entrypoint] app-hermes-dashboard tmux session already running — skipping"
         fi
@@ -225,7 +239,7 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   fi
 fi
 
-if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
+if oh_config_truthy '.access.ssh' && [ -x /usr/sbin/sshd ]; then
   if pgrep -x sshd >/dev/null 2>&1; then
     echo "[entrypoint] sshd already running — skipping"
   else
@@ -234,9 +248,10 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
 
     _ssh_dir=/home/sandbox/.ssh
     _have_keys=0
-    if [ -n "${SANDBOX_SSH_AUTHORIZED_KEYS:-}" ]; then
+    _ssh_authorized_keys="$(oh_config '.access.sshAuthorizedKeys' '')"
+    if [ -n "$_ssh_authorized_keys" ]; then
       mkdir -p "$_ssh_dir"
-      _ssh_keys="${SANDBOX_SSH_AUTHORIZED_KEYS//\\n/$'\n'}"
+      _ssh_keys="${_ssh_authorized_keys//\\n/$'\n'}"
       printf '%s\n' "$_ssh_keys" > "$_ssh_dir/authorized_keys"
       unset _ssh_keys
       chmod 700 "$_ssh_dir"
@@ -248,9 +263,9 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
     fi
 
     _pw_auth=no
-    case "$(printf '%s' "${SANDBOX_SSH_PASSWORD_AUTH:-false}" | tr '[:upper:]' '[:lower:]')" in
-      1|true|yes|on) _pw_auth=yes ;;
-    esac
+    if oh_config_truthy '.access.sshPasswordAuth'; then
+      _pw_auth=yes
+    fi
 
     mkdir -p /etc/ssh/sshd_config.d
     cat > /etc/ssh/sshd_config.d/openharness.conf <<EOF
@@ -262,8 +277,8 @@ EOF
 
     if [ "$_pw_auth" = "no" ] && [ "$_have_keys" -eq 0 ]; then
       echo "[entrypoint] WARNING: sshd starting with NO authorized_keys and password auth OFF —" >&2
-      echo "[entrypoint]          no one can log in. Set SANDBOX_SSH_AUTHORIZED_KEYS in .devcontainer/.env" >&2
-      echo "[entrypoint]          or SANDBOX_SSH_PASSWORD_AUTH=true in .devcontainer/.env. See docs/integrations/sshd.md" >&2
+      echo "[entrypoint]          no one can log in. Run: oh config set access.sshAuthorizedKeys '<public key>'" >&2
+      echo "[entrypoint]          or: oh config set access.sshPasswordAuth true. See docs/integrations/sshd.md" >&2
     fi
 
     if /usr/sbin/sshd; then
@@ -343,7 +358,6 @@ if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh aut
   fi
 fi
 
-# from the marker stored alongside node_modules. Set SKIP_PNPM_INSTALL=1 to opt
 pnpm_workspace_package_patterns() {
   local workspace="$1/pnpm-workspace.yaml"
   [ -f "$workspace" ] || return 0
@@ -446,7 +460,7 @@ pnpm_manifest_fingerprint() {
   done | sha256sum | awk '{print $1}'
 }
 
-if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
+if [ -f "$HARNESS/package.json" ] && ! oh_config_truthy '.build.skipPnpmInstall'; then
   PNPM_INSTALL_MARKER_FILENAME=".openharness-root-pnpm-manifest.sha256"
   PNPM_INSTALL_MARKER="$HARNESS/node_modules/$PNPM_INSTALL_MARKER_FILENAME"
   PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
@@ -539,20 +553,12 @@ else
   echo "[entrypoint] Slack not configured (or pi missing) — skipping client-slack-pi"
 fi
 
-if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser &>/dev/null; then
-  echo "[entrypoint] Installing agent-browser (INSTALL_AGENT_BROWSER=true)..."
-  pnpm add -g agent-browser@0.8.5 \
-    && find "$PNPM_HOME" -name "agent-browser-linux-*" -exec chmod +x {} \; \
-    && agent-browser install --with-deps 2>&1 | tail -5 \
-    && echo "[entrypoint] agent-browser installed" \
-    || echo "[entrypoint] agent-browser install failed — skipping"
-fi
+install -d -o sandbox -g sandbox -m 0755 /var/run/tailscale 2>/dev/null || true
 
 for hook in /usr/local/bin/*-entrypoint-hook.sh; do
   [ -x "$hook" ] && "$hook"
 done
 
-# First-boot message if onboarding not complete
 if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo ""
   echo "  ┌─────────────────────────────────────────────────┐"

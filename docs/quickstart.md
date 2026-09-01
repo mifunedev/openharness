@@ -119,9 +119,15 @@ continue to run independently under tmux.
 
 ## Set up agents inside Herdr
 
-The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
-DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
-demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use.
+The sandbox provisions Claude Code, Codex, and Pi — plus the Herdr and cloudflared
+tools — into `~/.local` on first boot —
+they live in the home mount, not the image, so `oh harness install <id>` upgrades
+them in place without a rebuild. A first boot on a fresh home mount therefore needs
+network access and takes a minute or two longer; the sandbox still comes up as a
+usable shell if the registry is unreachable, and you can retry with
+`bash .oh/scripts/provision-defaults.sh`. OpenCode, Hermes, and Grok
+Build are optional installs via `oh harness install <id>`; T3 Code runs on demand via the `/t3` skill
+or direct `npx`. Authenticate at least one harness before use.
 
 > **Simplest cross-provider login — device mode via `/login`.** The most straightforward path
 > that works the same across most harnesses: launch the agent in **interactive mode**, run
@@ -136,7 +142,6 @@ demand via the `/t3` skill or direct `npx`. Authenticate at least one harness be
 - **[Codex](./harnesses/codex.md)**: `codex login --device-auth` (device mode; or `/login` in-session)
 - **[OpenCode](./harnesses/opencode.md)**: `oh harness install opencode`, then run `opencode auth login`
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
-- **[DeepAgents](./harnesses/deepagents.md)**: `oh harness install deepagents`, then write provider keys to `~/.deepagents/.env`
 - **[Hermes](./harnesses/hermes.md)**: `oh harness install hermes`, then run `hermes setup`
 - **[Grok Build](./harnesses/grok-build.md)**: `oh harness install grok-build`, verify `grok --version`, then run `grok login --device-auth` (headless/remote) or `grok login`
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `/t3` or `npx t3` (browser UI on port 3773)
@@ -183,7 +188,6 @@ lifecycle command.)
   "git": { "userName": "your-name", "userEmail": "you@example.com" },
   "install": {
     "opencode": false,
-    "deepagents": false,
     "hermes": false,
     "grokBuild": false,
     "agentBrowser": false
@@ -215,7 +219,6 @@ full field reference, and `oh config set <field> <value>` to edit one field.
 | `git.userEmail` | Commit author email |
 | `install.agentBrowser` | Set `true` to install Chromium (~1 GB) |
 | `install.opencode` | Set `true` to include OpenCode in the sandbox image |
-| `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
 | `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 | `install.grokBuild` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
 

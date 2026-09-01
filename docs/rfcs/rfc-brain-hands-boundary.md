@@ -47,7 +47,7 @@ inside the environment to do its job?"*
 | **The build executor** (`.oh/scripts/firstmate.sh`, the story cycle) | **Brain** | Chooses the next story, decides when the loop terminates. It *invokes* hands; it is not hands. |
 | **Cron** (`crons/`, the scheduled-agent runtime) | **Brain** | Scheduling and cap enforcement are policy. The work a cron fires may be hands-side; the scheduler is not. |
 | **Autopilot** (`/autopilot`) | **Brain** | Issue selection, caps, and the merge gate are pure orchestration. |
-| **Wiki** (`.oh/skills/wiki/corpus/`) | **Brain** | Same: repo-file knowledge state. |
+| **Wiki** (`.oh/knowledge/`) | **Brain** | Same: repo-file knowledge state. |
 | **Provisioning / attach / exec** | **Hands** | The definition of the side. |
 | **Evals** (`.oh/evals/probes/`) | **Split — see §3** | Determined per-probe by a rule, not by a list. |
 
@@ -107,7 +107,7 @@ Two consequences that must not be forgotten when a second execution target lands
    about — a *second, nested* hands layer beneath the harness's own. The contract does not
    model it, and Phase-0 does not try to.
 2. Its brain-side surface is configured through an execution-shaped mechanism: the dashboard
-   is toggled by a **compose overlay** (`.devcontainer/docker-compose.hermes-dashboard.yml`),
+   was toggled by a compose overlay (retired in #920; `hermesDashboard.enabled` in `oh.json` now starts it on container loopback),
    so brain-side policy rides on substrate configuration.
 
 This is accepted for Phase-0 because Hermes is opt-in and off by default (`install.hermes`).

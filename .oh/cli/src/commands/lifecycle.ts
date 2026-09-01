@@ -321,18 +321,29 @@ export async function runDestroy(opts: DestroyOptions, io: LifecycleIO): Promise
       return 1;
     }
 
-    const volumes = namedVolumes(root);
+    const homePath = readOhConfig(ohConfigPath(root)).storage?.homePath;
     io.stdout(`\n${prompt.bold(`oh destroy — ${name}`)}\n\n`);
-    io.stdout("`docker compose down -v` removes the containers and deletes\n");
-    io.stdout(
-      volumes.length > 0
-        ? `these named volumes with everything in them:\n\n  ${volumes.join("\n  ")}\n\n`
-        : "every named volume this project owns, with everything in them.\n\n",
-    );
-    io.stdout(
-      "That is the provider authentication those volumes hold — every agent CLI\n" +
-        "login, the gh CLI token, and the SSH keys. Sign-in starts over.\n\n",
-    );
+
+    if (homePath !== undefined && homePath !== "") {
+      io.stdout("`docker compose down -v` removes the containers.\n");
+      io.stdout(
+        `This sandbox keeps its home on a host bind at ${homePath}, which \`down -v\`\n` +
+          "does not touch — every agent CLI login, the gh CLI token, and the SSH keys\n" +
+          "stay there. Delete that directory yourself if you also want them gone.\n\n",
+      );
+    } else {
+      const volumes = namedVolumes(root).map((volume) => `${name}_${volume}`);
+      io.stdout("`docker compose down -v` removes the containers and deletes\n");
+      io.stdout(
+        volumes.length > 0
+          ? `these named volumes with everything in them:\n\n  ${volumes.join("\n  ")}\n\n`
+          : "every named volume this project owns, with everything in them.\n\n",
+      );
+      io.stdout(
+        "That is the provider authentication those volumes hold — every agent CLI\n" +
+          "login, the gh CLI token, and the SSH keys. Sign-in starts over.\n\n",
+      );
+    }
 
     const askFn = io.ask ?? prompt.ask;
     const answer = (await askFn(`Type the sandbox name \`${name}\` to destroy it:`)).trim();

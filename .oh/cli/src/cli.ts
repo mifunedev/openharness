@@ -268,7 +268,7 @@ export function printHarnessHelp(): void {
   process.stdout.write(`oh harness — Install and inspect agent CLI harnesses
 
 Usage:
-  oh harness list                     List known harnesses and their state
+  oh harness list [--defaults]        List known harnesses and their state
   oh harness install <name>           Install a harness into the sandbox
   oh harness status [name]            Show installed/enabled state
 
@@ -281,6 +281,7 @@ and exits 0.
 Flags:
   --persist-only   Only set the oh.json install.* field (no container work)
   --no-persist     Live-install only; leave oh.json unchanged
+  --defaults       List only kind:"default" harnesses (list)
   --json           Machine-readable output (list/status)
 
 Harnesses:
@@ -369,7 +370,7 @@ runtime (see \`oh runtime\`) — a headless browser, a tunnel client, the
 GitHub CLI.
 
 Usage:
-  oh tool list                      List known tools and their state
+  oh tool list [--defaults]         List known tools and their state
   oh tool status [name]             Show installed state and version
   oh tool install <name>            Install a tool into the sandbox
 
@@ -386,6 +387,7 @@ Flags:
   --no-persist     Live-install only; leave oh.json unchanged
   --yes            Accept a large download without prompting
   --json           Machine-readable output (list/status)
+  --defaults       List only kind:"default" tools (list)
 
 Tools:
 ${toolIds().map((t) => `  ${t}`).join("\n")}
@@ -820,11 +822,18 @@ export interface HarnessArgs {
   name?: string;
   persistOnly: boolean;
   noPersist: boolean;
+  defaultsOnly: boolean;
   json: boolean;
 }
 
 export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
-  const args: HarnessArgs = { help: false, persistOnly: false, noPersist: false, json: false };
+  const args: HarnessArgs = {
+    help: false,
+    persistOnly: false,
+    noPersist: false,
+    defaultsOnly: false,
+    json: false,
+  };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
     return { ok: true, args: { ...args, help: true } };
   }
@@ -835,6 +844,8 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
       args.persistOnly = true;
     } else if (token === "--no-persist") {
       args.noPersist = true;
+    } else if (token === "--defaults") {
+      args.defaultsOnly = true;
     } else if (token === "--json") {
       args.json = true;
     } else if (token.startsWith("-")) {
@@ -860,6 +871,12 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   }
   if (sub === "list" && name !== undefined) {
     return { ok: false, error: `oh harness list: unexpected argument "${name}"` };
+  }
+  if (args.defaultsOnly && sub !== "list") {
+    return {
+      ok: false,
+      error: `oh harness ${sub}: --defaults applies to \`oh harness list\` only`,
+    };
   }
   if (args.persistOnly && args.noPersist) {
     return {
@@ -927,6 +944,7 @@ interface ToolArgs {
   noPersist: boolean;
   yes: boolean;
   json: boolean;
+  defaultsOnly: boolean;
   subcommand?: "list" | "install" | "status";
   name?: string;
 }
@@ -934,6 +952,7 @@ interface ToolArgs {
 export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
   const args: ToolArgs = {
     help: false, persistOnly: false, noPersist: false, yes: false, json: false,
+    defaultsOnly: false,
   };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
     return { ok: true, args: { ...args, help: true } };
@@ -945,6 +964,7 @@ export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
     else if (token === "--no-persist") args.noPersist = true;
     else if (token === "--yes" || token === "-y") args.yes = true;
     else if (token === "--json") args.json = true;
+    else if (token === "--defaults") args.defaultsOnly = true;
     else if (token.startsWith("-")) {
       return { ok: false, error: `oh tool: unknown flag "${token}"` };
     } else positionals.push(token);
@@ -971,6 +991,12 @@ export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
     return {
       ok: false,
       error: "oh tool: --persist-only conflicts with --no-persist — pass at most one",
+    };
+  }
+  if (args.defaultsOnly && sub !== "list") {
+    return {
+      ok: false,
+      error: `oh tool ${sub}: --defaults applies to \`oh tool list\` only`,
     };
   }
 
@@ -1335,7 +1361,7 @@ async function main(argv: string[]): Promise<number> {
       stderr: (s) => process.stderr.write(s),
     };
     if (a.subcommand === "list") {
-      return await runHarnessList({ json: a.json }, io);
+      return await runHarnessList({ json: a.json, defaultsOnly: a.defaultsOnly }, io);
     }
     if (a.subcommand === "status") {
       return await runHarnessStatus(a.name, { json: a.json }, io);
@@ -1389,7 +1415,7 @@ async function main(argv: string[]): Promise<number> {
       stderr: (s) => process.stderr.write(s),
     };
     if (a.subcommand === "list") {
-      return await runToolList({ json: a.json }, io);
+      return await runToolList({ json: a.json, defaultsOnly: a.defaultsOnly }, io);
     }
     if (a.subcommand === "status") {
       return await runToolStatus(a.name, { json: a.json }, io);

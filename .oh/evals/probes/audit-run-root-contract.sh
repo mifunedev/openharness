@@ -5,7 +5,7 @@
 set -euo pipefail
 unset AUDIT_RUN_ID AUDIT_ROOT AUDIT_TMP_ROOT AUDIT_EVIDENCE_PATH \
       AUDIT_ROUTE AUDIT_TARGET AUDIT_TARGET_ARGS_JSON AUDIT_AGENT_COMMAND_JSON
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; RUN="$REPO/.oh/skills/audit/scripts/audit-run.sh"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 tmp=$(mktemp -d); tmpdir=$(mktemp -d); trap 'rm -rf "$tmp" "$tmpdir"' EXIT
 mkdir -p "$tmp/.oh/skills/audit/references" "$tmp/.oh/scripts"
 for route in implementation pr prs harness context skills eval-quality drift full; do
@@ -16,11 +16,13 @@ printf '# private external route\n' >"$tmp/.oh/skills/audit/references/external-
 cp "$REPO/.oh/scripts/locked-append.sh" "$tmp/.oh/scripts/locked-append.sh"
 mkdir -p "$tmp/.oh/skills/audit/scripts"
 cp "$REPO/.oh/skills/audit/scripts/audit-evidence.sh" "$tmp/.oh/skills/audit/scripts/audit-evidence.sh"
+cp "$REPO/.oh/skills/audit/scripts/audit-run.sh" "$tmp/.oh/skills/audit/scripts/audit-run.sh"
+RUN="$tmp/.oh/skills/audit/scripts/audit-run.sh"
 cat >"$tmp/complete-driver" <<'DRIVER'
 #!/usr/bin/env bash
 "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete TEST-COMPLETE
 DRIVER
-chmod +x "$tmp/complete-driver" "$tmp/.oh/skills/audit/scripts/audit-evidence.sh"
+chmod +x "$tmp/complete-driver" "$tmp/.oh/skills/audit/scripts/audit-evidence.sh" "$RUN"
 git -C "$tmp" init -q; git -C "$tmp" config user.email test@example.invalid; git -C "$tmp" config user.name test
 git -C "$tmp" add .; git -C "$tmp" commit -qm init
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
@@ -30,17 +32,17 @@ still_running(){
   [[ -n $st && ${st#Z} == "$st" ]]
 }
 export TMPDIR="$tmpdir"
-set +e; usage_out=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" nope 2>&1); usage_rc=$?; set -e
+set +e; usage_out=$(bash "$RUN" nope 2>&1); usage_rc=$?; set -e
 [[ $usage_rc -eq 64 ]] || fail 'unknown target accepted/wrong usage rc'
 [[ ${usage_out%%$'\n'*} == 'usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|full> [target options]' ]] || fail 'usage first line is not exact'
 for route in implementation pr prs harness context skills eval-quality drift full; do grep -q "^| $route |" <<<"$usage_out" || fail "usage table missing $route"; done
 [[ -z $(find "$tmpdir" -mindepth 1 -print -quit) && ! -e "$tmp/.oh/logs" ]] || fail 'invalid usage created lifecycle state'
-if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" harness --external source --focus x -- true >/dev/null 2>&1; then fail 'external/focus conflict accepted'; fi
-if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" harness --wiki-ingest -- true >/dev/null 2>&1; then fail 'external-only option reached survey mode'; fi
-if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" implementation -- true >/dev/null 2>&1; then fail 'missing implementation slug accepted'; fi
-if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" pr 7 --repo bad -- true >/dev/null 2>&1; then fail 'invalid focused repo accepted'; fi
-if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift >/dev/null 2>&1; then fail 'missing route driver accepted'; fi
-if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- true >/dev/null 2>&1; then fail 'true callback certified completion'; fi
+if bash "$RUN" harness --external source --focus x -- true >/dev/null 2>&1; then fail 'external/focus conflict accepted'; fi
+if bash "$RUN" harness --wiki-ingest -- true >/dev/null 2>&1; then fail 'external-only option reached survey mode'; fi
+if bash "$RUN" implementation -- true >/dev/null 2>&1; then fail 'missing implementation slug accepted'; fi
+if bash "$RUN" pr 7 --repo bad -- true >/dev/null 2>&1; then fail 'invalid focused repo accepted'; fi
+if bash "$RUN" drift >/dev/null 2>&1; then fail 'missing route driver accepted'; fi
+if bash "$RUN" drift -- true >/dev/null 2>&1; then fail 'true callback certified completion'; fi
 cat >"$tmp/fake-agent" <<'AGENT'
 #!/usr/bin/env bash
 prompt=${!#}
@@ -55,14 +57,14 @@ leaked=$(printenv | grep -c '^AUDIT_' || true)
 printf 'route report\nAUDIT-EVIDENCE: DRIFT-OK\n'
 AGENT
 chmod +x "$tmp/fake-agent"
-AUDIT_AGENT_COMMAND_JSON="[\"$tmp/fake-agent\"]" CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" \
+AUDIT_AGENT_COMMAND_JSON="[\"$tmp/fake-agent\"]" \
   bash "$RUN" drift -- "$REPO/.oh/skills/audit/scripts/route-driver.sh" >/dev/null \
   || fail 'canonical production route driver did not publish correlated evidence (rc 8 = it leaked AUDIT_* into the agent)'
-CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" pr 7 --base stack-parent -- "$tmp/complete-driver" >/dev/null
-CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" prs --mine -- "$tmp/complete-driver" >/dev/null
-CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" full --repo owner/name -- "$tmp/complete-driver" >/dev/null
+bash "$RUN" pr 7 --base stack-parent -- "$tmp/complete-driver" >/dev/null
+bash "$RUN" prs --mine -- "$tmp/complete-driver" >/dev/null
+bash "$RUN" full --repo owner/name -- "$tmp/complete-driver" >/dev/null
 [[ ! -e "$tmp/.oh/logs" ]] || fail 'a run wrote the deleted .oh/logs tier'
-CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
+bash "$RUN" drift -- bash -c '
   [[ $AUDIT_ROUTE == "$AUDIT_ROOT/.oh/skills/audit/references/drift.md" ]]
   [[ ! -e "$AUDIT_ROOT/.oh/logs" ]]
   [[ $PWD == "$AUDIT_ROOT" ]]
@@ -72,11 +74,11 @@ CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
 '
 [[ $(<"$tmp/driver-marker") == route-ran ]] || fail 'selected route driver did not run/chdir or receive bindings'
 rm "$tmp/driver-marker"
-rec=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- "$tmp/complete-driver" 2>&1 >/dev/null)
+rec=$(bash "$RUN" drift -- "$tmp/complete-driver" 2>&1 >/dev/null)
 [[ $(grep -c '^audit -- run-id=' <<<"$rec") -eq 1 ]] || fail 'terminal run record did not follow driver'
 [[ ! -e "$tmp/.oh/logs" ]] || fail 'run record was written to the deleted .oh/logs tier'
 for n in 1 2; do
-  CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- \
+  bash "$RUN" drift -- \
     bash -c 'printf "%s|%s" "$AUDIT_RUN_ID" "$AUDIT_ROOT" >"$AUDIT_TMP_ROOT/seen"; "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete DRIFT-OK' 2>"$tmp/rec.$n" & pids[n]=$!
 done
 wait "${pids[1]}"; wait "${pids[2]}"
@@ -96,12 +98,12 @@ printf '%s\n' "$PWD" "$AUDIT_TARGET" "$AUDIT_TARGET_ARGS_JSON" "$@" >"$AUDIT_ROO
 "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete PRS-AUDIT-COMPLETE
 DRIVER
 chmod +x "$tmp/args-driver"
-CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" prs --label 'needs review' --base development -- "$tmp/args-driver"
+bash "$RUN" prs --label 'needs review' --base development -- "$tmp/args-driver"
 mapfile -t seen <"$tmp/args-seen"
 [[ ${seen[0]} == "$tmp" && ${seen[1]} == prs && ${seen[2]} == '["--label","needs review","--base","development"]' ]] || fail 'named argument bindings differ'
 [[ ${seen[3]} == prs && ${seen[4]} == --label && ${seen[5]} == 'needs review' && ${seen[6]} == --base && ${seen[7]} == development ]] || fail 'driver argv not exact'
 set +e
-failed_rec=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c 'exit 23' 2>&1 >/dev/null)
+failed_rec=$(bash "$RUN" drift -- bash -c 'exit 23' 2>&1 >/dev/null)
 failed_rc=$?
 set -e
 [[ $failed_rc -eq 23 ]] || fail 'driver failure rc was not propagated'
@@ -122,7 +124,7 @@ DRIVER
 chmod +x "$tmp/signal-driver"
 for sig in INT TERM HUP; do
   rm -f "$tmp/pids-seen" "$tmp/${sig,,}-seen"
-  SIGNAL_NAME=$sig CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- "$tmp/signal-driver" 2>"$tmp/sig-rec" & wrapper=$!
+  SIGNAL_NAME=$sig bash "$RUN" drift -- "$tmp/signal-driver" 2>"$tmp/sig-rec" & wrapper=$!
   for _ in {1..50}; do [[ -s "$tmp/pids-seen" ]] && break; sleep .05; done
   [[ -s "$tmp/pids-seen" ]] || fail "$sig signal fixture did not start"
   read -r driver_pid grandchild_pid <"$tmp/pids-seen"
@@ -142,7 +144,7 @@ while :; do sleep 1; done
 DRIVER
 chmod +x "$tmp/direct-driver"
 rm -f "$tmp/pids-seen" "$tmp/int-seen"
-AUDIT_FORCE_DIRECT=1 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- "$tmp/direct-driver" & wrapper=$!
+AUDIT_FORCE_DIRECT=1 bash "$RUN" drift -- "$tmp/direct-driver" & wrapper=$!
 for _ in {1..50}; do [[ -s "$tmp/pids-seen" ]] && break; sleep .05; done
 driver_pid=$(<"$tmp/pids-seen")
 kill -INT "$wrapper"

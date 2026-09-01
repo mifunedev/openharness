@@ -253,7 +253,6 @@ entrypoint: ["/usr/local/bin/entrypoint.sh"]
 cmd: ["sleep", "infinity"]
 
 env:
-  OH_IMAGE_ONLY: "1"                          # load-bearing
   OH_PROJECT_ROOT: /home/sandbox/harness      # load-bearing — must equal the mount target
   GIT_USER_NAME: "<your-name>"
   GIT_USER_EMAIL: "<your-email>"

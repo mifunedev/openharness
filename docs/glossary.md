@@ -12,7 +12,7 @@ Terms are listed alphabetically below.
 These names describe separate layers, not interchangeable jobs:
 
 - **Model** — The LLM selected by a provider; it proposes text and tool calls, while the surrounding agent, harness, and policy decide where those requests run and what is allowed. See the **model** glossary entry.
-- **Agent / CLI** — The process that wraps a model with tools, instructions, and session state, such as Claude Code, Codex, Pi, or a scoped worker defined under `.oh/agents/`. See the **agent** glossary entry.
+- **Agent / CLI** — The process that wraps a model with tools, instructions, and session state, such as Claude Code, Codex, or Pi. It is the runtime: the active session owns the work. See the **agent** glossary entry.
 - **Harness** — The repo, Docker sandbox, and `.oh/` control plane that give agents a reproducible workspace and lifecycle. See the **harness** glossary entry.
 - **Loop** — A repeated workflow that the harness drives until a terminal state, such as the `/spec execute` implementation cycle ending after every story passes. See the **loop** and **terminal state** glossary entries.
 - **Policy** — The provider-portable rules, skills, and hooks that constrain agent behavior and tool use. See the **policy** and **tool** glossary entries.
@@ -20,16 +20,16 @@ These names describe separate layers, not interchangeable jobs:
 
 ## Terms
 
-- **agent** — A model-driven worker that reads the workspace and does the task:
-  an agent CLI (Claude Code, Codex, Pi, …) running inside the sandbox, or a
-  scoped sub-agent defined under `.oh/agents/` that the orchestrator spawns for
-  a bounded job. No sub-agent ships with the harness today; `.oh/agents/` is the
-  canonical place to define one.
-  Source: [`.oh/agents/README.md`](../.oh/agents/README.md).
+- **agent / coding agent** — The running model-plus-tools process that reads the
+  workspace and does the task: Claude Code, Codex, Pi, or another coding harness
+  running inside the sandbox. The agent is the **runtime and the owner of the
+  work**; a role never implies a separate session or process. The repository
+  authors no agent definition files — a durable role is a **skill** the active
+  session adopts. Source: [`AGENTS.md`](../AGENTS.md).
 
 - **artifact** — Any inspectable file a workflow stage produces and a later stage
   or a human then consumes. The canonical example is the `.oh/tasks/<slug>/` task
-  folder and its four-file contract (`prd.md`, `prd.json`, `prompt.md`,
+  folder and its three-file contract (`prd.md`, `prd.json`,
   `progress.txt`), which the `/spec` pipeline reads and writes as
   they progress. Source: [`.oh/tasks/`](../.oh/tasks/).
 
@@ -56,9 +56,16 @@ These names describe separate layers, not interchangeable jobs:
   single repo-per-sandbox instance of it.
   Source: [`intro.md`](intro.md).
 
-- **loop** — A repeated implement → commit → check cycle driven until a
-  completion marker appears. `/spec execute` owns the implementation cycle and
-  records completion in `progress.txt` after every story passes.
+- **knowledge** — Durable repository knowledge kept under `.oh/knowledge/`: a
+  derived cache of understanding that the repository itself always outranks.
+  `source/` and `patterns/` entity pages are tracked and queryable; `local/` is
+  ignored per-machine scratch that nothing reads.
+  Source: [`.oh/knowledge/`](../.oh/knowledge/).
+
+- **loop** — A repeated implement → commit → check cycle driven until the task
+  graph is satisfied. `/spec execute` owns the implementation cycle; completion
+  is structured state in `prd.json` — every entry in `userStories` carrying
+  `"passes": true` — not a marker in prose.
   Source: [`.oh/skills/spec/references/execute.md`](../.oh/skills/spec/references/execute.md).
 
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and
@@ -78,11 +85,23 @@ These names describe separate layers, not interchangeable jobs:
   hook-enforced security rules.
   Source: [`.oh/skills/git/SKILL.md`](../.oh/skills/git/SKILL.md).
 
-- **primitive** — A reusable unit from the shared pack — skills, agents, and
-  hooks — vendored directly into the `.oh/` control plane and exposed to each
-  provider (`.claude/`, `.codex/`, `.pi/`) via symlinks into `.oh/`.
+- **primitive** — A reusable unit from the shared pack — skills and hooks —
+  vendored directly into the `.oh/` control plane and exposed to each provider
+  (`.claude/`, `.codex/`, `.pi/`) via symlinks into `.oh/`.
   Source: [`README.md`](README.md) (the primitive pack under `.oh/skills/`,
-  `.oh/agents/`, `.oh/hooks/`).
+  `.oh/hooks/`).
+
+- **rfc / adr** — A durable architecture decision, recorded as a GitHub issue
+  titled `RFC:` or `ADR:` and indexed on the RFC/ADR page. Three states —
+  `Draft`, `Accepted`, `Superseded` — and no further taxonomy. This is the only
+  decision store; `/architect` points durable decisions here rather than
+  creating another one. Source: [`docs/rfcs/README.md`](rfcs/README.md).
+
+- **rule** — Ambient repository policy an agent carries without invoking
+  anything: an `AGENTS.md` (aliased `CLAUDE.md` for provider compatibility) that
+  applies to every task under its directory, or a path-scoped reference skill.
+  Distinct from a skill, which is invoked for a job.
+  Source: [`AGENTS.md`](../AGENTS.md).
 
 - **runtime** — The always-on machinery that wakes the agent on a schedule: a
   tiny croner that reads scheduled-agent definitions from `crons/` and fires
@@ -93,16 +112,22 @@ These names describe separate layers, not interchangeable jobs:
   `.devcontainer/`, so the agent works against your code without touching the
   host machine. Source: [`.devcontainer/`](../.devcontainer/).
 
-- **session** — A single named run of an agent, typically a tmux session in the
-  sandbox. `/spec execute` keeps implementation, validation, evidence, and PR
-  finalization in one Advisor-owned session.
+- **session** — A terminal-backend run of an agent: a tmux session, a Herdr pane, or a
+  plain shell. It is a *backend*, not an identity. Distinguish it from the
+  **implementation owner** — the logical role that owns one `/spec execute` task from the
+  isolated worktree through the final PR gates. `/spec execute` keeps implementation,
+  validation, evidence, and PR finalization with the single agent that invoked it, whatever
+  backend that agent happens to be running in, and launches no session of its own.
   Source: [`.oh/skills/spec/references/execute.md`](../.oh/skills/spec/references/execute.md) and
   [`sandbox-processes.md`](../.oh/skills/t3/references/sandbox-processes.md).
 
 - **skill** — A packaged, invocable workflow (a `SKILL.md` plus optional
   references and scripts) that an agent runs via the Skill tool or a `/name`
-  slash command; the shared set lives under `.oh/skills/`.
-  Source: [`.oh/skills/`](../.oh/skills/).
+  slash command; the shared set lives under `.oh/skills/`. **Skills are the
+  canonical primitive for a reusable role, procedure, checklist, constraint set,
+  or body of domain judgment** — `/architect`, `/spec`, `/audit`, `/retro`, and
+  `/delegate` are roles encoded this way, loaded into the active session rather
+  than spawned as separate identities. Source: [`.oh/skills/`](../.oh/skills/).
 
 - **terminal state** — The end state that closes a workflow cycle. `/spec execute`
   completes implementation only after every story passes; the operative path
@@ -117,6 +142,14 @@ These names describe separate layers, not interchangeable jobs:
   results) that later analysis mines. `/prompt-miner` runs `mine-traces.mjs`
   over Claude and Pi session traces to score prompts by outcome.
   Source: [`mine-traces.mjs`](../.oh/skills/prompt-miner/scripts/mine-traces.mjs).
+
+- **worker / subagent** — An optional bounded, isolated execution context the
+  active agent spawns for one self-contained job — parallelism, context
+  isolation, verbose disposable output, or a deliberate tool restriction. It is
+  an execution primitive, not a project role: workers are provider built-ins
+  with no repository definition file, and `/delegate` owns when one is
+  justified. Source:
+  [`.oh/skills/delegate/SKILL.md`](../.oh/skills/delegate/SKILL.md).
 
 - **worktree** — A separate git working directory under `.worktrees/` that
   isolates a branch so parallel work doesn't collide; the `/worktrees` skill

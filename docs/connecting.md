@@ -100,11 +100,180 @@ This is NOT the default; you opt in explicitly. Be aware that binding to `0.0.0.
 
 **2. External tunnel**
 
-The harness ships no built-in tunnel tool. For public access, bring your own: `cloudflared`, `ngrok`, `tailscale funnel`, or an nginx/Caddy reverse proxy. Start the tunnel inside the sandbox in a named tmux session (see [tmux conventions](#tmux-session-naming)).
+For **public** access, use `cloudflared` (shipped in the image, see the `/cloudflared` skill), `ngrok`, or an nginx/Caddy reverse proxy. Start the tunnel inside the sandbox in a named tmux session (see [tmux conventions](#tmux-session-naming)).
+
+For **private** access from your own devices — including a phone — use Tailscale instead of a public tunnel. See [Mobile access over Tailscale](#mobile-access-over-tailscale). Tailscale Funnel would make a tailnet service public; it is never enabled by default and the harness ships no Funnel command.
 
 **3. Direct SSH + nginx multi-tenant routing**
 
 To SSH straight into the container — and to route several tenants' containers through one nginx reverse proxy on a single VM — enable the opt-in `sshd` overlay. See [Integrations → SSH](/docs/integrations/sshd).
+
+## Mobile access over Tailscale
+
+This is the supported path for reaching T3 Code from a phone, and the supported path for reaching it from a remote sandbox at all without publishing a port. Access stays **private to your tailnet**.
+
+### Where Tailscale runs, and why
+
+`tailscaled` runs **inside the sandbox container**, in userspace-networking mode, as the unprivileged `sandbox` user. The container is the tailnet node.
+
+- No `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, no host socket mount. Userspace networking needs none of them, and Tailscale Serve is fully supported in that mode.
+- **No host port is published.** T3 Code stays on container loopback `127.0.0.1:3773`. Tailscale Serve inside the container proxies tailnet HTTPS to that loopback address. A device outside the tailnet has nothing to reach.
+- **There is no compose change at all.** The opt-in is `install.tailscale` in `oh.json`; `.oh/scripts/provision-defaults.sh` installs from the tool catalog on every boot. Node identity and daemon state live in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount, so the node does not re-authenticate on every container recreate without any per-tool volume.
+- Because the container is the node, the MagicDNS name your phone saved does not change when you move the workspace to another VM.
+
+Installing the binary does **not** join a tailnet. Nothing on the boot path runs `tailscaled` or `tailscale up`. Joining is an explicit human act.
+
+### Prerequisites
+
+On the remote host:
+
+- The sandbox is running (`oh ps`).
+- Node in the sandbox satisfies T3 Code's range `^22.16 || ^23.11 || >=24.10` (`node -v`).
+- A provider is authenticated in the sandbox (`claude`, `codex login`, or `opencode auth login`).
+- A Tailscale account and a tailnet you control.
+
+On the phone:
+
+- The Tailscale app, signed in to the **same tailnet**.
+- The T3 Code mobile app.
+
+The phone and the sandbox must share one tailnet. There is no other reachability path.
+
+### Step 1 — Install Tailscale in the sandbox
+
+```bash
+oh tool install tailscale
+```
+
+This persists `install.tailscale: true` in the tracked `oh.json` so the opt-in survives container recreation, and installs the binary into a running sandbox when one is up. It is idempotent.
+
+If the sandbox was not running, the flag is persisted only. Run `oh sandbox` to recreate the container; boot provisioning reads `install.tailscale` from `oh.json` and installs the binary from the tool catalog, which is the sole owner of the pinned version and its checksums. No image rebuild is required. Nothing about networking activates until you start the daemon in the next step.
+
+Check the state at any time:
+
+```bash
+oh tool status tailscale
+```
+
+### Step 2 — Start the daemon
+
+Run it in a named tmux session so it survives a disconnect:
+
+```bash
+tmux new-session -d -s agent-tailscaled \
+  'tailscaled --tun=userspace-networking \
+              --statedir=$HOME/.tailscale'
+```
+
+### Step 3 — Join the tailnet
+
+```bash
+tailscale up
+```
+
+`tailscale up` prints a login URL. Open it in a browser and approve the node. This is the supported setup: an interactive human login. **Never commit a reusable Tailscale auth key**, and never print one into a log or a tracked file.
+
+Confirm the node is up and note its MagicDNS name:
+
+```bash
+tailscale status
+```
+
+### Step 4 — Start T3 Code in Tailscale mode
+
+```text
+/t3 start --tailscale
+```
+
+This runs `npx --yes t3 serve --tailscale-serve` in the `agent-t3code` tmux session. T3 Code configures Tailscale Serve on HTTPS 443 and advertises `https://<machine>.<tailnet>.ts.net/`. It prints a pairing URL and a QR code.
+
+Add `--tailscale-port 8443` if HTTPS 443 is already claimed on that node.
+
+Reprint the current pairing URL at any time:
+
+```text
+/t3 url
+```
+
+### Step 5 — Pair the phone
+
+1. Open the T3 Code mobile app.
+2. Scan the QR code printed in the `agent-t3code` session, or paste the `https://<machine>.<tailnet>.ts.net/...` pairing URL.
+3. The app binds to the running server.
+
+The pairing token is single-use. The paired session persists, so the phone reconnects later without pairing again — as long as the phone is on the tailnet and the server is running.
+
+### Adding another device
+
+Do not restart the server. Mint a fresh token against the running one:
+
+```text
+/t3 pair --tailscale
+```
+
+Then scan or paste the new URL on the second device.
+
+### Lifecycle
+
+Two tmux sessions carry this setup:
+
+| Session | Process |
+|---------|---------|
+| `agent-tailscaled` | the Tailscale daemon |
+| `agent-t3code` | `npx t3 serve --tailscale-serve` |
+
+Both survive a shell or SSH disconnect. Inspect them with `tmux ls`, attach with `tmux attach -t <session>`, detach with `Ctrl-b d`. `/t3 status` and `/t3 logs` read the T3 session without attaching.
+
+After a container recreate, the tailnet identity is still in `~/.tailscale` inside the home mount, but the daemon is not running: repeat steps 2 and 4. `tailscale up` is not needed again unless you logged out.
+
+### Revoking access
+
+T3 pairing credentials and Tailscale device access are **separate**. Revoke both.
+
+```bash
+t3 auth                          # inspect and revoke T3 sessions and pairing credentials
+tailscale serve --https=443 off  # withdraw the Serve mapping (it persists until you do)
+tailscale logout                 # sign the sandbox node out of the tailnet
+```
+
+Then delete the device in the Tailscale admin console. Revoking a phone's own tailnet access is done there too.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `/t3 start --tailscale` reports Tailscale missing | binary not installed | `oh tool install tailscale`, then `oh sandbox` if the sandbox was down |
+| `tailscale status` fails to reach the daemon | `tailscaled` not running | repeat step 2; check `tmux ls` for `agent-tailscaled` |
+| Backend state is not `Running` / "logged out" | node never joined, or was logged out | `tailscale up` and complete the browser login |
+| No `ts.net` URL in the T3 output | Serve was not configured | confirm `tailscale status` is `Running`, then restart with `/t3 start --tailscale` |
+| Serve still answers after T3 Code stops | the Serve mapping persists | `tailscale serve --https=443 off` |
+| T3 Code refuses to start with an engine error | Node outside `^22.16 \|\| ^23.11 \|\| >=24.10` | check `node -v`; the sandbox image pins Node 22.x, so upgrade past 22.16 |
+| Phone cannot reach the URL at all | phone not on the tailnet | sign the phone's Tailscale app in to the same tailnet and confirm it appears in `tailscale status` |
+| Phone is on the tailnet but the URL times out | Serve mapping on a different port, or the server stopped | `tailscale serve status`; `/t3 status` |
+| `https://app.t3.codes` cannot connect | mixed content: the hosted page is HTTPS and a plain-HTTP tailnet endpoint is blocked | use `--tailscale-serve` (HTTPS) or the native mobile app |
+
+`/t3 doctor` runs the Tailscale, Node, and tooling checks in one pass and prints an actionable line per failure.
+
+### Operator-owned fallback: Tailscale on the host
+
+If your host policy forbids a daemon inside the container, you can instead run `tailscaled` on the remote host and route the sandbox port through it. This is **not** the supported path and the harness does not manage it:
+
+- It requires publishing `3773` from the container to the host, which widens exposure on any multi-tenant or internet-facing VM.
+- `oh tool install tailscale` installs and versions the binary *inside* the sandbox, so `oh tool status tailscale` would not describe the host daemon.
+- The tailnet node becomes the host, so the MagicDNS name changes when you move the workspace to another machine.
+
+You own the configuration and the exposure in that layout.
+
+### Tailscale versus Cloudflared
+
+| | Tailscale Serve | Cloudflared |
+|---|---|---|
+| Audience | your tailnet only | anyone with the URL |
+| Auth | tailnet device identity | none — the URL is the bearer credential |
+| Use it for | phones, remote laptops, your own devices | a public preview shared with someone off your tailnet |
+| Command | `/t3 start --tailscale` | `/cloudflared 3773` |
+
+Cloudflared remains the right tool for public preview sharing. It is not the mobile path. Tailscale **Funnel** — which would make a tailnet service public — is never enabled by default and the harness ships no Funnel command.
 
 ## tmux session naming
 
@@ -113,7 +282,7 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 | Category | Example | Purpose |
 |----------|---------|---------|
 | `client-` | `client-slack-pi`, `client-discord` | External-surface clients bridging an in-sandbox agent |
-| `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
+| `agent-` | `agent-watcher`, `agent-batch`, `agent-t3code`, `agent-tailscaled` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
 | `app-` | `app-api` | Dev servers |
 
 For the full convention see [`.oh/skills/t3/references/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/.oh/skills/t3/references/sandbox-processes.md).
@@ -148,11 +317,15 @@ T3 Code is not preinstalled; the first invocation downloads it via `npx`. If an 
 Manual terminal fallback:
 
 ```bash
-tmux new-session -d -s agent-t3code 'npx t3 2>&1 | tee /tmp/agent-t3code.log'
+tmux new-session -d -s agent-t3code 'npx --yes t3 serve 2>&1 | tee /tmp/agent-t3code.log'
 tmux attach -t agent-t3code
 ```
 
-Watch the session output — T3 Code prints a pairing URL. Open that URL in your browser to complete the browser-based pairing step. After pairing, the UI is available at `localhost:3773` on your laptop (via VSCode auto-forwarding).
+Watch the session output — T3 Code prints a pairing URL and a QR code. Open that URL in your browser to complete pairing. After pairing, the UI is available at `localhost:3773` on your laptop (via VSCode auto-forwarding).
+
+To pair a second device later, run `/t3 pair` — do not restart the server.
+
+To reach T3 Code from a phone, follow [Mobile access over Tailscale](#mobile-access-over-tailscale) instead.
 
 Detach from the tmux session without stopping it: `Ctrl-b d`.
 
@@ -170,6 +343,6 @@ If a port is missing, confirm the tmux session is running (`tmux ls`) and that y
 
 ## Quick-reference: reach `localhost` from your laptop
 
-| App | Container port | Laptop URL (VSCode attached) |
-|-----|---------------|------------------------------|
-| T3 Code UI | 3773 | `http://localhost:3773` |
+| App | Container port | Laptop URL (VSCode attached) | Tailnet URL (Tailscale Serve) |
+|-----|---------------|------------------------------|-------------------------------|
+| T3 Code UI | 3773 (loopback only) | `http://localhost:3773` | `https://<machine>.<tailnet>.ts.net/` |

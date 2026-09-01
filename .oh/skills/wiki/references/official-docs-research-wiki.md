@@ -13,7 +13,7 @@ Use this pattern when a user asks to "add to wiki" but the source is a seed URL 
    - Stop for confirmation before writing the wiki implementation.
 3. Use subagents for research and audit, not direct tracked wiki writes.
    - Research subagents collect source-backed findings and identify related official docs.
-   - Subagents may draft proposed wiki text, but the orchestrator owns writes to `.oh/skills/wiki/corpus/raw/`, `.oh/skills/wiki/corpus/<slug>.md`, and cross-links.
+   - Subagents may draft proposed wiki text, but the orchestrator owns writes to `.oh/knowledge/raw/`, `.oh/knowledge/source/<slug>.md`, and cross-links.
 4. Snapshot every authoritative source that materially supports the final entry.
    - Prefer official docs over social posts, blog summaries, or inferred behavior.
    - Keep raw snapshots immutable and synthesized entries bounded by `.oh/skills/wiki/references/schema.md`.

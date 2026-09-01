@@ -1,0 +1,599 @@
+# evidence — `repo-knowledge-loop` (issue #926, PR #927)
+
+Branch `feat/926-repo-knowledge-loop` · base `development` · planning base
+`ecc49800` · repo `mifunedev/openharness`.
+
+Contract: `.oh/skills/audit/references/reviewer-evidence-doc.md`.
+
+---
+
+## 0. Why this is better than not doing it
+
+**Before.** `/spec` wrote durable knowledge more reliably than it read it. Nothing
+in the planning contract required a session to recall what the repository already
+knew, so each plan re-derived it — and re-derived it differently. The planner's
+`Wiki Alignment` block was the *only* knowledge-impact oracle, even though
+implementation reaches paths a planner never sees. Page validity was decided by
+`updated > 90d`, which is unrelated to whether the page is still true. Knowledge
+pages were gitignored-by-default and whitelisted one at a time, so one machine
+could consume a page that a fresh clone could not see. And several `/spec`
+surfaces carried a second copy of state that already existed elsewhere.
+
+**After, with the numbers this run produced.**
+
+| | Before | After | Observed by |
+|---|---|---|---|
+| Knowledge read before a plan exists | not in the contract | required step 2, recorded in `## Knowledge Context` | `spec-plan-knowledge-context.sh` |
+| Knowledge-impact oracle | the planner's prediction | prediction **∪** actual diff **∪** declared dependencies | `spec-execute-knowledge-impact.sh`; this build's own run below |
+| Pages this build would have missed on the old oracle | — | **2 of 6** (`document-ingestion`, `oh-cli-portable-lifecycle` were never predicted) | the gate run below |
+| Validity test | `updated > 90d` | a declared source changed after `verified_at` | `knowledge-source-freshness.sh` |
+| Unresolvable provenance found by the new check | unmeasured — no check existed | **5** (3 phantom snapshots, 2 bad pins), all repaired | the source-path check |
+| Places completion is represented | 2 (`prd.json` + a prose sentinel) | 1 (`prd.json`) | `task-completion-structured-state.sh` |
+| Writable knowledge locations | 1, gitignored-by-default | 1, tracked, with scratch physically separate | `knowledge-path-single-owner.sh`, `knowledge-tracked-query-boundary.sh` |
+| `/spec` conceptual nodes | 4 (`ship` owned no mechanics) | 2 + a wrapper | `spec-family-contract.sh` |
+| `/wiki lint` checks | 6, all report-only, 0 with an oracle | 6, **6 with a named oracle**; 2 unenforceable ones retired | `lint.md:23-33` |
+| Execution states a caller can observe | 0 (a detached launch reported a ready PR) | 4, in `/tmp/agent-spec-<slug>.state` | `spec-execute-running-contract.sh` |
+
+**The sharpest number is 2 of 6.** The Actual Knowledge Impact gate found six
+pages this change touched. `prd.md`'s `Expected Knowledge Impact` — written by the
+planner with the whole issue in front of it — named four of them and missed
+`document-ingestion` and `oh-cli-portable-lifecycle`. Under the old model those
+two would have shipped stale, silently. That is the loop closing on its first run.
+
+**Cost paid.** 106 files, +3873/−1931. The `/spec` reference docs grew
+(`SKILL.md` 138→235, `plan.md` 142→251, `execute.md` 603→742) because three real
+gates were added; `lint.md` shrank 551→427 and `ship.md` (121 lines) was deleted.
+The probe suite grew 117→127. One new executable, 179 lines
+(`knowledge-impact.sh`), replaces logic that would otherwise have been duplicated
+in `/wiki lint` and `/spec execute`.
+
+**Claimed, unmeasured:** that recall makes *future* plans better. This run proves
+the mechanism exists and fires; a capability-benchmark delta over several cycles
+would be the measurement, and it does not exist yet.
+
+---
+
+## 1. What the plan asked for
+
+Issue #926 asked for one thing in eighteen parts: make `/spec` a closed loop in
+which accumulated repository understanding is consumed before work, re-verified
+against current reality, spent, and replenished — and retire the surfaces that
+had grown a second copy of state.
+
+In the operator's terms:
+
+1. Planning must **read** durable knowledge before it writes a PRD, and must
+   re-check what it read against the repository rather than trusting it.
+2. An approved plan that grounding materially changes must **stop**, not proceed.
+3. The **diff**, not the planner, must decide what the change made untrue.
+4. Freshness must be a fact about sources, not about the calendar.
+5. Durable knowledge must own its own surface, and shared knowledge must be
+   physically separate from per-machine scratch.
+6. `ship`, generated `prompt.md`, `STATUS: COMPLETE`, mandatory `/compact`, and
+   the `.oh/memory` vocabulary must go — **atomically**, with every consumer.
+7. Detached execution must have a real `RUNNING` state.
+8. The single-Advisor executor model must survive all of it (pinned comment).
+
+---
+
+## 2. What was built
+
+### The knowledge surface (US-001, US-002, US-003)
+
+```
+$ git log --diff-filter=R --name-status --format= origin/development..HEAD | grep -c '^R'
+32
+$ git ls-files -- .oh/skills/wiki | sed 's|.oh/skills/wiki/||'
+SKILL.md
+references/compile.md          references/official-docs-research-wiki.md
+references/concurrent-ingest-worktrees.md   references/query.md
+references/github-repo-research-wiki.md     references/schema.md
+references/ingest.md           references/social-image-wiki-ingest.md
+references/lint.md             scripts/knowledge-impact.sh
+   (11 files — procedure only; not one data page remains under the skill)
+$ bash .oh/evals/probes/knowledge-path-single-owner.sh
+PASS: one writable knowledge surface at .oh/knowledge/ — the retired corpus path is gone
+from disk, from git, and from every active reference, and the new surface ships and gates in CI
+```
+
+The ledger moved without being edited. Its old path is resolved from the base
+tree rather than spelled out, because the guard above scans this document too:
+
+```
+$ BASE_LEDGER=$(git ls-tree -r --name-only origin/development | grep '/skill-impact\.md$')
+$ diff <(git show "origin/development:$BASE_LEDGER") .oh/evals/decisions/skill-impact.md \
+    && echo IDENTICAL
+IDENTICAL
+```
+
+Scratch is physically separate and no read path touches it:
+
+```
+$ bash .oh/evals/probes/knowledge-tracked-query-boundary.sh
+PASS: .oh/knowledge/local/ is ignored, holds nothing tracked but its anchor, is enumerated
+by no read path, and has an explicit promotion path
+```
+
+### Source-change freshness (US-002)
+
+`knowledge-impact.sh` is the single implementation. Its `--verified` mode is what
+`/wiki lint` calls; the numbers below are real state, not a fixture:
+
+```
+$ bash .oh/skills/wiki/scripts/knowledge-impact.sh --verified | cut -f1 | sort | uniq -c
+     11 NOT-APPLICABLE
+      5 FRESH
+      4 NEEDS-REVIEW
+```
+
+The four `NEEDS-REVIEW` rows — `audit-architecture`, `fresh-machine-setup`,
+`managed-agents`, `release-versioning` — are pre-existing debt the old age rule
+could not see: each names a `kind: repo` page whose declared sources moved after
+its `verified_at` commit. Under `updated > 90d`, every one of them was "fresh".
+The pages this change itself updated are absent from the list, because resolving
+them advanced their pins — which is the check working, not the check being
+silenced.
+
+### The Actual Knowledge Impact gate (US-005) — run for real on this build
+
+```
+$ git diff --name-only origin/development...HEAD | wc -l
+105
+$ bash .oh/skills/wiki/scripts/knowledge-impact.sh --changed $(...105 paths...) \
+    | grep NEEDS-REVIEW
+NEEDS-REVIEW  document-ingestion            declared sources are in the changed set: .oh/skills/wiki/references/ingest.md
+NEEDS-REVIEW  oh-cli-portable-lifecycle     declared sources are in the changed set: .oh/manifest.json .oh/README.md docs/oh-directory-layout.md docs/rfcs/rfc-brain-hands-boundary.md
+NEEDS-REVIEW  plan-vs-built-reconciliation  declared sources are in the changed set: .oh/skills/spec/references/execute.md
+```
+
+Union with `prd.md`'s `Expected Knowledge Impact`, and the state each page ended in:
+
+| Page | State | Why |
+|---|---|---|
+| `plan-vs-built-reconciliation` | **UPDATED** | every `execute.md` line and step anchor it cites moved; records the knowledge gate now beside the evidence gate |
+| `oh-cli-portable-lifecycle` | **UPDATED** | the manifest it documents now ships `knowledge/**` |
+| `wikiskill-experience-compilation` | **UPDATED** | its "the harness lacks the pattern layer, the impact ledger, and any wiki read on the proposer path" is now wrong on all three counts |
+| `pattern-wiki-ungated-check-drift` | **UPDATED** | corroborating evidence appended per schema § 11a; this change applied its prescribed workaround to the whole check list |
+| `pattern-wiki-external-model-over-mapping` | **UPDATED** | corroborating evidence appended; two exclusions written down alongside the structures that transferred |
+| `plan-vs-built-reconciliation` | **UPDATED again after the merge** | `execute.md` moved a second time when #930 landed; all nine line anchors re-verified against the merged file and `verified_at` advanced |
+| `oh-cli-portable-lifecycle` | **UPDATED again after the second merge** | #931 removed `agents/**` from the manifest and the two agent provider links from `init.ts`; the page's manifest paragraph records both and `verified_at` advanced |
+| `document-ingestion` | **REVERIFIED** | `ingest.md` moved under it, but only paths and kind guidance changed; its conversion claims still hold. `verified_at` advanced, body untouched |
+| `audit-architecture` | **NOT-AFFECTED** (no declared source is in the changed set; the audit subsystem is untouched by this change) | named in the prediction, not in the diff |
+
+### The `/spec` contract (US-004, US-005, US-006)
+
+```
+$ for p in spec-plan-knowledge-context spec-plan-reconciliation-gate \
+           spec-execute-knowledge-impact spec-execute-running-contract \
+           spec-no-generated-prompt-contract task-completion-structured-state \
+           retired-memory-vocabulary spec-family-contract advisor-monitored-loop \
+           spec-ready-finalization; do
+    printf '%-34s ' "$p"; bash .oh/evals/probes/$p.sh 2>&1 >/dev/null | head -1
+  done
+spec-plan-knowledge-context        PASS: /spec plan recalls tracked knowledge and re-grounds it before the PRD, and records Knowledge Context
+spec-plan-reconciliation-gate      PASS: a materially changed approved intent stops for re-approval and cannot flow into /spec execute
+spec-execute-knowledge-impact      PASS: /spec execute derives knowledge impact from the actual diff through the shared primitive and resolves every page to one explicit state
+spec-execute-running-contract      PASS: detached execution reports RUNNING against a real status file and never promises a synchronous READY
+spec-no-generated-prompt-contract  PASS: the durable task contract is prd.md + prd.json + progress.txt; the launch prompt is rendered, never persisted
+task-completion-structured-state   PASS: task completion derives from prd.json structured state; the prose sentinel survives only in marked historical records
+retired-memory-vocabulary          PASS: the retired memory tier appears in no current architecture doc, and its ignore rule is a labelled tombstone with a removal horizon
+spec-family-contract               PASS: /spec owns the workflow, dispatches plan/execute/retro with an approved plan path as the default, ...
+advisor-monitored-loop             PASS: one /spec Advisor owns implementation and gates; /delegate is bounded fan-out; retired handoff is absent
+spec-ready-finalization            PASS: /spec execute treats the draft PR as a checkpoint, refuses the undraft without a tracked evidence.md, ...
+```
+
+The last two matter most for the pinned execution requirement: the lifecycle
+change did **not** cost the single-Advisor model or the human merge boundary.
+
+### This run dogfooded the contract it built
+
+`prd.md` carries `## Knowledge Context` (base commit, queries, 8 slugs read,
+grounded-against list, 4 conflicts), `## Expected Knowledge Impact`, and
+`## Plan Reconciliation`. The task folder is three files plus `evidence.md` and
+`eval-result.json` — no `prompt.md`. Completion is `prd.json`:
+
+```
+$ jq -e 'all(.userStories[]; .passes == true)' .oh/tasks/repo-knowledge-loop/prd.json && echo COMPLETE
+COMPLETE
+```
+
+The status file was kept current at every phase, which is how the orchestrator
+observed `RUNNING` rather than inferring it. The shipped contract names it
+`/tmp/spec-<slug>.state` after the #930 reconciliation; this run also kept writing
+the pre-reconciliation path its orchestrator was already polling, so the observer
+never lost the signal mid-build.
+
+### The re-ground step fired on this build, against this build
+
+Step 0 of the new `execute.md` exists for exactly one situation, and it happened:
+
+```
+$ git log --oneline ecc49800..origin/development
+0f87d985 FROM task/928-retire-spec-agent-handoff TO development (#930)
+$ git diff --name-only ecc49800..origin/development | grep -c '^.oh/skills/spec/'
+5
+```
+
+`development` moved onto five of the files this change rewrites, retiring the
+execution mechanism #926's own pinned comment names. The merge surfaced nine
+conflicts; each was resolved toward the merged repository state, and the five
+probes #930 added — `spec-no-agent-handoff`, `spec-single-owner`,
+`spec-no-advisor-session-coupling`, `cleanup-no-agent-session-coupling`,
+`headless-tmux-preserved` — all pass alongside this change's ten:
+
+```
+$ bash .oh/skills/eval/run.sh
+ran 131 probe(s)   →   exit 0, zero green→red, 4 SKIPPED (same 4 as base)
+```
+
+This is the loop's own thesis demonstrated on itself: a plan written against
+`ecc49800` was re-grounded against a base that had moved underneath it, and the
+divergence was reconciled explicitly rather than discovered at merge time.
+
+### The regression floor
+
+```
+$ bash .oh/skills/eval/run.sh
+ran 127 probe(s); wrote .oh/evals/RESULTS.md
+   (runner exit 0; zero green->red transitions; 4 SKIPPED — the same 4 as base ecc49800)
+$ bash .oh/scripts/link-providers.sh --check
+Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)
+$ git diff --check && echo clean
+clean
+```
+
+---
+
+## 3. Fault injection — every new probe's REGRESSION branch was driven
+
+A probe that has never failed has an unverified oracle
+(`[[pattern-evals-unexercised-oracle]]`). Each injection below was applied,
+observed, and reverted; each probe was re-run after revert and returned to PASS.
+
+| Probe | Injection | Observed |
+|---|---|---|
+| `spec-plan-knowledge-context` | delete the `## Knowledge Context` block line | `REGRESSION: plan.md no longer specifies the block: ## Knowledge Context` |
+| | reorder so grounding follows `/prd` | `REGRESSION: plan.md orders the pipeline wrong — recall and grounding must precede /prd` |
+| | re-add a `## Wiki Alignment` heading | `REGRESSION: the retired Wiki Alignment planning block reappeared as a section heading` |
+| `spec-plan-reconciliation-gate` | downgrade the stop to a warning | `REGRESSION: plan.md's reconciliation gate does not stop before execution` |
+| | delete the `## Plan Reconciliation` block line | `REGRESSION: plan.md no longer specifies the ## Plan Reconciliation block` |
+| `spec-execute-knowledge-impact` | rename the gate heading | `REGRESSION: execute.md has no Actual Knowledge Impact gate` |
+| `knowledge-tracked-query-boundary` | comment out the `local/` ignore rule | `REGRESSION: .oh/knowledge/local/ is not gitignored — a scratch page would enter the shared set` |
+| `knowledge-source-freshness` | make `dep_matches` always return false | `REGRESSION: changing a declared dependency did not mark the page needs-review (got: 'none')` |
+| | point a pin at a path absent from a present commit | `REGRESSION: pinned source does not resolve at ce7b7db2 (basename hits: 0)` |
+| | point a pin at an unreachable commit | `PASS ... (1 pin(s) unverifiable in this clone depth)` — deliberately not a failure |
+| `spec-execute-running-contract` | remove the status file | `REGRESSION: execute.md defines no status file, so RUNNING is not observable` |
+| `spec-no-generated-prompt-contract` | reintroduce a generated task prompt | `REGRESSION: .oh/skills/spec/references/plan.md still names a task-folder prompt artifact` |
+| `task-completion-structured-state` | re-add the sentinel to the cleanup cron | `REGRESSION: active surface still keys on the retired completion sentinel: crons/cleanup-tasks.md:170` |
+| `retired-memory-vocabulary` | list `memory/` in the `.oh/` contents table | `REGRESSION: .oh/README.md still lists memory/ in its contents table` |
+| `knowledge-path-single-owner` | create a file under the retired path | `REGRESSION: the retired corpus directory still exists on disk` |
+
+**The single-owner guard fired on this document.** The first draft of § 2 quoted
+the retired path inside two shell transcripts, and `/audit implementation` gate 2
+returned `AUDIT-FAIL` naming `evidence.md:86` and `:96` — a textbook instance of
+`[[pattern-docs-prohibition-by-example]]`, arriving in the one file written to
+prove the migration was complete. The fix followed that pattern's own workaround:
+name the guard and resolve the path programmatically rather than restating it. The
+oracle was **not** widened to exempt `evidence.md`, because an exemption for the
+document that describes the migration is exactly the hole through which the
+retired path comes back.
+
+**The undraft ordering fault was found by review, and fixed in the contract.**
+`gh pr ready` ran at `d1aebc75` with its four checks green, but two commits
+followed and one was pushed while CI was still running — so the PR sat *ready* on
+a classification that no longer described its head. Every pushed head has since
+completed all four checks green (`d1aebc75`, `b0ee168a`, `b2b83e29`, `9e54a9dd`,
+`a6c2f1ed`), so the outcome held; the ordering did not.
+
+The procedure allowed it: `execute.md` said the promotable audit runs
+"immediately before any undraft" and said nothing about a push *after* one.
+Step 10 now (a) confirms the PR's `headRefOid` equals local HEAD before reading
+the classification, (b) states that the gate re-opens on every push after the
+undraft and that a no-longer-promotable head goes back to draft via
+`gh pr ready --undo`, and (c) says the cheap way to honor this is to finish the
+tail before undrafting at all. `spec-ready-finalization.sh` gained three
+assertions over that section; all three were fault-injected and fire
+(`REGRESSION: /spec execute does not confirm the PR head is the commit it is
+promoting`, `... no longer re-opens the promotable gate on a post-undraft push`,
+`... names no way back to draft when a pushed head stops being promotable`).
+
+**A stray `2` file was committed, and deleting it was not the fix.** A `sed`
+invocation had rewritten `>&2` to `&>2` inside
+`spec-execute-running-contract.sh`, and `&>2` is valid shell that redirects into
+**a file named `2`** rather than to stderr. So the probe re-created the file on
+every suite run: the first deletion was undone by the next `/eval`. The fix is at
+the source — the redirect is `>&2` again — and
+`eval-contract-text-20260831.sh` now fails any probe containing `&>[0-9]`, with
+the reason spelled out, so the class cannot return silently:
+
+```
+$ sed -i 's|synchronous READY" >&2|synchronous READY" \&>2|' <probe>   # inject
+$ bash .oh/evals/probes/eval-contract-text-20260831.sh
+REGRESSION: spec-execute-running-contract.sh: '&>N' redirects to a FILE named N,
+not to a descriptor — use '>&N'
+```
+
+Same class as the `pipefail` finding this run compiled: a shell redirect that
+silently did something other than what it read as, and that a green suite could
+not see.
+
+**The simplify gate deleted a mode nobody called.** `/audit implementation`
+gate 5 found `knowledge-impact.sh --since <ref>` with zero call sites, contradicting
+the script's own stated contract of two consumers. The Advisor deleted the branch
+rather than arguing for it (round 1 of 3): 179 → 172 lines, and `--since` is now
+rejected with the usage line. `--verified` and `--changed` are unchanged and still
+exercised by `knowledge-source-freshness.sh` and `spec-execute-knowledge-impact.sh`.
+
+**Fault injection changed the work, which is the point.** The first pass on
+`spec-plan-knowledge-context` reported PASS *after the block it guards was
+deleted*: a heading naming `` `## Knowledge Context` `` satisfied a substring pin.
+Both planning probes were rewritten to assert the block by exact line
+(commit `786920fd`). Two probes that looked green were not.
+
+---
+
+## 4. Where they diverged from the plan, and why
+
+1. **`depends_on:` was collapsed into `sources:`.** Requirement E illustrates
+   freshness with a separate `depends_on:` list ("for example"); requirement F
+   normatively puts repository paths in `sources:`. Two lists of the same paths
+   is the duplication `AGENTS.md` forbids. `sources:` is the single declaration
+   and `verified_at:` pins the check. The behavior E asks for is unchanged.
+   Declared in `prd.md` before implementation.
+2. **`/spec retro` took option 1 of requirement K** (compatibility wrapper), not
+   option 2 (delete). `references/retro.md` is a `protected-paths.txt` entry and
+   an `audit-stale-references.sh` coverage path; deleting it needs a
+   protected-path removal #926 does not ask for. The wrapper carries no second
+   ontology — `spec-family-contract.sh` now fails if it grows one.
+3. **No `/spec ship` alias survives.** Zero callers repository-wide outside the
+   skill's own two files, so the non-goal against compatibility abstractions
+   applies. A two-line redirect for a literal `ship` first token remains, for a
+   correctness reason rather than a compatibility one: without it,
+   `/spec ship <plan>` would derive the slug `ship`.
+4. **`.oh/knowledge/raw/` is tracked, not ignored.** This PRD's US-001 criterion 4
+   as first written required `raw/` to be ignored. It holds the immutable
+   snapshots `kind: external` pages cite, and an untracked snapshot is provenance
+   a fresh clone cannot verify — problem 4 of the issue, wearing a new name. The
+   criterion was corrected mid-build; the issue's own layout comment annotates
+   only `local/` as ignored, so this moves toward the issue, not away. Recorded
+   in `prd.json`'s US-001 `notes` and in `prd.md`'s Plan Reconciliation.
+5. **A fourth provenance form was added: a bare upstream URL.** Not in the issue.
+   Forced by real state: three pages (`managed-agents`,
+   `molt-agentic-reinforcement-learning`, `recursive-self-improvement-survey`)
+   cited `raw/` snapshots that exist in **no commit** — the new source-path check
+   found them. Repaired without fabricating provenance: two carry the arXiv URL
+   their own bodies state; `managed-agents`, whose upstream URL is recorded
+   nowhere in the repository, is reclassified `kind: repo` against the five
+   repository documents it actually reasons over, with its unrecoverable external
+   seed stated in the page. The URL form is documented as the weakest, and
+   `/wiki ingest` can never produce it.
+6. **Two pattern pins were re-pointed.** `pattern-wiki-ungated-check-drift` and
+   `pattern-wiki-external-model-over-mapping` cited knowledge pages at
+   pre-migration shas, where the new path does not exist. Re-pinned to a revision
+   where the cited path is real. Historical precision is slightly reduced; the
+   alternative was writing the retired path into a tracked file, which the
+   single-owner guard forbids.
+7. **`/eval` ran three times, not once.** Run 1 found a self-inflicted regression
+   (`wiki-compile-contract` pinned schema sections I renumbered). Run 2 was clean.
+   Run 3 followed the shallow-clone fix below. The once-per-cycle rule exists to
+   stop three runs against the *same* commit telling us the same thing once; each
+   of these ran against a different commit after a real change.
+8. **`.oh/tasks/compose-env-boundary/prompt.md` was deleted.** A tracked artifact
+   of the retired contract in another task's folder. Retiring the artifact from
+   the durable contract while leaving a tracked instance behind would not be
+   atomic.
+
+9. **The execution base moved mid-build, and the reconciliation is the one call a
+   reviewer may want to overrule.** PR #930 (issue #928) merged into
+   `development` while this build was in its tail and retired the `/spec`
+   agent-handoff mechanism: no tmux launch, no `/goal` prompt, no
+   `agent-spec-<slug>` session naming, and `RUNNING` redefined as *task* state
+   rather than a process. #926's pinned comment asks for the opposite in
+   mechanism — "one persistent Herdr/tmux-backed session", `RUNNING` as "the
+   persistent Advisor doing the work". This build **adopted the merged state**,
+   because it is the newer operator decision and because it preserves every
+   invariant that comment actually protects: one implementation owner,
+   `/delegate` bounded beneath it, the
+   `PLANNED → RUNNING → READY | DRAFT-BLOCKED(<gate>)` lifecycle, and human merge
+   as the final boundary. What changed is *who* the owner is — the agent already
+   running `/spec execute`, not a session it spawns — and the status file name
+   (`/tmp/spec-<slug>.state`). Flagged on the PR so the operator rules on it.
+
+10. **`cleanup-no-agent-session-coupling.sh` was amended, not just satisfied.**
+    #930's probe pinned `STATUS: COMPLETE` as the archival key while its actual
+    subject is session decoupling — and #926 retires that sentinel. The probe now
+    asserts the same decoupling against `prd.json` structured state. Both
+    contracts hold; neither was weakened.
+
+11. **`development` moved a second time, and PR #931 landed too.** It made skills
+    the only role primitive, retired the `agents/**` payload and the agent
+    provider links, and added `/architect` plus five probes. Two follow-on edits
+    were required and made: "Advisor" is now a retired role identity, so
+    `plan.md` and the `/retro --task` section say *owner*; and `roles-are-skills.sh`
+    carried two exclusions for the retired corpus path, which after this change
+    protect nothing while re-introducing the retired literal into a tracked file
+    and tripping `knowledge-path-single-owner`. Both exclusions were removed
+    rather than the guard being widened.
+
+12. **`development` moved a third time: PR #934 retired cron worktree
+    isolation.** `execute.md`'s build-worktree step branched on `$CRON_WORKTREE`;
+    it now branches on the checked-out branch, matching the merged contract. Three
+    merges landed on this branch during the tail, on five, thirty-eight and eleven
+    files respectively. Each was reconciled explicitly rather than discovered at
+    merge time — which is the behavior step 0 of the contract this change ships
+    exists to produce.
+
+---
+
+## 5. What remains unverified
+
+- **`shellcheck` was not run locally** — it is not installed in this worktree, so
+  US-002's "passes shellcheck" clause was not observed here. CI's *Boot Path Lint
+  (shellcheck + hadolint)* job covers it and is green on this branch.
+- **Four pages are `NEEDS-REVIEW` against their own `verified_at`** —
+  `audit-architecture`, `fresh-machine-setup`, `managed-agents`,
+  `release-versioning`. This is pre-existing debt the new check made visible for
+  the first time, not something this change caused: no declared source of any of
+  the four is in this diff. Clearing it means re-reading four pages against
+  sources that moved over months, which is a separate unit of work. `/wiki lint`
+  reports it; nothing blocks on it. `managed-agents` is on the list *because* this
+  change reclassified it `kind: repo` against real repository sources — before
+  that it cited a snapshot that exists in no commit and could not be checked at
+  all.
+- **Two probes SKIP in CI**, `wiki-pattern-persistence` and
+  `wiki-skill-impact-append-only`, because a depth-1 checkout has no merge-base.
+  They SKIP identically on the scaffold commit `dc8043da`, before any of this
+  change existed, so the behavior is pre-existing. Both PASS locally against a
+  full clone, and both were made rename-aware in this change so the migration
+  itself did not silence them.
+- **One pin is unverifiable at CI clone depth** by design (see the fault-injection
+  table). The check reports the count rather than failing; a reviewer who wants
+  full-history verification runs the probe against a full clone.
+- **`kind: external` and `kind: pattern` freshness is not modelled.** Their
+  provenance is immutable, so no source-change test applies. A paper that is
+  superseded upstream is invisible to every check here; that is a deliberate
+  scope boundary, not an oversight.
+- **The `/spec plan` recall step is a procedure, not an executable.** The probes
+  assert that the contract requires recall and ordering; they cannot assert that a
+  future session actually performed it. The `## Knowledge Context` block is the
+  artifact a reviewer checks.
+- **Claimed, unmeasured:** that recalling knowledge improves plan quality over
+  time. The mechanism is proven to exist and to fire; the capability-benchmark
+  delta that would measure the payoff needs several cycles.
+- **`eval-result.json` can never satisfy its own freshness key.** The record
+  stores the commit it ran against, and committing the record moves `HEAD` past
+  it, so a downstream reader following the `commit == HEAD` rule always re-runs.
+  `/audit implementation` did exactly that on this build and was right to. The
+  reuse contract predates this change and is out of its scope; recorded here and
+  nominated as a retro hypothesis rather than patched in passing.
+- **The diff grew 384 lines after the last simplify round, and the loop ended on
+  the monotone rule rather than on the diff getting smaller.** The post-merge
+  audit flagged this, correctly. The growth is attributable, not unexamined work:
+  of the 733 lines added since the round-1 commit, **537 arrived with the
+  `development` merge** — PR #930's four new probes and the `/spec`, `/delegate`,
+  `/rlm`, `/ste`, `/t3`, `/audit`, capability, cron and docs surfaces it rewrote —
+  plus this run's two compiled pattern pages. Two further merges (#931, #934)
+  landed after that measurement. Round 2 found **no blocking
+  finding** and `SIMPLICITY-RESIDUAL: 0`; the two residuals round 1 disclosed were
+  re-examined and cleared (`--format slugs` has real call sites in two probes, and
+  extracting the probes' one-line `ROOT=` preamble would add a file rather than
+  remove lines). The round record carries the attribution so a reviewer does not
+  have to reconstruct it.
+- **The PR carries the advisory `size-convention` flag** — 113 files after the merge, past the
+  50-changed-file convention. It is not splittable without breaking the thing the
+  issue asks for: requirement H says every moved-path consumer, doc, probe,
+  script, provider wiring, and CI filter is updated **atomically**, and a
+  migration landed in two PRs leaves a window with two writable knowledge
+  locations, which is the acceptance criterion's explicit failure case. Flagged,
+  not fixed, so the reviewer decides with the reason in front of them.
+- **Public-documentation mirror to `mifunedev/openharness-web`** — the repo half is
+  done here (`docs/oh-directory-layout.md`, `docs/glossary.md`, the RFCs,
+  `.oh/README.md`, `.oh/tasks/README.md`); the site half is filed as
+  **[mifunedev/openharness-web#37](https://github.com/mifunedev/openharness-web/issues/37)**,
+  which is what the issue's last acceptance criterion asks for. The criterion is
+  therefore **met**, not deferred: it requires a separate follow-up issue, not a
+  site change in this PR.
+
+  Two published pages carry live drift, both found by grepping the site rather
+  than assumed:
+  - `docs/harnesses/deepagents.md:154,156,164,180` — describes `/spec execute` as
+    owning implementation "in one Advisor session" and "the Advisor-owned task
+    session". Both the role name and the session-ownership model are retired.
+  - `blog/2026-07-07-open-harness-demo-guide.md:131` — lists `.oh/memory/` as
+    "session logs and durable lessons", i.e. as current architecture.
+
+  Checked and deliberately **excluded**: `docs/integrations/pi-autoresearch.md:65`
+  cites `.auto/prompt.md`, which is Pi autoresearch's own file and unrelated to the
+  retired `.oh/tasks/<slug>/prompt.md`. The four repo docs this PR changes are not
+  published on the site, so they carry no mirror obligation. The site has no page
+  describing the knowledge surface at all, which is a coverage gap rather than a
+  contradiction and is recorded in #37 as optional.
+
+---
+
+## 6. What this run compounded back
+
+Both probes the session-scoped retro nominated are **minted**, and each was
+fault-injected on every branch before being counted green:
+
+| Probe | Guards | Injection observed |
+|---|---|---|
+| `evals-20260901-suite-tree-clean` | no probe redirects into the repository (`&>N`, or a redirect targeting `$ROOT`/`$HARNESS`), and no redirect residue is tracked at the root | all three branches fired: the `&>2` spelling, a `> "$ROOT/..."` write, and a tracked root file named `2` |
+| `docs-20260901-followup-artifact-cited` | the evidence contract requires a follow-up to be cited, and every tracked `evidence.md` bullet tying a criterion to a follow-up carries a resolvable issue/PR URL | reconstructing **this run's own defect** — replacing the openharness-web#37 link with the words "a separate follow-up issue" — fires it |
+
+The second is the sharper of the two: it fails on the exact text this build
+shipped before verification caught it, which is the only real test of a probe
+minted from a retro.
+
+Two design choices are worth the reviewer's eye. `evals-20260901-suite-tree-clean`
+is a **static** guard plus a residue check, not a sandboxed execution test: a
+probe cannot run the suite to observe what the suite writes without recursing
+into itself. A first draft flagged any redirect to a relative path and produced
+46 findings — shell comparisons (`(( n > CAP ))`), prose arrows, and heredocs
+written inside a probe's own `mktemp` directory — so it was narrowed to patterns
+that cannot mean anything else. `$AUDIT_ROOT` is deliberately not anchored: it is
+invocation-scoped by contract and probes legitimately point it at a fixture.
+
+The `&>[0-9]` check added to `eval-contract-text-20260831.sh` mid-session was
+**moved** into the new probe rather than duplicated. One rule, one owner: the
+literal-pinning probe guards pinning, and write hygiene now has its own.
+
+
+`/retro --task repo-knowledge-loop` tested 9 hypotheses (8 supported, 1
+inconclusive) and `/wiki compile` turned the durable ones into knowledge:
+
+| Page | Action | Lesson |
+|---|---|---|
+| `pattern-evals-pipefail-early-exit` | **created** | under `pipefail`, a reader that exits on first match SIGPIPEs the writer, so a successful match reports as a failed pipeline |
+| `pattern-spec-self-staling-reuse-record` | **created** | a commit-keyed record committed into the repository it measures can never satisfy `commit == HEAD`, so the fallback is the only path |
+| `pattern-evals-prose-literal-pinning` | patched | the same matcher fails the other way too: a short pin can be satisfied by a heading that merely names the block it guards |
+| `pattern-docs-prohibition-by-example` | patched | the guard fired on this document; resolve a retired path programmatically, and never exempt the file that describes the migration |
+
+Two probe candidates were **nominated and not minted**: a `pipefail`/`grep -q`
+lint over shell scripts (12 files repo-wide carry the shape) and a doc-lint on the
+reuse-record contract. Both are guardrails worth having and neither is asked for
+by #926; minting them here would widen a diff gate 5 already flagged for size.
+The knowledge pages above carry the workarounds, so the lessons are durable
+whether or not the probes land.
+
+Context compaction was **not run**. It is optional and non-gating in the new
+contract, and every durable artifact above was written at full resolution first,
+which is the ordering the change exists to guarantee.
+
+---
+
+## 7. Benchmark verdict
+
+`/benchmark` — **`BENEFICIAL` (justified hold)**.
+
+- **Floor**: the record was stale against HEAD, so the suite was re-run rather
+  than inherited: 127 probes, exit 0, zero new `green→red`, four SKIPPED that are
+  the same four skipped on base.
+- **Ceiling**: suite score **held at 1.44/2.00** against the counterfactual. That
+  is a *justified* hold rather than "machinery without movement", because the
+  disqualifier for the latter is no capability task crediting the change — and
+  CB-005 credits it directly: its success signal asks for a tracked pattern page
+  with a `path:line` root cause and pinned `<path>@<short-sha>` provenance, and
+  this run produced two and patched two more.
+- **`REDIRECT-FLAG` raised.** The suite has **no task that measures
+  recall-before-plan**, which is the capability this change adds, so the ceiling
+  cannot see it in either direction. This is the shape CB-004 was retired for — a
+  row that held at `Δ +0.00` because nothing was ever measured. Recommended
+  redirect: author a CB task scoring whether a plan consumed tracked knowledge
+  before its PRD existed.
+- **No ledger write.** `/benchmark` writes an `SI-nnnn-V` record only for a
+  `/builder` proposal under evaluation; none covers #926.
+- Instrument grooming (`/audit eval-quality`) was not run — that follow-on does
+  not exist yet, and is named rather than silently skipped.
+
+---
+
+## Correlation
+
+| Field | Value |
+|---|---|
+| Audit run id | `audit-20260901T022121Z-1697369` (post-merge; the pre-merge pass was `audit-20260901T014837Z-1436087`) |
+| Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 0` (gates: graph 7/7 · eval rc=0 131 probes · promotable true · ui n/a · slop no blocking finding) |
+| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T031737Z-2034186` on head `d3b1a5cd` (CI PASS on all four checks · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`). Re-run on every head pushed after the undraft, per the rule this build added to step 10. |
+| Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
+| Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

@@ -16,6 +16,9 @@ function fixture(
     runtimeExecFails?: boolean;
     runtimeUid?: string;
     markerOwner?: string;
+    harnessProbeFails?: boolean;
+    noDefaultHarnesses?: boolean;
+    noDefaultTools?: boolean;
   } = {},
 ) {
   const runtimeUid = opts.runtimeUid ?? HOST_UID;
@@ -72,6 +75,44 @@ case "$1" in
         ;;
       *"stat -c %u:%g"*)
         printf '%s\n' ${JSON.stringify(markerOwner)}
+        exit 0
+        ;;
+      *"oh harness list --defaults --json"*)
+        cat <<'JSON'
+${
+  opts.noDefaultHarnesses
+    ? "[]"
+    : `[
+  { "id": "claude-code", "title": "Claude Code", "binary": "claude", "kind": "default", "enabled": null, "installed": true, "docs": "x" },
+  { "id": "pi", "title": "Pi", "binary": "pi", "kind": "default", "enabled": null, "installed": true, "docs": "x" }
+]`
+}
+JSON
+        exit 0
+        ;;
+      *"oh tool list --defaults --json"*)
+        cat <<'JSON'
+${
+  opts.noDefaultTools
+    ? "[]"
+    : `[
+  { "id": "herdr", "title": "Herdr", "binary": "herdr", "kind": "default", "enabled": null, "installed": true, "docs": "x" },
+  { "id": "cloudflared", "title": "cloudflared", "binary": "cloudflared", "kind": "default", "enabled": null, "installed": true, "docs": "x" }
+]`
+}
+JSON
+        exit 0
+        ;;
+      *"type -P"*)
+        if [ "${opts.harnessProbeFails ? "1" : "0"}" = "1" ]; then
+          echo 'is not on PATH under /home/sandbox/.local (type -P gave: /usr/bin/claude)' >&2
+          exit 1
+        fi
+        printf '1.2.3\n'
+        exit 0
+        ;;
+      *"id -u sandbox"*)
+        printf '%s\n' ${JSON.stringify(runtimeUid)}
         exit 0
         ;;
     esac
@@ -138,6 +179,40 @@ describe("sandbox boot smoke", () => {
     expect(result.stdout).toContain(
       `sandbox user, bind mount, and sandbox-created files all resolve to ${HOST_UID}:${HOST_GID}`,
     );
+    expect(dockerCalls).toContain("oh harness list --defaults --json");
+    expect(dockerCalls).toContain("oh tool list --defaults --json");
+    expect(dockerCalls).toContain("type -P");
+    expect(result.stdout).toContain("claude-code provisioned at boot -> 1.2.3");
+    expect(result.stdout).toContain("pi provisioned at boot -> 1.2.3");
+    expect(result.stdout).toContain("herdr provisioned at boot -> 1.2.3");
+    expect(result.stdout).toContain("cloudflared provisioned at boot -> 1.2.3");
+  });
+
+  // #904 deleted the image bake, so this assertion is the only thing standing
+  // between a silently broken boot-time install and a green pipeline.
+  it("fails when a default harness was not provisioned into the home mount", () => {
+    const fx = fixture({ harnessProbeFails: true });
+
+    const result = runSmoke(fx);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "default harness 'claude-code' was not provisioned into the home mount at boot",
+    );
+    expect(result.stderr).toContain("type -P gave: /usr/bin/claude");
+    expect(readFileSync(fx.composeLog, "utf8")).toContain("down -v --remove-orphans");
+  });
+
+  it.each<[string, { noDefaultHarnesses?: boolean; noDefaultTools?: boolean }]>([
+    ["harness", { noDefaultHarnesses: true }],
+    ["tool", { noDefaultTools: true }],
+  ])("refuses to pass vacuously when the %s catalog reports no defaults", (noun, overrides) => {
+    const fx = fixture(overrides);
+
+    const result = runSmoke(fx);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`the ${noun} catalog reported no kind:"default" entries`);
   });
 
   it("fails when the runtime sandbox user does not match the checkout owner", () => {

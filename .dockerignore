@@ -1,8 +1,4 @@
 **/.env*
-# Exclude .claude/ CONTENTS (local plans, specs, screenshots, auth state) but
-# re-include the tracked control-plane config the OH_IMAGE_ONLY seed needs.
-# Without these in /opt/oh-seed, a no-bind volume boots without
-# .claude/protected-paths.txt and link-providers.sh --init crash-loops.
 .claude/*
 !.claude/protected-paths.txt
 !.claude/settings.json
@@ -15,3 +11,6 @@ projects/*
 !projects/CLAUDE.md
 .git/
 node_modules/
+.pnpm-store/
+.pi/bridge/
+.pi/npm/

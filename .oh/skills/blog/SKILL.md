@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 description: |
   Turn a source scenario into a publishable blog post. First supported playbook:
   Loom/demo-to-blog, where a raw notes file plus Loom screenshots become a
-  polished site post after Advisor briefing, photo/text alignment audit, site
+  polished site post after a /delegate briefing, photo/text alignment audit, site
   convention audit, narrative/fact-check audit, source-faithful image handling
   (exact URLs or local files downloaded from them), optional social/channel-promotion
   artifact generation, and build verification. Manual-invoke only because it writes content and may spawn
@@ -70,4 +70,4 @@ Result: CREATED | DRY-RUN | BLOCKED
 /blog Create blog from @.claude/specs/openharness-demo --target /worktrees openharness-web
 ```
 
-Expected behavior: read `demo.md`, audit all Loom images, use Advisor plus specialized delegates, write a Docusaurus post in the target blog repo, embed only selected safe screenshots using exact `demo.md` URLs or local files downloaded from those URLs, run validation, and report changed paths.
+Expected behavior: read `demo.md`, audit all Loom images, obtain a `/delegate` briefing, spawn specialized delegates, write a Docusaurus post in the target blog repo, embed only selected safe screenshots using exact `demo.md` URLs or local files downloaded from those URLs, run validation, and report changed paths.

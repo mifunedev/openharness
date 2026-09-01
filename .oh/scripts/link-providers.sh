@@ -27,10 +27,7 @@ provider_links=(
   ".pi/skills|../.oh/skills"
   ".claude/skills|../.oh/skills"
   ".codex/skills|../.oh/skills"
-  ".claude/agents|../.oh/agents"
   ".claude/hooks|../.oh/hooks"
-  ".codex/agents|../.claude/agents"
-  ".prime/agent/skills|../../.oh/skills"
 )
 
 HERMES_LINK=".hermes/skills/openharness"
@@ -72,7 +69,6 @@ print_state() {
   cat >&2 <<EOF
 Vendored skill pack: .oh/skills (expected to exist as tracked files)
 Provider surfaces:   .pi/skills .claude/skills .codex/skills -> ../.oh/skills
-                     .prime/agent/skills -> ../../.oh/skills
 Remediation: bash .oh/scripts/link-providers.sh --init
 EOF
 }
@@ -108,7 +104,7 @@ init_links() {
     [ -f "$f" ] && chmod +x "$f"
   done
 
-  if [ "${INSTALL_HERMES:-false}" = "true" ]; then
+  if command -v hermes >/dev/null 2>&1; then
     link_provider "$HERMES_LINK" "$HERMES_TARGET" || true
   fi
 }
@@ -129,7 +125,7 @@ check_symlink() {
 }
 
 check_hermes_link() {
-  if [ "${INSTALL_HERMES:-false}" != "true" ] && [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ]; then
+  if [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ]; then
     return 0
   fi
   check_symlink "$HERMES_LINK" "$HERMES_TARGET"
@@ -149,7 +145,7 @@ check_protected_paths() {
     entry="$(printf '%s' "$entry" | xargs)"
     [ -n "$entry" ] || continue
     case "$entry" in
-      .oh/skills/*|.oh/agents/*|.oh/hooks/*)
+      .oh/skills/*|.oh/hooks/*)
         [ -e "$entry" ] || fail "protected pack path missing: $entry"
         ;;
     esac
@@ -221,4 +217,4 @@ if [ "$failures" -ne 0 ]; then
   exit 1
 fi
 
-printf 'Providers OK: .pi/.claude/.codex/.prime skills -> .oh/skills (vendored pack present)\n'
+printf 'Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'

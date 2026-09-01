@@ -29,22 +29,22 @@ install:
   grok_build: true
 ```
 
-Or set the legacy build flag in `.devcontainer/.env`:
+Or set it from the CLI:
 
 ```bash
-INSTALL_GROK_BUILD=true
+oh config set install.grokBuild true
 ```
 
-Then rebuild/restart the sandbox:
+Either way the boot provisioner installs it on the next start — no rebuild:
 
 ```bash
 oh stop && oh sandbox
 ```
 
-Open Harness uses the upstream installer during image build, pinned to the version verified when this support was added:
+Open Harness uses the upstream installer as the `sandbox` user, pinned to the version verified when this support was added, with the binary directed into the home mount:
 
 ```bash
-curl -fsSL https://x.ai/cli/install.sh | bash -s 0.2.39
+curl -fsSL https://x.ai/cli/install.sh | GROK_BIN_DIR="$HOME/.local/bin" bash -s 0.2.39
 ```
 
 Review-first equivalent for manual inspection:
@@ -63,7 +63,7 @@ Verify the install inside the sandbox:
 grok --version
 ```
 
-If `grok` is not found, confirm `INSTALL_GROK_BUILD=true` is set in `.devcontainer/.env` and rebuild.
+If `grok` is not found, run `oh harness install grok-build` — it installs into `~/.local/bin` and sets `install.grokBuild` so a fresh home mount reinstalls it at boot.
 
 ## Authentication
 
@@ -84,7 +84,7 @@ environment variables as convenience secret storage only; users and processes
 with Docker/container access may be able to inspect them.
 
 :::warning Auth precedence
-Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`. If Grok Build appears to ignore a new API key, run `grok logout` or reset the `grok-auth` volume, then try again.
+Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`. If Grok Build appears to ignore a new API key, run `grok logout` or delete `~/.grok`, then try again.
 :::
 
 ## Common usage
@@ -109,7 +109,7 @@ tmux attach -t agent-grok
 
 ## State persistence
 
-Open Harness mounts the `grok-auth` named volume at `/home/sandbox/.grok` (`~/.grok`) alongside the other agent auth volumes. This volume persists **Grok user state written under `~/.grok`** across container rebuilds, such as:
+Open Harness persists `~/.grok` in the single `/home/sandbox` mount, alongside every other agent's state. That keeps **Grok user state written under `~/.grok`** across container rebuilds, such as:
 
 - auth and cached sessions (`auth.json`)
 - config
@@ -119,7 +119,7 @@ Open Harness mounts the `grok-auth` named volume at `/home/sandbox/.grok` (`~/.g
 - logs
 
 :::warning Volume removal deletes Grok state
-`oh destroy` and `docker compose down -v` remove named volumes, including `grok-auth`. Use `oh stop` when you want Grok Build state under `~/.grok` to survive.
+`oh destroy` and `docker compose down -v` delete the sandbox home volume, `~/.grok` included. Use `oh stop` when you want Grok Build state under `~/.grok` to survive.
 :::
 
 ## Dangerous flags

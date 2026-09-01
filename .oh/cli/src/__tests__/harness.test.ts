@@ -9,6 +9,7 @@ vi.mock("node:os", async (importOriginal) => {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  PROBE_TIMEOUT_MS,
   runHarnessInstall,
   runHarnessList,
   runHarnessStatus,
@@ -49,14 +50,19 @@ function makeRepo(): string {
 interface RecordedCall {
   cmd: string;
   args: string[];
+  timeoutMs?: number;
 }
 
 function makeRunner(
   reply: (cmd: string, args: string[]) => RunResult | undefined = () => undefined,
 ): { calls: RecordedCall[]; run: LifecycleRunner } {
   const calls: RecordedCall[] = [];
-  const run: LifecycleRunner = (cmd, args) => {
-    calls.push({ cmd, args: [...args] });
+  const run: LifecycleRunner = (cmd, args, opts) => {
+    calls.push({
+      cmd,
+      args: [...args],
+      ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+    });
     return reply(cmd, args) ?? { status: 0, stdout: "", stderr: "" };
   };
   return { calls, run };
@@ -160,7 +166,7 @@ describe("help", () => {
 
   it("names every installable harness so `<name>` is discoverable", () => {
     const help = captureStdout(printHarnessHelp);
-    for (const id of ["claude-code", "codex", "pi", "opencode", "grok-build", "deepagents", "hermes", "t3code"]) {
+    for (const id of ["claude-code", "codex", "pi", "opencode", "grok-build", "hermes", "t3code"]) {
       expect(help).toContain(id);
     }
   });
@@ -266,25 +272,21 @@ describe("runHarnessInstall against the container", () => {
     const install = execCalls(calls).find((c) => c.args.includes("opencode-ai"));
     expect(install).toBeDefined();
     expect(install!.args).toContain("-u");
-    expect(install!.args).toContain("root");
-    expect(install!.args.slice(-4)).toEqual(["npm", "install", "-g", "opencode-ai"]);
+    // #908: every harness installs as the sandbox user into the home mount.
+    expect(install!.args).toContain("sandbox");
+    expect(install!.args).not.toContain("root");
+    expect(install!.args.slice(-6)).toEqual([
+      "npm",
+      "--prefix",
+      "/home/sandbox/.local",
+      "install",
+      "-g",
+      "opencode-ai",
+    ]);
     expect(text(out)).toContain("installed");
     expect(text(out)).toContain(
       "https://github.com/mifunedev/openharness/blob/main/docs/harnesses/opencode.md",
     );
-  });
-
-  it("installs deepagents as the sandbox user, not root", async () => {
-    const root = makeRepo();
-    const { calls, run } = makeRunner((c, a) => {
-      if (isInspect(c, a)) return running;
-      if (isExecOf(c, a, "--version")) return { status: 1, stdout: "", stderr: "" };
-      return undefined;
-    });
-
-    await runHarnessInstall("deepagents", { cwd: root, run }, makeIo().io);
-    const install = execCalls(calls).find((c) => c.args.includes("deepagents-cli"));
-    expect(install!.args[install!.args.indexOf("-u") + 1]).toBe("sandbox");
   });
 
   it("is a no-op when the binary is already present", async () => {
@@ -414,6 +416,50 @@ describe("runHarnessList", () => {
   });
 });
 
+describe("runHarnessList — a hung verify probe cannot stall the boot path", () => {
+  const INSIDE_SANDBOX: NodeJS.ProcessEnv = { OH_EXECUTION_TARGET: "local" };
+
+  it("bounds every probe spawn with a timeout", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    await runHarnessList({ cwd: root, run, env: INSIDE_SANDBOX, json: true }, makeIo().io);
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) expect(call.timeoutMs).toBe(PROBE_TIMEOUT_MS);
+  });
+
+  it("reports a timed-out probe as unknown rather than throwing", async () => {
+    const root = makeRepo();
+    const { run } = makeRunner((cmd) =>
+      cmd === "npx"
+        ? { status: null, error: { code: "ETIMEDOUT", message: "spawnSync npx ETIMEDOUT" } }
+        : undefined,
+    );
+    const { out, io } = makeIo();
+    expect(await runHarnessList({ cwd: root, run, env: INSIDE_SANDBOX, json: true }, io)).toBe(0);
+    const parsed = JSON.parse(text(out));
+    expect(parsed.find((h: { id: string }) => h.id === "t3code").installed).toBeNull();
+    expect(parsed.find((h: { id: string }) => h.id === "claude-code").installed).toBe(true);
+  });
+
+  it("--defaults probes only the default harnesses, never the registry-touching ones", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    const { out, io } = makeIo();
+    expect(
+      await runHarnessList(
+        { cwd: root, run, env: INSIDE_SANDBOX, json: true, defaultsOnly: true },
+        io,
+      ),
+    ).toBe(0);
+    expect(JSON.parse(text(out)).map((h: { id: string }) => h.id)).toEqual([
+      "claude-code",
+      "codex",
+      "pi",
+    ]);
+    expect(calls.map((c) => c.cmd).sort()).toEqual(["claude", "codex", "pi"]);
+  });
+});
+
 describe("runHarnessStatus", () => {
   it("with no name behaves like list", async () => {
     const root = makeRepo();
@@ -458,7 +504,11 @@ describe("oh harness — inside the sandbox", () => {
     const { io, out } = makeIo();
     expect(await runHarnessInstall("opencode", { cwd: root, run, env: INSIDE }, io)).toBe(0);
     expect(text(out)).not.toContain("skipping the live install");
-    expect(calls.some((c) => c.cmd === "sudo" && c.args.includes("opencode-ai"))).toBe(true);
+    // #908: this previously asserted `cmd === "sudo"`, codifying the very defect
+    // that made `oh harness install opencode` hang inside the sandbox —
+    // stdio:"inherit" selects plain `sudo --`, and sandbox has no NOPASSWD.
+    expect(calls.some((c) => c.cmd === "sudo")).toBe(false);
+    expect(calls.some((c) => c.args.includes("opencode-ai"))).toBe(true);
     expect(installFlag(root, "opencode")).toBe(true);
   });
 

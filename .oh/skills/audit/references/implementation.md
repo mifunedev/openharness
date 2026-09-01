@@ -31,7 +31,7 @@ is a downstream concern and remediation belongs to the build step on
 
 ---
 
-## The four gates (fail-fast, in order)
+## The five gates (fail-fast, in order)
 
 Run in order; the **first** gate that fails decides the verdict (`AUDIT-FAIL`,
 naming the gate). Only when **all** applicable gates pass is the verdict
@@ -45,7 +45,7 @@ the production helper `"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gate
 the snippets below explain its behavior and are not a second implementation.
 
 **(a) Task-graph conformance.** Every user story in the task graph must be marked
-complete. The Advisor flips `passes: false → true` only after it validates each story, so
+complete. The implementation owner flips `passes: false → true` only after validating each story, so
 the graph is conformant only when **zero** stories remain unfinished:
 
 ```bash
@@ -158,6 +158,64 @@ repository. No clean screenshot/snapshot for an applicable story is `AUDIT-FAIL`
 When no story declares browser verification, this gate is **not applicable** and
 must not invoke `agent-browser` at all.
 
+### Gate 5 — Slop (less code, low complexity)
+
+The correctness gates above prove the change *works*. None of them can fail a change
+that works and is twice the size it needed to be. This gate asks the one question that
+closes that hole:
+
+> **Can this diff be smaller and still satisfy every acceptance criterion in `prd.json`?**
+
+While the answer is yes, the verdict is `AUDIT-FAIL` and the build simplifies. The goal
+stays one sentence on purpose — the ingenuity belongs in the execution, not in the
+objective. Less code is less code to maintain and fewer places for a bug to live.
+
+**Signals.** Run
+`"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gates.sh" slop-metrics "$BASE"`,
+which emits one JSON object. Report every number in the verdict:
+
+| Field | Meaning |
+|---|---|
+| `netAdded` / `netRemoved` | Lines the unit's diff adds and removes vs. `--base`, excluding lockfiles, `.oh/evals/RESULTS.md`, and symlinked provider mirrors. `netAdded` is the headline number the loop drives down. |
+| `tsOverCcn` | Functions in the changed `.ts`/`.js`/`.mjs` files over `ccnMax` (default 10), from `uvx lizard`. **Real per-function cyclomatic complexity.** |
+| `shBranchPoints` | The *net* change in branch tokens across changed `.sh` files. No complexity tool parses bash, so this is an explicit **proxy** — never report it as CCN. |
+| `tool` | `lizard <version>`, `lizard n/a (no analysable files changed)`, or `unavailable`. |
+
+`tool: unavailable` means `uvx lizard` could not resolve (an offline runner). The
+complexity signal is then **SKIPPED and disclosed** — an empty `tsOverCcn` from an
+unavailable tool is never reported as a clean complexity result. Never infer green from
+silence.
+
+**Findings — the termination rule.** Every finding MUST cite `file:line`, name the
+concrete simpler alternative, and state the lines it removes. **A finding with no
+concrete simpler alternative is not a finding.** That rule is what keeps this gate an
+engineering check rather than an unbounded argument about taste. Typical shapes: a
+primitive the repo already has, an abstraction with exactly one call site and no
+criterion requiring it, a new file where editing an existing one would do, a path no
+story exercises.
+
+A finding is **blocking** only when its alternative satisfies every acceptance criterion
+with no new work. Anything else is disclosed, non-gating. A function the diff
+*introduces* above `ccnMax` is blocking; one already over the threshold on the base is
+disclosed only — the same pre-existing/new distinction gate 2 makes.
+
+**The bounded, monotone loop.** Read the caller's round record with
+`implementation-gates.sh simplicity-round "$SLUG"`, which prints
+`rounds=<n> cap=3 escalate=<bool> prevNetAdded=<n|none>` from
+`.oh/tasks/<slug>/simplify-rounds.json`:
+
+- `escalate=false` and a blocking finding exists → `AUDIT-FAIL` (gate 5). The build
+  simplifies and re-audits.
+- `escalate=true` (round cap reached), **or** `netAdded` did not strictly fall below
+  `prevNetAdded` on this round → stop blocking. `prevNetAdded=none` is the first round:
+  there is nothing to compare, so the monotone rule does not apply to it. The loop ends when the diff can no
+  longer be made smaller, not when taste is satisfied, so it terminates by construction.
+  Emit `AUDIT-PASS` with `SIMPLICITY-RESIDUAL: <n>` and list the residual findings for
+  the operator; they belong in `evidence.md`.
+
+This route **reads** the round record. It never writes or increments it — the
+orchestrating caller owns that file, exactly as it owns `evidence.md`.
+
 ---
 
 ## Verdict
@@ -168,7 +226,9 @@ must not invoke `agent-browser` at all.
 
 State the verdict, then — on the **final line** — emit the routing token. Always
 name the deciding gate on `AUDIT-FAIL` and disclose any non-gating pre-existing
-red from gate 2.
+red from gate 2. An `AUDIT-PASS` reached at the gate-5 round cap or on a
+non-reducing round carries `SIMPLICITY-RESIDUAL: <n>` with the residual findings;
+a `PASS` that hides residual slop is the one thing this gate exists to prevent.
 
 ---
 
@@ -180,6 +240,10 @@ red from gate 2.
 - **Fork PR classification.** It consumes the same private classifier JSON as
   `/audit pr` and `/audit prs`.
 - **Re-run a passing gate.** Fail-fast: stop at the first failing gate.
+- **Write or increment the gate-5 round counter.** It reads
+  `.oh/tasks/<slug>/simplify-rounds.json`; the orchestrating caller writes it.
+- **Apply the simplification.** Gate 5 names the smaller alternative; removing the
+  code is the `implement` node's job, like every other `AUDIT-FAIL`.
 - **Write the reviewer evidence doc.** The per-gate observations above are what
   `.oh/tasks/<slug>/evidence.md` is built from, but the orchestrating caller writes and
   commits it — see [`reviewer-evidence-doc.md`](reviewer-evidence-doc.md).
@@ -195,6 +259,6 @@ Return this structured observation to the outer dispatcher; do not report a run 
 - **Result**: OP
 - **Unit**: <slug> (PR #<N> / branch <branch>)
 - **Verdict**: AUDIT-PASS | AUDIT-FAIL (gate <n>: <reason>)
-- **Gates**: graph <p/t> · eval <rc> · promotable <class> · ui <pass|n/a>
+- **Gates**: graph <p/t> · eval <rc> · promotable <class> · ui <pass|n/a> · slop +<netAdded>/-<netRemoved> (<clean|blocking n|residual n>)
 - **Observation**: <one sentence>
 ```

@@ -37,7 +37,7 @@ candidate answers a chunk yields. This skill never re-implements selection — i
 
 | Substrate | Owner | How `/rlm` uses it |
 |---|---|---|
-| Recursion **loop** | `/spec execute` | each story re-reads disk = the REPL step — **owned by the active Advisor, never split into another session** |
+| Recursion **loop** | `/spec execute` | each story re-reads disk = the REPL step — **owned by the active implementation owner, never split into another session** |
 | Isolated recursion **branches** | `.worktrees/` (the `/worktrees` skill) | depth-2 sub-trees fork here — **reused by reference, never edited** |
 | Recursion **budget** | `/delegate` (`.oh/skills/delegate/SKILL.md`) | the `Max depth N / Max children per level M / Step budget S` triple — `references/recursion-budget.md` points at it and adds a per-run token ceiling |
 | Chunk-map **primitive** | `scripts/query-context.mjs` (US-004, this skill) | partitions the artifact without ingesting it |

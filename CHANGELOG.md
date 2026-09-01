@@ -8,6 +8,86 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-31
+
+### Added
+- Add `spec-no-agent-handoff`, `spec-no-advisor-session-coupling`, `cleanup-no-agent-session-coupling`, `headless-tmux-preserved`; rename `advisor-monitored-loop` to `spec-single-owner` ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- Add `.oh/skills/wiki/scripts/knowledge-impact.sh`, the single dependency-aware invalidation primitive: `--verified` for `/wiki lint`, `--changed` for the `/spec execute` knowledge gate. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Add `evals-20260901-suite-tree-clean` and `docs-20260901-followup-artifact-cited`: no probe may redirect into the repository, and a criterion met by a follow-up must cite its URL. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Add ten tier-A probes covering the knowledge surface, the planning recall and reconciliation gates, the RUNNING contract, structured completion, and the retired vocabulary. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))
+- Add `.oh/logs/`, gitignored by default with a tracked README, for records that outlive the session that wrote them; `/escalate` appends every attempt to `escalations.jsonl`. ([#919](https://github.com/mifunedev/openharness/issues/919))
+- Add `escalate-contract.sh`, a tier-A probe: a no-op names its reason, is recorded, and `--dry-run` makes no network call. ([#919](https://github.com/mifunedev/openharness/issues/919))
+- Add gate 5 to `/audit implementation`: fail a promotable change while its diff can still be smaller. Measures net lines and per-function CCN on changed TypeScript via `uvx lizard`. ([#912](https://github.com/mifunedev/openharness/issues/912))
+- Add `audit-slop-gate.sh`, a tier-A probe holding gate 5's termination contract: a finding needs a concrete smaller alternative, and the loop ends on the cap or a non-reducing round. ([#912](https://github.com/mifunedev/openharness/issues/912))
+- Add `/wiki compile`, a `kind: pattern` corpus layer, and an append-only `skill-impact.md` ledger, so a `/retro` lesson becomes a page `/builder` reads before proposing. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add a `--patterns` mode to `/wiki query` that filters on `kind:`, reads up to five pattern entries, and ranks them by term-hit count before recency. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add a fault-injection requirement to the probe contract: a probe is not green until its REGRESSION branch has been driven against a broken input. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add capability task `CB-005` scoring whether a lesson reaches a validated skill change; two runs score 0.67 then 1.33, moving the suite mean to 1.44 over a changed task set. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Add `/architect`, an inline architecture-decision skill that classifies significance, grounds analysis in repository sources, and returns one Architecture Brief ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Add six tier-A probes covering the `/architect` contract, roles-as-skills, the retired builder agent type, the `/delegate` worker boundary, the absent agent catalog, and RFC/ADR reuse ([#929](https://github.com/mifunedev/openharness/issues/929)).
+
+### Changed
+- **BREAKING:** Move durable repository knowledge to a tracked `.oh/knowledge/` surface — `source/`, `patterns/`, `raw/` tracked, `local/` ignored — with no compatibility alias. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Make `/spec plan` recall tracked knowledge and re-ground it before the PRD; `prd.md` carries Knowledge Context, Expected Knowledge Impact, and Plan Reconciliation. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Derive final knowledge impact in `/spec execute` from the actual diff plus page dependencies, resolving every impacted page to UPDATED, REVERIFIED, or NOT-AFFECTED. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Replace age-based wiki staleness with source-change freshness: a `kind: repo` page pins `verified_at` and goes needs-review when a declared source changed after it. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Model `/spec execute` as PLANNED -> RUNNING -> READY | DRAFT-BLOCKED(gate), with RUNNING derived from `prd.json` and mirrored into `/tmp/spec-<slug>.state`. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Re-open `/spec execute`'s promotable gate when a push lands after `gh pr ready`: the verdict binds to one head, so a moved head is re-audited or returned to draft. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Reduce `/wiki lint` to six correctness checks and demote `/compact` to an optional non-gating step that runs only after evidence, retro, and pattern compilation. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Reduce `/spec retro` to an explicit wrapper around `/retro --task <slug>`, which `/retro` now accepts; `/retro` stays report-only and `/wiki compile` stays the durable pattern writer. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Move eleven settings out of the compose `environment:` block into oh.json, read through the `oh` CLI; a hand-edited `.devcontainer/.env` no longer carries them ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- Make `/spec` ship by default: an unrecognized first token routes to a new `ship` node that runs `plan` then `execute`, so `/spec <plan-path>` produces a ready-for-review PR ([#914](https://github.com/mifunedev/openharness/issues/914)).
+- **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
+- Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
+- **BREAKING:** Stop baking Claude Code, Codex, and Pi into the image; boot installs them into the home mount, so a first boot needs network and runs 60-180s longer ([#904](https://github.com/mifunedev/openharness/issues/904)).
+- **BREAKING:** Stop baking Herdr and cloudflared into the image; both become `kind: "default"` tools installed into `~/.local/bin` at boot from a pinned, checksum-verified binary ([#906](https://github.com/mifunedev/openharness/issues/906)).
+- **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
+- `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
+- **BREAKING:** `/spec execute` no longer launches a coding agent; the agent that runs it is the single implementation owner through the final PR gates ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- Task identity and `RUNNING` state depend on `.oh/tasks/<slug>/` alone, never on a terminal session, tab, or pane ([#928](https://github.com/mifunedev/openharness/issues/928)).
+- `/delegate` keeps work in the active session when phases share substantial context and spawns provider-native workers only for self-contained, isolated, or parallel work ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- `/spec plan` judges architecture significance once and routes a significant topic through `/architect` before planning ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- `docs/glossary.md` defines coding agent, skill, worker/subagent, rule, and RFC/ADR as five distinct terms ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- `/t3` launches the headless `t3 serve` instead of the local-GUI `t3`, and gains `--tailscale`, a `pair` action for a second device, and a `doctor` preflight ([#858](https://github.com/mifunedev/openharness/issues/858)).
+
+### Fixed
+- Fix `/wiki lint` generating the corpus index from the working tree instead of the git-tracked set, which made any untracked scratch entry a `wiki-readme-index.sh` regression. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Fix three unresolved `related:` and `[[slug]]` links in the `recursive-language-models` wiki entry, and add the `/wiki lint` check that would have caught them. ([#916](https://github.com/mifunedev/openharness/pull/916))
+- Provision the default harnesses into `/home/sandbox/.local` at boot, gated by `OH_PROVISION_HARNESSES`, so `oh harness install` also works from inside the sandbox ([#902](https://github.com/mifunedev/openharness/issues/902)).
+- Add `oh-home-mount.sh`, a tier-A probe holding the single-`$HOME`-mount contract: one mount per compose file, the baked `/opt/home-seed`, and the checkout prune that replaces `-xdev` ([#898](https://github.com/mifunedev/openharness/issues/898)).
+- Assert boot-provisioned harnesses in the boot smoke and reject a baked default harness in `verify-sandbox-image.sh`, so CI exercises the install path ([#904](https://github.com/mifunedev/openharness/issues/904)).
+- Add `oh tool list --defaults` and generalize the boot provisioner over both catalogs as `provision-defaults.sh` (`OH_PROVISION_DEFAULTS`) ([#906](https://github.com/mifunedev/openharness/issues/906)).
+- Fix `oh harness install` hanging on a sudo password prompt inside the sandbox: every harness now installs as the sandbox user, so no install path needs root ([#908](https://github.com/mifunedev/openharness/issues/908)).
+- Add `skills-task-tool-coupling.sh`, a tier-A probe holding the canonical skill pack and the sandbox in agreement about the Claude-Code-only task tools ([#886](https://github.com/mifunedev/openharness/issues/886)).
+- Add `install.tailscale` and `oh tool install tailscale`, an opt-in userspace Tailscale client installed into `~/.local/bin` as the sandbox user, granting no capability ([#858](https://github.com/mifunedev/openharness/issues/858)).
+- Give the five probes that shipped without one a `# source:` header, so every probe records the lesson it closes and the `source` column in `RESULTS.md` is fully populated ([#889](https://github.com/mifunedev/openharness/issues/889)).
+- `/delegate` no longer instructs the Claude-Code-only `TaskCreate`/`TaskUpdate` from the provider-shared skill pack; its wave graph persists to a `.oh/tasks/<slug>/` run ledger ([#886](https://github.com/mifunedev/openharness/issues/886)).
+
+### Removed
+- **BREAKING:** Retire the `/spec ship` node; an unrecognized first token is an approved plan path that runs `plan` then `execute`, so `/spec <plan-path>` is unchanged. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire the generated `.oh/tasks/<slug>/prompt.md`; the task prompt is rendered at execution time from its template and never persisted. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire the `STATUS: COMPLETE` sentinel; task completion derives from `prd.json` story state, which the `cleanup-tasks` cron now reads. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Move the skill-impact ledger to `.oh/evals/decisions/skill-impact.md`; it is a decision record, not a knowledge page. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Retire orphan detection and the 90-day rule as `/wiki lint` health failures; age survives as informational `last-reviewed` telemetry only. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- Finish retiring `.oh/memory` from current architecture docs; the surviving `.gitignore` rule is labelled a compatibility tombstone with a 0.7.0 removal horizon. ([#926](https://github.com/mifunedev/openharness/issues/926))
+- **BREAKING:** Retire cron worktree isolation — the `worktree:` frontmatter key, `.worktrees/cron/` per-fire worktrees, the `CRON_WORKTREE` export, and every `*_WORKTREE*` log state are gone; crons fire in the shared root under the id lock.
+- **BREAKING:** Retire the `OH_IMAGE_ONLY` flag; `entrypoint.sh` detects the sandbox flavor from whether `/home/sandbox/harness` is a bind mount holding `.oh/`, and logs the detected mode ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- **BREAKING:** Retire `docker-compose.hermes-dashboard.yml` and its published `127.0.0.1:9119`; the dashboard now binds container loopback, reachable over cloudflared or Tailscale ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- Remove the duplicate agent-browser and Tailscale installers from `entrypoint.sh`; the tool catalog is the sole owner of both pins and Tailscale's two checksums ([#920](https://github.com/mifunedev/openharness/issues/920)).
+- Remove the `BAKE_HARNESSES` and `AGENTS` build args along with the image bake they gated; the harness catalog is the only source of truth for what gets installed ([#904](https://github.com/mifunedev/openharness/issues/904)).
+- Remove Cloudflare's apt repository and its bookworm-suite pin from the image; Docker's is now the only third-party apt source ([#906](https://github.com/mifunedev/openharness/issues/906)).
+- Remove the four optional-harness build args and the dead `buildArg` catalog field; the `install.*` keys keep working and now drive boot provisioning ([#908](https://github.com/mifunedev/openharness/issues/908)).
+- **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
+- **BREAKING:** Retire Prime Agent and its `.prime/agent/` provider surface; `oh harness install prime-agent` is no longer available ([#918](https://github.com/mifunedev/openharness/issues/918)).
+- **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
+- **BREAKING:** Retire `.oh/agents/` with its `.claude/agents` and `.codex/agents` provider symlinks; the `oh` payload manifest no longer ships an `agents/**` pack ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- **BREAKING:** Retire `/builder agent` and its authoring reference; `/builder` now dispatches `skill`, `command`, and `rule` only ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Remove the stale `implementer`/`critic`/`pm`/`council` worker types from `/delegate` and the dangling expert, council, and critic agent paths from `/strategic-proposal` ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Retire `rl-delegation-write-worker.sh`; `delegate-worker-boundary.sh` carries its read-only-worker lesson forward ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- Retire the last `Advisor` role noun from `/blog`, which told the reader to "use Advisor" for a role that no longer exists; the briefing is `/delegate`'s ([#929](https://github.com/mifunedev/openharness/issues/929)).
+- **BREAKING:** Retire the automated `/spec` Advisor handoff — detached tmux launch, `agent-spec-*` sessions and their sweep kill, pane logging, runner fallbacks ([#928](https://github.com/mifunedev/openharness/issues/928)).
+
 ## [0.5.1] - 2026-08-29
 
 ### Fixed

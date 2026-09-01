@@ -10,12 +10,13 @@ restart, and log capture across all internal apps.
 `tmux` is preinstalled in the sandbox image; a default `.tmux.conf` is
 baked in (see commit `b30cef9`).
 
-### Agent task workflows
+### Agent task workflows are not a tmux exception
 
-`/spec execute` runs implementation and its validation gates in one Advisor-owned session.
-The Advisor may use `/delegate` for bounded, disjoint worker tasks, but it does not create a
-second implementation owner or nested supervisory session. Keep the Advisor session named
-`agent-spec-<slug>` so the operator can attach to the one workflow that owns the task.
+This rule covers **headless infrastructure** — cron runtime and detached fires, messaging
+gateways, supervisors and watchdogs, tunnels, the T3 Code server. It does not reach
+`/spec execute`, which claims no session of its own: the agent the operator already started
+owns the task, so there is no `/spec` session to name, log, attach to, or kill.
+Do not reintroduce an `agent-spec-*` convention or any other `/spec` agent-handoff session.
 
 ## Session Naming
 
@@ -25,7 +26,7 @@ Format: `<category>-<identifier>` (kebab-case inside each segment).
 |----------|---------|---------|
 | `app-` | `app-docs`, `app-api` | User dev servers |
 | `cloudflared-` | `cloudflared-3000` | Cloudflare tunnels for shared previews |
-| `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes. Interactive CLIs (`claude`, `codex`, `opencode`) are normally foreground in a terminal or VS Code, not detached in tmux. |
+| `agent-` | `agent-watcher`, `agent-batch`, `agent-t3code`, `agent-tailscaled` | Headless / long-running agent processes, including the T3 Code server (`t3 serve`) and the userspace `tailscaled` that fronts it. Interactive CLIs (`claude`, `codex`, `opencode`) are normally foreground in a terminal or VS Code, not detached in tmux. |
 | `client-` | `client-slack-pi`, `client-slack-hermes`, `client-discord` | External-surface clients that bridge an in-sandbox agent to a third-party UI |
 | `cron-` | `cron-heartbeat`, `cron-cleanup-tasks-0613-1805`, `cron-system` | Scheduled cron jobs and the cron runtime. |
 

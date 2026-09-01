@@ -28,7 +28,7 @@ run `oh harness install hermes`, then `hermes setup`.
 
 ## How the primitive pack ships
 
-Open Harness vendors the shared skills/agents/hooks primitive pack directly into the `.oh/` control plane (`.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, `.oh/skills.lock`), tracked as ordinary files — the `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has them with no submodule or network step. Provider paths such as `.pi/skills`, `.claude/skills`, and `.codex/skills` are symlinks into `.oh/skills`; `.pi/` remains a provider surface for v1.
+Open Harness vendors the shared skills/hooks primitive pack directly into the `.oh/` control plane (`.oh/skills/`, `.oh/hooks/`, `.oh/skills.lock`), tracked as ordinary files — the `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has them with no submodule or network step. Provider paths such as `.pi/skills`, `.claude/skills`, and `.codex/skills` are symlinks into `.oh/skills`; `.pi/` remains a provider surface for v1.
 
 ## Setup & first steps
 
@@ -46,7 +46,6 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Codex](harnesses/codex.md)
 - [Pi](harnesses/pi.md)
 - [OpenCode](harnesses/opencode.md)
-- [DeepAgents](harnesses/deepagents.md)
 - [Hermes](harnesses/hermes.md)
 - [Grok Build](harnesses/grok-build.md)
 - [T3 Code](harnesses/t3code.md)

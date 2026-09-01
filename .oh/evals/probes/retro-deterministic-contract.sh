@@ -31,7 +31,7 @@ for literal in \
   '| ID | Subsystem | Hypothesis | Evidence for | Evidence against | Verdict | Confidence | Promotion |' \
   '[<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis:' \
   'Bypassing the schema/scripts' \
-  'argument-hint: "[--dry-run] [--focus <subsystem>] [auto-approve]"' \
+  'argument-hint: "[--task <slug>] [--dry-run] [--focus <subsystem>] [auto-approve]"' \
   'STATUS: RETRO-DONE'
 do
   if ! grep -Fq "$literal" "$PI_DIR/SKILL.md"; then

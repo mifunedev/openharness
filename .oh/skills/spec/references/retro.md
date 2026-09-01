@@ -1,74 +1,62 @@
-# `/spec retro` — capture the build's lessons
+# `/spec retro` — compatibility wrapper for `/retro --task <slug>`
 
 > Detail doc for the **`retro`** subcommand of the `/spec` skill
 > (`.oh/skills/spec/SKILL.md`). Argument form: `retro <slug> [--dry-run]`.
 > The dispatcher passes the argument string after `retro` to this procedure as
 > `$ARGUMENTS`. Authority: `.oh/skills/spec/SKILL.md`.
 
-The **reflection** node of the `/spec` workflow runs
-inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and the evidence
-step has run, and before `improve`, to turn the execution run into durable,
-evidence-tested lessons.
+**This subcommand owns no behavior.** It is a one-line alias kept because
+`/spec execute`'s tail and several existing callers spell the task-scoped
+retrospective this way:
 
-**Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
-scientific session-closing pass — falsifiable hypotheses, evidence for *and* against, a
-verdict + confidence, and a propose-then-confirm nomination of candidate probes under
-`.oh/evals/probes/`. `retro` is the execution-side application of it: point `/retro`
-at the just-built `.oh/tasks/<slug>/` run so the reflection is anchored to that unit's
-artifacts (`prd.md`, `progress.txt`, `prd.json`, the `/audit implementation` evidence)
-rather than the whole ambient session.
+```text
+/spec retro <slug> [--dry-run]   ≡   /retro --task <slug> [--dry-run]
+```
 
-It is **not** a second retro engine. The propose-then-confirm gate, the five-subsystem lens,
-and the promotion rules all live in `/retro`; `retro` only frames the scope and
-records that the execution stage ran its retro.
+Read `.oh/skills/retro/SKILL.md` and follow it with `--task <slug>` (plus
+`--dry-run` when supplied). Nothing else happens here.
 
----
+## Why a wrapper and not a second node
+
+`/retro` already implements the whole scientific pass — falsifiable hypotheses,
+evidence for *and* against, verdict plus confidence, and a propose-then-confirm
+nomination of candidate probes. Its `--task <slug>` flag already scopes that pass
+to one `.oh/tasks/<slug>/` run.
+
+There is therefore exactly **one** retro ontology, and it lives in `/retro`.
+Earlier revisions of this document described `/spec retro` as owning a
+propose-and-write gate, which was never true: `/retro` is report-only by contract
+(guarded by `.oh/evals/probes/retro-deterministic-contract.sh`) and `/wiki
+compile` is the durable pattern writer. Restating either here would create a
+second description that drifts from the one that runs.
+
+| Concern | Owner |
+|---|---|
+| Hypotheses, evidence, verdicts, confidence, probe nominations | `/retro` |
+| Scoping that pass to one task folder | `/retro --task <slug>` |
+| Writing durable `kind: pattern` pages from the report | `/wiki compile` |
+| Deciding promotability of the implementation | the implementation audit route, earlier in `/spec execute` |
 
 ## Inputs
 
 | Arg | Meaning |
 |-----|---------|
-| `<slug>` | The task slug — the retro reads `.oh/tasks/<slug>/` artifacts as its primary signal source. Required. |
-| `--dry-run` | Passed through to `/retro`: report only (`Result: DRY-RUN`). |
+| `<slug>` | The task slug, passed through as `--task <slug>`. Required. |
+| `--dry-run` | Passed through: report only. |
 
-If `.oh/tasks/<slug>/` has no `progress.txt`/`prd.md`, there is no build to reflect on — say so
-and fall back to a plain `/retro` on the session, or skip with a note in the report.
-
----
-
-## Run
-
-Invoke `/retro` with the execution scope made explicit — gather signals primarily from
-this task's artifacts: what the `prd.md` intended vs. what `progress.txt` shows shipped,
-what the `build ⇄ audit` loop revealed (how many
-FAIL→build cycles, and why), and any coupling/constraint the run surfaced. Then let `/retro`
-do its scientific pass: form falsifiable hypotheses, test each for and against, assign
-verdict + confidence, and present supported `medium`+ lessons for confirmation before any
-write. Always reports, even on a trivial/no-lesson run.
-
----
-
-## What this node does NOT do
-
-- **Re-implement retro.** The hypothesis engine, qualify filter, and propose-then-confirm
-  gate are `/retro`'s; `retro` only scopes them to the task.
-- **Audit or decide promotability.** That was `/audit implementation` (the `build ⇄ audit` loop) earlier in
-  `/spec execute`.
-- **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are no longer a
-  step of `/spec execute` at all — the triad was cut in US-003's follow-on because
-  `/audit drift` already runs hourly from the heartbeat cron and the other two never blocked
-  a merge. Run them on their own cadence, or on demand.
-- **Merge or undraft.** No GitHub-side mutation — reflection only.
+If `.oh/tasks/<slug>/` has no `prd.md`, there is no build to reflect on — say so
+and fall back to a plain `/retro` on the session.
 
 ## Pipeline position
 
-Within the workflow owned by `.oh/skills/spec/SKILL.md`, `retro` runs inside the
-`spec-execute` tail (`build ⇄ audit → evidence → spec-retro → improve`). The next
-step is `improve` (compound · compress · benchmark).
+Within the workflow owned by `.oh/skills/spec/SKILL.md`, this runs inside the
+`spec-execute` tail, after the implementation audit passes and `evidence.md` is
+written, and before `/wiki compile` turns the supported lessons into durable
+pattern pages. It writes no file of its own, and it always completes, so the
+execute tail always continues.
 
-The terminal artifact is the log entry plus whatever the propose-then-confirm gate actually
-wrote. Report the counts. There is no `STATUS: SPEC-RETRO-DONE` token — it had no executable
-consumer.
+## See Also
 
-The `/spec` family's authority is `.oh/skills/spec/SKILL.md`. `retro` always
-completes (like `/retro`), so the execute tail always continues to `improve`.
+- `.oh/skills/retro/SKILL.md` — the engine; report-only by contract
+- `.oh/skills/wiki/references/compile.md` — the durable pattern writer
+- `.oh/skills/spec/references/execute.md` — the tail this runs inside

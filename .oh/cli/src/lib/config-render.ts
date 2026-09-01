@@ -1,7 +1,26 @@
 import type { OhConfig } from "./oh-config.js";
 import { isSecretKey } from "./secrets.js";
 
-const RETIRED_KEYS = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR"] as const;
+const RETIRED_KEYS = [
+  "WORKTREES_DIR",
+  "PROJECTS_DIR",
+  "CRONS_DIR",
+  "OH_PROJECT_ROOT",
+  "INSTALL_DEEPAGENTS",
+  "INSTALL_OPENCODE",
+  "INSTALL_GROK_BUILD",
+  "INSTALL_HERMES",
+  "INSTALL_AGENT_BROWSER",
+  "INSTALL_TAILSCALE",
+  "SANDBOX_SSH_PASSWORD_AUTH",
+  "SANDBOX_SSH_AUTHORIZED_KEYS",
+  "HERMES_DASHBOARD",
+  "HERMES_DASHBOARD_PORT",
+  "CRON_AGENT_BIN",
+  "SKIP_PNPM_INSTALL",
+  "LANGFUSE_BASE_URL",
+  "LANGFUSE_PRIVACY_PRESET",
+] as const;
 
 export interface RenderedVar {
   key: string;
@@ -17,33 +36,14 @@ export function renderComposeVars(config: OhConfig): RenderedVar[] {
 
   put("SANDBOX_NAME", config.name);
   put("TZ", config.timezone);
-  put("OH_PROJECT_ROOT", config.projectRoot);
+  put("OH_HOME_MOUNT", config.storage?.homePath);
 
   put("GIT_USER_NAME", config.git?.userName);
   put("GIT_USER_EMAIL", config.git?.userEmail);
 
-  put("INSTALL_OPENCODE", config.install?.opencode);
-  put("INSTALL_GROK_BUILD", config.install?.grokBuild);
-  put("INSTALL_DEEPAGENTS", config.install?.deepagents);
-  put("INSTALL_HERMES", config.install?.hermes);
-  put("INSTALL_AGENT_BROWSER", config.install?.agentBrowser);
-
   put("DOCKER_SOCKET", config.access?.dockerSocket);
   put("SANDBOX_SSH", config.access?.ssh);
   put("SANDBOX_SSH_PORT", config.access?.sshPort);
-  put("SANDBOX_SSH_PASSWORD_AUTH", config.access?.sshPasswordAuth);
-  put("SANDBOX_SSH_AUTHORIZED_KEYS", config.access?.sshAuthorizedKeys);
-
-  put("HERMES_DASHBOARD", config.hermesDashboard?.enabled);
-  put("HERMES_DASHBOARD_PORT", config.hermesDashboard?.port);
-
-  put("CRON_AGENT_BIN", config.cron?.agentBin);
-  if (config.build?.skipPnpmInstall !== undefined) {
-    put("SKIP_PNPM_INSTALL", config.build.skipPnpmInstall ? "1" : "0");
-  }
-
-  put("LANGFUSE_BASE_URL", config.langfuse?.baseUrl);
-  put("LANGFUSE_PRIVACY_PRESET", config.langfuse?.privacyPreset);
 
   put("OH_SANDBOX_IMAGE", config.image?.ref);
   put("OH_PULL_POLICY", config.image?.pullPolicy);

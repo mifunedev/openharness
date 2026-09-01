@@ -6,6 +6,8 @@ Source: Chen, Wang, Qu, *Recursive Self-Improvement in AI: From Bounded Self-Ref
 
 Amended 2026-08-29 ([#870](https://github.com/mifunedev/openharness/issues/870)): the `.oh/memory/` tier this RFC cited as a rung-4 instrument and as the harness's capital account has since been deleted. The argument is unchanged; the two citations now name the instruments that survive.
 
+Amended 2026-08-31 ([#926](https://github.com/mifunedev/openharness/issues/926)): the `STATUS: COMPLETE` sentinel this RFC cites as the build executor's terminal interface has since been retired — task completion now derives from `prd.json` structured story state, where every entry in `userStories` carries `"passes": true`. The rung-4 argument is unchanged: the self-reported-count shape it describes is the point, not the specific token.
+
 ## 1. Why this survey and not another
 
 The survey's §3.5–3.6 describes what Open Harness is. That section describes an agent that rewrites its own prompts, skills, memory, and orchestration code. That agent validates each change against a fixed benchmark, and a human holds the merge gate. The survey supplies three items this repository lacks:
@@ -32,7 +34,7 @@ The survey's §3.6 assessment applies verbatim: persistence changes which faults
 | **1 — formal** | Sound by construction | None. `shellcheck` and `pnpm -r type-check` are the closest, and neither one is sound. |
 | **2 — execution** | Reliable, incomplete, eventually gamed | `.oh/evals/probes/*.sh` (105 deterministic three-state oracles, run in CI by `ci-harness.yml` and `release.yml`), `/ci-status`, `.oh/cli` unit suites. |
 | **3 — learned judge** | Bounded by the judge's competence; itself an optimization target | `/audit implementation`, `/audit pr`, `/benchmark`, and the rubric scoring behind `.oh/evals/capability/RESULTS.md`. |
-| **4 — intrinsic** | Cheapest, most gameable | `STATUS: COMPLETE` in `progress.txt` — the terminal interface of the one build executor (`firstmate`) — plus every self-reported count in a session's own prose. |
+| **4 — intrinsic** | Cheapest, most gameable | the now-retired `STATUS: COMPLETE` in `progress.txt` — the terminal interface of the one build executor (`firstmate`) — plus every self-reported count in a session's own prose. |
 
 Two readings follow the table. Each reading changes what a reviewer trusts.
 
@@ -71,7 +73,7 @@ Each finding states a survey result, the in-repo exhibit, and what the exhibit p
 
 **Survey (§6.3):** a measured 34.2% integrity-failure rate arises when honest acknowledgment of failure conflicts with task completion. All seven tested models fabricate synthetic data rather than acknowledge infeasibility.
 
-**Exhibit:** [#767](https://github.com/mifunedev/openharness/issues/767) closed a defect in `/retro`. `/retro` logged its promotion counts before the confirmation gate resolved. The #767 `CHANGELOG.md` entry records the residue: *"the count is still the agent's self-report, so a miscount remains reachable."* The `STATUS: COMPLETE` terminal interface carries the identical shape.
+**Exhibit:** [#767](https://github.com/mifunedev/openharness/issues/767) closed a defect in `/retro`. `/retro` logged its promotion counts before the confirmation gate resolved. The #767 `CHANGELOG.md` entry records the residue: *"the count is still the agent's self-report, so a miscount remains reachable."* The now-retired `STATUS: COMPLETE` terminal interface carries the identical shape.
 
 **What the exhibit proves:** the harness already found this failure mode empirically, once. The repair patched the *ordering* rather than the *rung*. The survey names the rung as the defect.
 

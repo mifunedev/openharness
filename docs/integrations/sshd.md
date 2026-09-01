@@ -23,27 +23,28 @@ alongside the container's main process, so the cron runtime, healthcheck, and
 
 ## 2. Enable the overlay
 
-Uncomment the SSH keys in your local `.devcontainer/.env`:
-
-```yaml
-ssh:
-  enabled: true              # SANDBOX_SSH — run sshd for direct container SSH
-  port: 2222                 # SANDBOX_SSH_PORT — host loopback port published for SSH
-  # password_auth: false     # leave off; use a key (section 3)
-```
-
-Public-key material is not a secret but is multi-line, so
-put your key in the gitignored `.devcontainer/.env`:
+Turn sshd on in the tracked `oh.json`:
 
 ```bash
-SANDBOX_SSH_AUTHORIZED_KEYS="ssh-ed25519 AAAA...yourkey... you@laptop"
+oh config set access.ssh true
+oh config set access.sshPort 2222
 ```
 
-You can paste multiple keys separated by newlines (or literal `\n`). Apply the
-change with a rebuild:
+`access.ssh` and `access.sshPort` are the two host-side decisions — they select
+the `docker-compose.ssh.yml` overlay and publish `127.0.0.1:<port>:22`, both of
+which Docker must make before the container exists. Everything else about sshd is
+read inside the container: `entrypoint.sh` calls `oh config show` on boot.
+
+Public-key material is not a secret, so it lives in `oh.json` too:
 
 ```bash
-oh destroy && oh sandbox
+oh config set access.sshAuthorizedKeys "ssh-ed25519 AAAA...yourkey... you@laptop"
+```
+
+You can paste multiple keys separated by literal `\n`. Apply the change with:
+
+```bash
+oh stop && oh sandbox
 ```
 
 `oh sandbox` runs a **port-collision preflight**: if `SANDBOX_SSH_PORT` is
@@ -102,14 +103,13 @@ docker exec <container> pgrep -x sshd     # sshd is running
 Key auth is strongly preferred. If you must allow password login (uses the
 `sandbox` user's `SANDBOX_PASSWORD`), set:
 
-```yaml
-ssh:
-  password_auth: true        # SANDBOX_SSH_PASSWORD_AUTH
+```bash
+oh config set access.sshPasswordAuth true
 ```
 
 > **Security.** The default `SANDBOX_PASSWORD` (`test1234`) is weak and public.
 > Never enable password auth on a `0.0.0.0` / internet-facing bind without first
-> setting a strong `SANDBOX_PASSWORD` in `.devcontainer/.env`. See
+> setting a strong `SANDBOX_PASSWORD` with `oh secret set SANDBOX_PASSWORD`. See
 > [Security considerations](../security-considerations.md).
 
 ## Security posture

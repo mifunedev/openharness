@@ -2,14 +2,14 @@
   "version": 1,
   "name": "openharness",
   "timezone": "America/Los_Angeles",
-  "projectRoot": "/home/sandbox/harness",
   "git": {},
+  "storage": {},
   "install": {
     "opencode": false,
     "grokBuild": false,
-    "deepagents": false,
     "hermes": false,
-    "agentBrowser": false
+    "agentBrowser": false,
+    "tailscale": false
   },
   "access": {
     "ssh": false,

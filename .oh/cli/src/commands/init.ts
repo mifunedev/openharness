@@ -492,9 +492,7 @@ const PROVIDER_LINKS: [string, string][] = [
   [".pi/skills", "../.oh/skills"],
   [".claude/skills", "../.oh/skills"],
   [".codex/skills", "../.oh/skills"],
-  [".claude/agents", "../.oh/agents"],
   [".claude/hooks", "../.oh/hooks"],
-  [".codex/agents", "../.claude/agents"],
   [".codex/specs", "../.claude/specs"],
 ];
 

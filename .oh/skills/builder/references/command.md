@@ -20,7 +20,8 @@ Author a deliberate, user-invoked workflow as a skill. The public type remains
 Use this type for an on-demand procedure that performs a recognizable job from
 input to reported result: deploy, release, publish, sync, migrate, scaffold, sweep,
 or triage. Use `/builder skill` for knowledge Claude should apply inline while
-working. Use an agent for a reusable specialist identity with isolated context.
+working. A specialist role is also a skill; `/delegate` decides when its work
+runs in a bounded isolated worker context.
 
 A task-style skill should have:
 
@@ -73,8 +74,7 @@ Guidance:
   explicit slash invocation is safe.
 - Omit `model` to inherit unless the workflow has a stable model requirement.
 - Use `context: fork` only when intermediate work would pollute the parent and the
-  body is a self-contained task prompt. Select an existing agent explicitly only
-  when its role fits.
+  body is a self-contained task prompt. Otherwise run inline in the active session.
 - Add `paths:` rarely; file-triggered loading is usually a reference-skill concern.
 
 ## Authoring protocol

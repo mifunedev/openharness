@@ -6,7 +6,6 @@
     "templates/**",
     "evals/**",
     "skills/**",
-    "agents/**",
     "hooks/**",
     "skills.lock",
     "README.md",

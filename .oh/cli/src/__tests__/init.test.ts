@@ -632,11 +632,11 @@ describe("runInit", () => {
       expect.arrayContaining([
         "evals/**",
         "skills/**",
-        "agents/**",
         "hooks/**",
       ]),
     );
     expect(m.include).not.toContain("context/**");
+    expect(m.include).not.toContain("agents/**");
   });
 
 
@@ -706,10 +706,8 @@ describe("runInit", () => {
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
     const links: [string, string][] = [
       [".claude/skills", "../.oh/skills"],
-      [".claude/agents", "../.oh/agents"],
       [".claude/hooks", "../.oh/hooks"],
       [".codex/skills", "../.oh/skills"],
-      [".codex/agents", "../.claude/agents"],
       [".pi/skills", "../.oh/skills"],
     ];
     for (const [rel, target] of links) {

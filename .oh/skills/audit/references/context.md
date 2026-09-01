@@ -67,13 +67,12 @@ TOKENS=$(($(wc -c < "$f") / 4))
 
 #### Dimension B — Load-bearing (0-2)
 
-Citation count: how many skills, agents, tracked docs, and orchestrator files reference this file by name (a measurable proxy for "this content is actively consumed").
+Citation count: how many skills, tracked docs, and orchestrator files reference this file by name (a measurable proxy for "this content is actively consumed").
 
 ```bash
 FILE_BASE=$(basename "$f")
 REFS=$(grep -rl "$FILE_BASE" \
   "$HARNESS/.oh/skills" \
-  "$HARNESS/.oh/agents" \
   "$HARNESS/AGENTS.md" \
   "$HARNESS/docs" 2>/dev/null \
   | grep -v "^${f}$" | wc -l)

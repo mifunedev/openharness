@@ -12,14 +12,14 @@
         "Every tracked entry under the retired corpus path is moved to .oh/knowledge/source/, .oh/knowledge/patterns/, or .oh/knowledge/raw/ with git mv",
         "No tracked file remains under the retired corpus path and no active tracked surface references it",
         ".oh/knowledge/README.md is the generated tracked index; raw/ and local/ each carry a tracked README anchor",
-        ".gitignore tracks .oh/knowledge/source/ and .oh/knowledge/patterns/ and ignores raw/ and local/ contents except their README anchors",
+        ".gitignore tracks .oh/knowledge/source/, .oh/knowledge/patterns/, and .oh/knowledge/raw/ and ignores only .oh/knowledge/local/ contents except its README anchor",
         ".oh/manifest.json include lists knowledge/**",
         ".github/workflows/ci-harness.yml push and pull_request paths both list .oh/knowledge/**",
         ".oh/evals/decisions/skill-impact.md holds the prior ledger content unedited and builder/benchmark cite the new path"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified: 32 git-mv renames; 0 files tracked under the retired corpus path; three README anchors tracked; manifest include carries knowledge/**; both CI path lists carry .oh/knowledge/**; the moved ledger is byte-identical to the base copy (diff empty). AMENDED CRITERION 4: as first written it required raw/ to be ignored. raw/ holds the immutable snapshots that kind: external pages cite as provenance, and an untracked snapshot is provenance a fresh clone cannot verify -- the split-brain #926 problem 4 names. The criterion was corrected to track raw/, which also matches the issue's own layout comment (only local/ is annotated ignored). Recorded in evidence.md as a divergence from the PRD as first written."
     },
     {
       "id": "US-002",
@@ -35,8 +35,8 @@
         "Dependency-aware invalidation is implemented once, in the knowledge primitive, and /spec calls it"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified: 9 of 9 kind: repo pages carry verified_at and at least one repository-relative source; knowledge-impact.sh is executable and exercised by knowledge-source-freshness.sh against a scratch git repository in both directions. shellcheck is NOT installed in this worktree, so the 'passes shellcheck' clause was not observed here; CI's boot-lint job covers it. Provenance gained a fourth form -- a bare upstream URL -- because three pre-existing pages cited raw/ snapshots that were never committed; documented as the weakest form, and /wiki ingest can never produce it."
     },
     {
       "id": "US-003",
@@ -49,8 +49,8 @@
         "The planner/executor asymmetry is preserved and described as a default, not isolation"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified: query.md enumerates $KNOWLEDGE/source and $KNOWLEDGE/patterns only (query.md:118,121); the three mentions of knowledge/local are all prohibitions. knowledge-tracked-query-boundary.sh proves the ignore rule fires, that nothing but the anchor is tracked there, and that no read path enumerates it."
     },
     {
       "id": "US-004",
@@ -63,8 +63,8 @@
         "The verified task contract is prd.md, prd.json, progress.txt with no generated prompt.md"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified by spec-plan-knowledge-context.sh (recall -> ground -> /prd ordering, the three prd.md blocks pinned by exact line) and spec-plan-reconciliation-gate.sh (the stop, the re-approval requirement, and execute.md's refusal of a folder whose reconciliation says NO). This task's own prd.md was written with the new contract, so the sections are exercised, not just specified."
     },
     {
       "id": "US-005",
@@ -80,8 +80,8 @@
         "The single-Advisor executor ownership model and the human merge boundary are intact"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified by spec-execute-knowledge-impact.sh (which also drives knowledge-impact.sh --changed in both directions) and spec-execute-running-contract.sh. The gate was run for real on this build: the 105-path diff produced 3 NEEDS-REVIEW pages, and the union with Expected Knowledge Impact resolved to 5 UPDATED, 1 REVERIFIED, 1 NOT-AFFECTED. advisor-monitored-loop.sh and spec-ready-finalization.sh still pass, so the single-Advisor model and the merge boundary survived the lifecycle change."
     },
     {
       "id": "US-006",
@@ -96,8 +96,8 @@
         "docs/oh-directory-layout.md, docs/glossary.md, and the affected RFCs match the new contract"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified: ship.md absent; spec-family-contract.sh now treats ship as retired and requires the approved-plan default branch; task-completion-structured-state.sh proves no active surface keys on the prose sentinel and that the documented jq check answers both ways; retired-memory-vocabulary.sh proves the tombstone labelling and removal horizon. /retro gained --task <slug> and stays report-only (retro-deterministic-contract.sh green)."
     },
     {
       "id": "US-007",
@@ -113,8 +113,8 @@
         "bash .oh/scripts/link-providers.sh --check passes and git diff --check is clean"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified: 10 new tier-A probes, all green, each fault-injected with the observed REGRESSION output recorded in evidence.md. Two of them were STRENGTHENED as a result: fault injection showed the planning probes passing after the block they guard was deleted, because a heading naming the block satisfied a substring pin. 8 existing probes updated. bash .oh/skills/eval/run.sh: 127 probes, runner exit 0, zero green->red transitions, the same 4 SKIPPED as base. link-providers --check passes; git diff --check is clean."
     }
   ]
 }

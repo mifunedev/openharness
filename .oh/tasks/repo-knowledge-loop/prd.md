@@ -87,7 +87,22 @@ Issue: [#926](https://github.com/mifunedev/openharness/issues/926) · slug
      `.oh/knowledge/local/` exists, keeping `source/` and `patterns/` ignored
      buys nothing and forces the `git add -f` dance plus `/wiki lint`'s dual
      working-tree/tracked entry sets. Both collapse.
-  5. **`.oh/manifest.json` must gain `knowledge/**`.** The corpus shipped to
+  5. **`raw/` is tracked, not ignored.** This PRD first wrote requirement G's
+     ignore boundary around `raw/` as well as `local/`. `raw/` holds the
+     immutable snapshots `kind: external` pages cite, and an untracked snapshot
+     is provenance a fresh clone cannot verify — problem 4 in the issue, wearing
+     a new name. Corrected mid-build to track it, which also matches the issue's
+     own layout comment, where only `local/` is annotated ignored. Recorded in
+     `evidence.md` as a divergence from the PRD as first written.
+  6. **Three pre-existing pages cited snapshots that were never committed.**
+     `managed-agents`, `molt-agentic-reinforcement-learning`, and
+     `recursive-self-improvement-survey` named `raw/` files absent from every
+     commit — the same split-brain, found by the new source-path check. Repaired
+     without fabricating provenance: two carry the arXiv URL their bodies state,
+     and `managed-agents` is reclassified `kind: repo` against the repository
+     documents it actually reasons over, with its unrecoverable external seed
+     stated in the page.
+  7. **`.oh/manifest.json` must gain `knowledge/**`.** The corpus shipped to
      consumer repos today only because it sat under `skills/**`. Moving it out
      without the manifest entry would silently stop shipping durable knowledge.
 
@@ -151,8 +166,9 @@ tracked while `raw/` and `local/` are ignored, add `knowledge/**` to
 **Acceptance criteria**
 - No tracked file remains under the retired corpus path and no active surface
   references it (`knowledge-path-single-owner` probe).
-- `.oh/knowledge/README.md` is the generated tracked index; `raw/` and `local/`
-  each carry a tracked README anchor and nothing else tracked.
+- `.oh/knowledge/README.md` is the generated tracked index; `source/`,
+  `patterns/`, and `raw/` are tracked; `local/` carries a tracked README anchor
+  and nothing else tracked.
 - `.oh/manifest.json` `include` lists `knowledge/**`.
 - `.github/workflows/ci-harness.yml` push and pull_request filters both list
   `.oh/knowledge/**`.

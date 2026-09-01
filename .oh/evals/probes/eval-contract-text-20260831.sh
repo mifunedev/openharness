@@ -25,10 +25,20 @@ while IFS= read -r hit; do
   (( ${#lit} > MAX )) && failures+=("$(basename "$file"): pinned literal is ${#lit} chars (>$MAX), likely to straddle a wrap: ${lit:0:48}...")
 done < <(grep -rn "grep -[A-Za-z]*F[A-Za-z]* -- '" "$PROBES" 2>/dev/null || true)
 
+# A probe must not write into the repository. `>&2` sends output to stderr; `&>2`
+# is a valid but different construct that CREATES A FILE NAMED 2 in the working
+# directory, so a probe carrying it silently commits scratch on every suite run.
+while IFS= read -r hit; do
+  [[ -n "$hit" ]] || continue
+  file="${hit%%:*}"
+  [[ "$(basename "$file")" == "$(basename "${BASH_SOURCE[0]}")" ]] && continue
+  failures+=("$(basename "$file"): '&>N' redirects to a FILE named N, not to a descriptor — use '>&N'")
+done < <(grep -rnE '&>[0-9]' "$PROBES" 2>/dev/null || true)
+
 if ((${#failures[@]})); then
   printf 'REGRESSION: %s\n' "${failures[@]}" >&2
   exit 1
 fi
 
-echo "PASS: no probe pins an over-long fixed-string literal, and the pinning contract is documented" >&2
+echo "PASS: no probe pins an over-long fixed-string literal or redirects into a numbered file, and the pinning contract is documented" >&2
 exit 0

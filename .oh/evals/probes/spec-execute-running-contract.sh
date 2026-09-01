@@ -73,5 +73,5 @@ if ((${#failures[@]})); then
   exit 1
 fi
 
-echo "PASS: RUNNING is task state mirrored into a session-free status file, and a run that returns mid-build never promises a synchronous READY" &>2
+echo "PASS: RUNNING is task state mirrored into a session-free status file, and a run that returns mid-build never promises a synchronous READY" >&2
 exit 0

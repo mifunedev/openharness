@@ -61,3 +61,11 @@
   all three fault-injected and fire. Also removed a stray root file named "2" — a
   &>2 typo in a sed invocation had redirected a probe's PASS line into it and a
   later git add -A tracked it.
+
+2026-09-01 stray-file-root-cause — Deleting the "2" file was not the fix: a sed
+  had rewritten >&2 to &>2 inside spec-execute-running-contract.sh, so the probe
+  re-created the file on every suite run and the first deletion was undone by the
+  next /eval. Repaired at the source and guarded:
+  eval-contract-text-20260831.sh now fails any probe containing &>[0-9], with the
+  reason spelled out. Fault-injected and fires. plan-vs-built-reconciliation
+  re-verified against the new execute.md anchors; verified_at advanced.

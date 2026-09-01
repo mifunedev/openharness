@@ -297,11 +297,25 @@ assertions over that section; all three were fault-injected and fire
 promoting`, `... no longer re-opens the promotable gate on a post-undraft push`,
 `... names no way back to draft when a pushed head stops being promotable`).
 
-**A stray `2` file was committed and is now removed.** A `&>2` typo in a `sed`
-invocation redirected a probe's PASS line into a file named `2` at the repository
-root, and a later `git add -A` tracked it. Deleted. It is the same class as the
-`pipefail` finding this run compiled — a shell redirect that silently did
-something other than what it read as.
+**A stray `2` file was committed, and deleting it was not the fix.** A `sed`
+invocation had rewritten `>&2` to `&>2` inside
+`spec-execute-running-contract.sh`, and `&>2` is valid shell that redirects into
+**a file named `2`** rather than to stderr. So the probe re-created the file on
+every suite run: the first deletion was undone by the next `/eval`. The fix is at
+the source — the redirect is `>&2` again — and
+`eval-contract-text-20260831.sh` now fails any probe containing `&>[0-9]`, with
+the reason spelled out, so the class cannot return silently:
+
+```
+$ sed -i 's|synchronous READY" >&2|synchronous READY" \&>2|' <probe>   # inject
+$ bash .oh/evals/probes/eval-contract-text-20260831.sh
+REGRESSION: spec-execute-running-contract.sh: '&>N' redirects to a FILE named N,
+not to a descriptor — use '>&N'
+```
+
+Same class as the `pipefail` finding this run compiled: a shell redirect that
+silently did something other than what it read as, and that a green suite could
+not see.
 
 **The simplify gate deleted a mode nobody called.** `/audit implementation`
 gate 5 found `knowledge-impact.sh --since <ref>` with zero call sites, contradicting

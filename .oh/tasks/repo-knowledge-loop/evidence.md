@@ -376,6 +376,31 @@ Both planning probes were rewritten to assert the block by exact line
 
 ---
 
+## 6. What this run compounded back
+
+`/retro --task repo-knowledge-loop` tested 9 hypotheses (8 supported, 1
+inconclusive) and `/wiki compile` turned the durable ones into knowledge:
+
+| Page | Action | Lesson |
+|---|---|---|
+| `pattern-evals-pipefail-early-exit` | **created** | under `pipefail`, a reader that exits on first match SIGPIPEs the writer, so a successful match reports as a failed pipeline |
+| `pattern-spec-self-staling-reuse-record` | **created** | a commit-keyed record committed into the repository it measures can never satisfy `commit == HEAD`, so the fallback is the only path |
+| `pattern-evals-prose-literal-pinning` | patched | the same matcher fails the other way too: a short pin can be satisfied by a heading that merely names the block it guards |
+| `pattern-docs-prohibition-by-example` | patched | the guard fired on this document; resolve a retired path programmatically, and never exempt the file that describes the migration |
+
+Two probe candidates were **nominated and not minted**: a `pipefail`/`grep -q`
+lint over shell scripts (12 files repo-wide carry the shape) and a doc-lint on the
+reuse-record contract. Both are guardrails worth having and neither is asked for
+by #926; minting them here would widen a diff gate 5 already flagged for size.
+The knowledge pages above carry the workarounds, so the lessons are durable
+whether or not the probes land.
+
+Context compaction was **not run**. It is optional and non-gating in the new
+contract, and every durable artifact above was written at full resolution first,
+which is the ordering the change exists to guarantee.
+
+---
+
 ## Correlation
 
 | Field | Value |

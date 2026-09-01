@@ -59,14 +59,16 @@ Schema, frontmatter spec, provenance kinds, and every authoring rule:
 | plan-vs-built-reconciliation | Plan-vs-Built Reconciliation | [spec-execute, evidence, merge-gate, comprehension, audit, task-folder, review] | 2026-09-01 |
 | pattern-wiki-ungated-check-drift | Report-only checks nothing gates on stop being run | [wiki, lint, evals, probes, report-only, drift, gating] | 2026-09-01 |
 | pattern-wiki-external-model-over-mapping | Mapping an external model onto the harness reimports a tier it deleted | [wiki, ingest, architecture, external-sources, scope-creep, design-review] | 2026-09-01 |
+| pattern-spec-self-staling-reuse-record | A commit-keyed reuse record goes stale the moment it is committed | [spec, evals, caching, provenance, freshness, build-cycle] | 2026-09-01 |
+| pattern-evals-prose-literal-pinning | Contract probes that pin multi-word prose break on reflow, not on drift | [evals, probes, contract-text, grep, false-failure, documentation] | 2026-09-01 |
+| pattern-evals-pipefail-early-exit | A short-circuiting reader turns a successful match into a failed pipeline | [evals, probes, bash, pipefail, sigpipe, false-failure, shell] | 2026-09-01 |
+| pattern-docs-prohibition-by-example | Documenting a forbidden literal by quoting it violates the rule | [docs, evals, probes, vocabulary, guards, self-reference] | 2026-09-01 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-09-01 |
 | document-ingestion | Local Document Ingestion | [wiki, ingestion, markitdown, documents, provenance, security] | 2026-09-01 |
 | sandbox-dependency-installs | Sandbox Dependency Installs | [sandbox, devcontainer, pnpm, dependencies, boot] | 2026-08-31 |
 | recursive-self-improvement-survey | Recursive Self-Improvement in AI (survey, arXiv 2607.07663) | [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark] | 2026-08-31 |
 | recursive-language-models | Recursive Language Models | [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency] | 2026-08-31 |
 | pattern-evals-unexercised-oracle | A probe that has never failed has an unverified oracle | [evals, probes, oracles, skipped, fault-injection, continual-learning] | 2026-08-31 |
-| pattern-evals-prose-literal-pinning | Contract probes that pin multi-word prose break on reflow, not on drift | [evals, probes, contract-text, grep, false-failure, documentation] | 2026-08-31 |
-| pattern-docs-prohibition-by-example | Documenting a forbidden literal by quoting it violates the rule | [docs, evals, probes, vocabulary, guards, self-reference] | 2026-08-31 |
 | compose-env-boundary | Compose Environment Boundary | [compose, devcontainer, oh-json, cli, entrypoint, boundary, provisioning, sandbox] | 2026-08-31 |
 | runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-08-27 |
 | molt-agentic-reinforcement-learning | Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning | [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia] | 2026-08-27 |

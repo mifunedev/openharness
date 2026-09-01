@@ -4,9 +4,11 @@ slug: pattern-evals-prose-literal-pinning
 kind: pattern
 tags: [evals, probes, contract-text, grep, false-failure, documentation]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 sources:
   - .oh/evals/probes/wiki-kind-schema-contract.sh@bfe22487
+  - .oh/evals/probes/spec-plan-knowledge-context.sh@fcbeedea
+  - .oh/tasks/repo-knowledge-loop/evidence.md@fcbeedea
   - .oh/skills/wiki/references/schema.md@c841e567
 confidence: provisional
 ---
@@ -49,6 +51,16 @@ several deliberately stop mid-sentence at the wrap boundary rather than reach pa
 it. Where a whole-sentence assertion is genuinely required, normalize before
 matching — fold the document's whitespace to single spaces and match against the
 normalized text — instead of pinning the stored bytes.
+
+A second failure mode of the same matcher, found by issue #926: a **short** pin
+can be too weak rather than too brittle. `grep -qF '## Knowledge Context'`
+survived deleting the block it guards, because the section heading that *names*
+the block contains the same substring. Both planning probes reported PASS against
+a document with the contract removed. Where the pinned text is a whole line — a
+heading, a template block, a table row — assert it with `grep -qxF` so a mention
+cannot satisfy an assertion about the thing itself
+(`.oh/evals/probes/spec-plan-knowledge-context.sh:29-32`). Fault injection is what
+surfaced it; neither probe had ever been run against a broken input.
 
 ## See Also
 - [[pattern-evals-unexercised-oracle]]

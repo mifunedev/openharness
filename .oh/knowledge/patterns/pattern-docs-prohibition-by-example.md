@@ -4,9 +4,11 @@ slug: pattern-docs-prohibition-by-example
 kind: pattern
 tags: [docs, evals, probes, vocabulary, guards, self-reference]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 sources:
   - .oh/evals/probes/audit-stale-references.sh@ce7b7db2
+  - .oh/evals/probes/knowledge-path-single-owner.sh@fcbeedea
+  - .oh/tasks/repo-knowledge-loop/evidence.md@fcbeedea
   - .oh/skills/wiki/references/schema.md@c841e567
   - .oh/skills/wiki/references/compile.md@c841e567
 confidence: provisional
@@ -51,6 +53,20 @@ the next time the guard's list changes. Where a document genuinely must show a
 forbidden literal, add the specific `path:line` to the guard's exemption list rather
 than broadening its exclusion pathspec — the narrow exemption stays reviewable and
 cannot silently cover a real violation elsewhere in the same file.
+
+Issue #926 found the sharpest instance: the guard fired on the **evidence
+document written to prove the migration was complete**, whose shell transcripts
+quoted the retired path as literal command text. `/audit implementation` gate 2
+returned `AUDIT-FAIL` naming two lines of `evidence.md`. Two further rules follow
+from that. First, a guard that scans every tracked file also scans the proof, so
+transcripts must resolve a retired path programmatically — from the base tree, or
+from the guard's own output — rather than pasting it. Second, do **not** exempt
+the document that describes the migration: an exemption there is a hole in the
+guard placed exactly where the retired vocabulary is most likely to be reused.
+The guard authored for this migration
+(`.oh/evals/probes/knowledge-path-single-owner.sh`) also follows the other half of
+the rule — it assembles the forbidden path from fragments, so it is not a hit for
+itself and needs no self-exemption at all.
 
 ## See Also
 - [[pattern-evals-prose-literal-pinning]]

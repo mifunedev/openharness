@@ -1,0 +1,15 @@
+{
+  "commit": "e66f7fdf40f7c912bd93bd1fdaf5557c7b54b323",
+  "runnerExit": 0,
+  "ranAt": "2026-09-01T01:34:01Z",
+  "probesRun": 127,
+  "newRegressions": [],
+  "preExistingReds": [],
+  "skipped": [
+    "cc-safety-net-wiring",
+    "debugmcp-availability",
+    "next-dev-prod",
+    "registry-portability"
+  ],
+  "notes": "Zero green->red transitions. The four SKIPPED probes are the same four SKIPPED on the base commit ecc49800. Three further probes (oh-compose-env-wiring, oh-destroy-guard, oh-init-headless-config) SKIPPED on the first run of this cycle only because .oh/cli/dist was unbuilt in a fresh worktree; after 'npm install && node build.mjs' all three PASS, and they PASS in this run."
+}

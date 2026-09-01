@@ -1,0 +1,19 @@
+# progress
+
+2026-08-31 plan — base commit 4fbca95432dd39cfb2e45a4baba1c7cf2082cf33 on
+`development`. Queries run: `sandbox deployment image boot`,
+`compose env provisioning`, `release versioning ghcr`, `evals probes oracles`,
+`docs gating drift`. Knowledge read: source/compose-env-boundary,
+source/sandbox-dependency-installs, source/release-versioning,
+source/audit-architecture; patterns/pattern-wiki-ungated-check-drift,
+patterns/pattern-evals-unexercised-oracle,
+patterns/pattern-evals-prose-literal-pinning,
+patterns/pattern-evals-pipefail-early-exit,
+patterns/pattern-spec-self-staling-reuse-record. Issue #937 opened. Folder
+scaffolded with 9 stories.
+
+2026-08-31 plan (revision) — operator extended scope mid-run: the instrument's
+primary door is a `/deploy-check` skill for local validation in a throwaway
+sandbox, with CI as its second consumer. Added R0 and US-004; renumbered the
+remaining stories. Recorded in prd.md under Plan Reconciliation as an
+operator-directed deviation, already approved by the instruction itself.

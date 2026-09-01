@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/937-deployment-provisioning-guard",
+  "description": "Convert the manual, non-gating live-host smoke checklist for the published sandbox image into a repeatable instrument: an image-only compose driver, a flavor switch on the existing boot smoke, a deployment guard that pulls and boots the published GHCR image and asserts resource and internal provisioning, a tier-A wiring probe, and a post-release CI workflow.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Image-only compose driver",
+      "description": "As the deployment guard, I want a compose driver for the image-only flavor so that the existing BOOT_SMOKE_COMPOSE seam can boot a published image without the local bind-mount stack.",
+      "acceptanceCriteria": [
+        ".oh/scripts/deployment-compose.sh exists, is executable, and forwards its argv to `docker compose -f .devcontainer/docker-compose.image-only.yml`",
+        "It reads no repository dotenv: it passes no --env-file and does not source .env or .devcontainer/.env, so the rendered OH_SANDBOX_IMAGE / OH_PULL_POLICY / SANDBOX_NAME of the local flavor cannot leak in",
+        "It exports DOCKER_CONFIG pointing at an empty scratch directory it creates, overridable by OH_DEPLOY_DOCKER_CONFIG, so an unexecutable ambient credsStore cannot fail an anonymous pull of a public image",
+        "`bash .oh/scripts/deployment-compose.sh config --quiet` exits 0 with OH_SANDBOX_IMAGE and SANDBOX_NAME set",
+        "shellcheck -S warning passes on the file",
+        "It adds no compose file and no compose `environment:` key, so .oh/evals/probes/compose-env-boundary.sh still passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "BOOT_SMOKE_FLAVOR switch on the boot smoke",
+      "description": "As the deployment guard, I want sandbox-boot-smoke.sh to accept an image-only flavor so that its provisioning oracle is reused rather than re-derived, without asserting a bind ownership contract that does not exist on that flavor.",
+      "acceptanceCriteria": [
+        "BOOT_SMOKE_FLAVOR defaults to `bind`; the default path still calls verify_bind_ownership",
+        "BOOT_SMOKE_FLAVOR=image-only skips verify_bind_ownership and nothing else; verify_default_catalog runs unchanged for both `harness` and `tool`",
+        "The skip is keyed on the flavor variable, never on detecting an absent checkout",
+        "An unrecognised BOOT_SMOKE_FLAVOR value exits non-zero with a message naming the accepted values, rather than silently defaulting",
+        "The success line names the flavor that ran",
+        "This is the only edit to the file; verify_default_catalog and verify_bind_ownership are not moved, copied, or rewritten",
+        "shellcheck -S warning passes on the file"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Deployment guard entry point",
+      "description": "As an operator or a CI job, I want one command that pulls the published image, verifies it, boots it in the image-only flavor, and asserts resource and internal provisioning, so that the published artifact is validated the same way every time.",
+      "acceptanceCriteria": [
+        ".oh/scripts/deployment-guard.sh exists, is executable, and resolves IMAGE from a positional argument else OH_SANDBOX_IMAGE else ghcr.io/mifunedev/openharness:latest",
+        "Preflight aborts before touching the daemon when docker or jq is absent, or when any existing container, volume, or network already matches the run's unique project name",
+        "It runs `docker pull` on the resolved image and then `bash .oh/scripts/verify-sandbox-image.sh` on it",
+        "It runs sandbox-boot-smoke.sh with BOOT_SMOKE_FLAVOR=image-only, BOOT_SMOKE_COMPOSE pointed at deployment-compose.sh, a unique SANDBOX_NAME, OH_PULL_POLICY=never, and a BOOT_SMOKE_TIMEOUT_SECONDS greater than the image-only healthcheck deadline derived from docker-compose.image-only.yml (start_period + interval x retries)",
+        "Post-boot assertions accumulate rather than fail fast, and each prints an ok:/FAIL: line naming the assertion",
+        "Assertion: docker logs contains `no checkout bind at` and does not contain `checkout bind detected at`",
+        "Assertion: /home/sandbox/harness/.oh/.image-seeded exists in the container",
+        "Assertion: the container's ~/.gitconfig carries the GIT_USER_NAME and GIT_USER_EMAIL the guard passed in",
+        "Assertion read from `docker inspect`, not from inside the container: exactly one mount, of type volume, destination /home/sandbox; no published ports; no /var/run/docker.sock bind; HostConfig.Privileged is false",
+        "Assertion of the persist-and-install contract: a catalog entry that is kind:\"optional\" and installed:false before the call becomes install.<id>==true in oh.json and a live binary under NPM_USER_PREFIX after `oh harness install`; the pre-state is asserted first so the check cannot pass vacuously",
+        "trap covers EXIT INT TERM; teardown removes only this run's own project resources, then asserts nothing matching the run name survives and forces a non-zero exit if anything leaked",
+        "The script text contains no `prune` verb and no bulk force-remove over a command substitution",
+        "shellcheck -S warning passes on the file"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "/deploy-check skill \u2014 the operator-facing door",
+      "description": "As the operator, I want one skill that validates a deployment locally in a throwaway sandbox, so that I can check a feature end to end without polluting or touching my main harness sandbox.",
+      "acceptanceCriteria": [
+        ".oh/skills/deploy-check/SKILL.md exists, authored through the /builder skill protocol, with name, description carrying explicit TRIGGER phrasing, and argument-hint frontmatter matching nearby skills such as health-check and ci-status",
+        "Argument shape `[scenario] [--image <ref>] [--local] [--keep]`, with `provisioning` as the default scenario; an unknown scenario prints the accepted list and stops without touching the daemon",
+        "The skill's procedure invokes `bash .oh/scripts/deployment-guard.sh` and re-implements none of its assertions and no second copy of the boot sequence",
+        "The skill states the isolation contract explicitly: unique compose project name, a volume created and destroyed with the run, its own DOCKER_CONFIG, no bind of the operator's checkout, no read or write of the checkout's oh.json or .env, no published port, no prune verb",
+        "The skill states that it never manages the operator's own sandbox and offers no way to attach to a long-lived one; it does not invoke `oh sandbox` or `oh shell`",
+        "`--keep` skips teardown and prints the exact cleanup command it did not run",
+        "The skill documents how a second scenario is added \u2014 a case branch in the runner plus its assertions \u2014 so the extension point is real rather than promised",
+        "`.claude/skills/deploy-check` resolves through the provider mirror and `bash .oh/scripts/link-providers.sh --check` exits 0",
+        "A PROPOSED record is appended to .oh/evals/decisions/skill-impact.md with the next SI-nnnn id, the single target artifact, and the motivating pattern slugs",
+        "Every path, command, and flag named in the skill body is verified to exist before the skill is reported done"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Tier-A wiring probe, driven red before it is trusted",
+      "description": "As the eval suite, I want a fast probe that guards the deployment guard's wiring and host-safety invariants so that the instrument cannot be silently deleted or made unsafe, without attempting the live boot the 30s probe cap forbids.",
+      "acceptanceCriteria": [
+        ".oh/evals/probes/deployment-guard-ci.sh exists with `# tier: A`, a `# source:` naming issue #937, and a `# desc:` stating it guards the instrument's wiring and host-safety invariants, not the deployment itself",
+        "It asserts the workflow invokes `bash .oh/scripts/deployment-guard.sh` and declares both the post-release trigger and workflow_dispatch",
+        "It asserts .oh/skills/deploy-check/SKILL.md exists and invokes `bash .oh/scripts/deployment-guard.sh`, so the operator-facing door cannot drift from the mechanism",
+        "It asserts deployment-guard.sh invokes verify-sandbox-image.sh and sandbox-boot-smoke.sh and still passes BOOT_SMOKE_FLAVOR=image-only",
+        "It asserts deployment-guard.sh matches no docker prune verb and no bulk force-remove over a command substitution, and that it traps EXIT INT TERM",
+        "It asserts sandbox-boot-smoke.sh still calls verify_bind_ownership on the bind path, so the flavor switch cannot disable it everywhere",
+        "Every assertion pins a short wrap-safe fragment; whole-line pins use grep -qxF",
+        "It restates no assertion already owned by .oh/evals/probes/oh-image-only-deploy.sh",
+        "Its SKIPPED guard cannot fire in this repository; running it here yields PASS or REGRESSION, never exit 2",
+        "Each assertion has been driven to REGRESSION by fault injection and the injection reverted; evidence.md records which assertions were driven red",
+        "It completes in under 30s and adds a row to .oh/evals/RESULTS.md",
+        "shellcheck -S warning passes on the file"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Post-release CI workflow",
+      "description": "As the project, I want the guard to run automatically after every successful release and on demand, so that a broken published image is caught rather than discovered by a user.",
+      "acceptanceCriteria": [
+        ".github/workflows/deployment-guard.yml exists with `workflow_run` on completion of the workflow named `Release`, gated on the workflow_run conclusion being success",
+        "It also declares workflow_dispatch with an `image` input defaulting to ghcr.io/mifunedev/openharness:latest",
+        "One job: permissions contents read, timeout-minutes 20, checkout, `bash .oh/scripts/link-providers.sh --init`, jq installed if absent, then `bash .oh/scripts/deployment-guard.sh`",
+        "The job fails loudly when Docker or the network is unavailable; it contains no conditional that turns a missing daemon into a skip",
+        "The file parses as YAML and actionlint reports no error",
+        "It does not push, log in to a registry, request packages write, or reference secrets beyond the default token"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Retire the non-gating checklist from the deployment doc",
+      "description": "As a reader of the deployment guide, I want the manual checklist replaced by the instrument that now performs it, so that one source of truth describes how Flavor B is verified.",
+      "acceptanceCriteria": [
+        "The section titled `### Manual live-host smoke checklist (non-gating)` is gone from docs/deployment-prebuilt-image.md",
+        "The word `non-gating` no longer appears in the file",
+        "The replacement text names .oh/scripts/deployment-guard.sh and .github/workflows/deployment-guard.yml and states the default image and the OH_SANDBOX_IMAGE override",
+        "The sentence naming the boot-time defaults as `Claude Code, Codex, Pi` is corrected to point at the catalog as the source of truth rather than a hardcoded three",
+        "No other section of the file changes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Live end-to-end verification on a real daemon",
+      "description": "As the operator, I want the guard proven against the real published image on a daemon shared with production containers, so that its assertions and its cleanup are both demonstrated rather than assumed.",
+      "acceptanceCriteria": [
+        "Container, volume, and network inventories captured before the run are byte-identical to the inventories captured after it",
+        "`bash .oh/scripts/deployment-guard.sh` against ghcr.io/mifunedev/openharness:latest exits 0, and every assertion printed an ok: line",
+        "The same run is driven through the /deploy-check skill, not only the bare script, and the operator's own sandbox container and its volumes are confirmed untouched",
+        "A discrimination test proves the oracle is not vacuous: the guard exits non-zero against an input that should fail it, and the failure names the assertion",
+        "An interrupt test: the run is killed mid-boot with SIGTERM and no resource matching the run name survives",
+        "A collision test: pointing the run name at an existing resource aborts in preflight with the daemon unmodified",
+        "`bash .oh/scripts/sandbox-boot-smoke.sh` with no BOOT_SMOKE_FLAVOR is confirmed to still take the verify_bind_ownership path (bind-flavor non-regression)",
+        "`bash .oh/skills/eval/run.sh` reports no green-to-red transition"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Knowledge impact",
+      "description": "As the knowledge corpus, I want the pages this change contradicts brought back in line, so that a future planner reads what the repository actually does.",
+      "acceptanceCriteria": [
+        ".oh/knowledge/source/compose-env-boundary.md records the second compose driver and the deployment guard as the consumer that boots the image-only flavor, with verified_at advanced",
+        ".oh/knowledge/source/sandbox-dependency-installs.md records that boot-time provisioning now has a published-image oracle, with verified_at advanced",
+        "Each updated page's claims are re-read against the current sources named in its `sources:` list before verified_at moves",
+        ".oh/knowledge/README.md is regenerated and `bash .oh/evals/probes/wiki-readme-index.sh` exits 0",
+        "`bash .oh/skills/wiki/scripts/knowledge-impact.sh` reports no page left NEEDS-REVIEW by this diff without being addressed"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

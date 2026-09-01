@@ -22,7 +22,6 @@ import {
   buildTmuxWrapper,
   decideOverlap,
   fire,
-  inspectFallbackWorktree,
   isValidAgentBin,
   isValidCronId,
   isValidRemote,
@@ -31,7 +30,6 @@ import {
   loadCrons,
   onJobError,
   parseCronFile,
-  pruneAndCountFallbackWorktrees,
   readFailureTail,
   reloadEntryForFire,
   remoteForRepo,
@@ -43,7 +41,6 @@ import {
   scheduleAll,
   sighupHandler,
   tmuxSessionName,
-  worktreeInUse,
 } from "../cron-runtime";
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -164,52 +161,27 @@ Heartbeat body.
     expect(parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.repo).toBeUndefined();
   });
 
-  it("parses worktree: true and defaults to false otherwise", () => {
-    expect(
-      parseCronFile(`---\nschedule: "* * * * *"\nworktree: true\n---\nbody\n`, "a.md")
-        ?.worktree,
-    ).toBe(true);
-    expect(
-      parseCronFile(`---\nschedule: "* * * * *"\nworktree: false\n---\nbody\n`, "b.md")
-        ?.worktree,
-    ).toBe(false);
-    expect(
-      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.worktree,
-    ).toBe(false);
-  });
 });
 
 describe("decideOverlap", () => {
-  it("returns 'worktree' for a worktree cron regardless of lock state", () => {
-    for (const pidfileExists of [false, true]) {
-      for (const holderAlive of [false, true]) {
-        for (const overlap of [false, true]) {
-          expect(
-            decideOverlap({ overlap, worktree: true, pidfileExists, holderAlive }),
-          ).toBe("worktree");
-        }
-      }
-    }
-  });
-
   it("runs (never skips) when overlap is allowed", () => {
     expect(
-      decideOverlap({ overlap: true, worktree: false, pidfileExists: true, holderAlive: true }),
+      decideOverlap({ overlap: true, pidfileExists: true, holderAlive: true }),
     ).toBe("run");
   });
 
   it("reclaims (runs) when there is no live holder of the id lock", () => {
     expect(
-      decideOverlap({ overlap: false, worktree: false, pidfileExists: false, holderAlive: false }),
+      decideOverlap({ overlap: false, pidfileExists: false, holderAlive: false }),
     ).toBe("run");
     expect(
-      decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: false }),
+      decideOverlap({ overlap: false, pidfileExists: true, holderAlive: false }),
     ).toBe("run");
   });
 
-  it("skips a non-worktree cron only when a live holder owns the id lock", () => {
+  it("skips only when a live holder owns the id lock", () => {
     expect(
-      decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: true }),
+      decideOverlap({ overlap: false, pidfileExists: true, holderAlive: true }),
     ).toBe("skip");
   });
 });
@@ -461,24 +433,7 @@ describe("buildTmuxWrapper", () => {
     );
   });
 
-  it("uses a session-scoped pidfile and exports CRON_WORKTREE for an isolated worktree fire", () => {
-    const wt = buildTmuxWrapper({
-      session: "cron-autopilot-0610-1805",
-      id: "autopilot",
-      agentBin: "pi",
-      promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
-      pidFile: "/tmp/cron-autopilot-0610-1805.pid",
-      worktree: "/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805",
-    });
-    expect(wt).toContain("echo $$ > '/tmp/cron-autopilot-0610-1805.pid';");
-    expect(wt).toContain("rm -f '/tmp/cron-autopilot-0610-1805.pid';");
-    expect(wt).not.toContain("/tmp/cron-autopilot.pid");
-    expect(wt).toContain(
-      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805';",
-    );
-  });
-
-  it("omits CRON_WORKTREE and defaults to the id-scoped pidfile for a primary fire", () => {
+  it("defaults to the id-scoped pidfile and never exports CRON_WORKTREE", () => {
     expect(wrapper).toContain("echo $$ > '/tmp/cron-autopilot.pid';");
     expect(wrapper).not.toContain("CRON_WORKTREE=");
   });
@@ -1131,7 +1086,6 @@ describe("reloadBody", () => {
       overlap: false,
       catchup: false,
       tmux: false,
-      worktree: false,
       body: "cached body\n",
       filePath: missingPath,
     };
@@ -1144,219 +1098,6 @@ describe("reloadBody", () => {
 
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
-  });
-});
-
-describe("fallback worktree pruning", () => {
-  const git = (cwd: string, args: string[]): void => {
-    const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
-    expect(result.status, `${args.join(" ")}\n${result.stderr}`).toBe(0);
-  };
-
-  const initRepoWithFallbackWorktrees = (): { repo: string; dirtyWt: string; cleanWt: string } => {
-    const repo = path.join(tmp, "repo");
-    mkdirSync(repo, { recursive: true });
-    git(repo, ["init", "-b", "development"]);
-    writeFileSync(path.join(repo, "README.md"), "fixture\n");
-    git(repo, ["add", "README.md"]);
-    git(repo, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"]);
-
-    const dirtyWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-dirty");
-    const cleanWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-clean");
-    git(repo, ["worktree", "add", "--detach", dirtyWt, "HEAD"]);
-    git(repo, ["worktree", "add", "--detach", cleanWt, "HEAD"]);
-    writeFileSync(path.join(dirtyWt, "uncommitted.txt"), "salvage me\n");
-    return { repo, dirtyWt, cleanWt };
-  };
-
-  it("resolves the cron worktree root at the fixed .worktrees/ root", async () => {
-    const repo = path.join(tmp, "envrepo");
-    mkdirSync(path.join(repo, ".worktrees", "cron"), { recursive: true });
-
-    const priorCwd = process.cwd();
-    try {
-      process.chdir(repo);
-
-      vi.resetModules();
-      const runtime = await import("../cron-runtime.ts");
-      expect(runtime.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
-      expect(existsSync(path.join(repo, ".worktrees", "cron"))).toBe(true);
-    } finally {
-      process.chdir(priorCwd);
-      vi.resetModules();
-    }
-  });
-
-  it("reports dirty fallback worktree state including untracked files", () => {
-    const { dirtyWt } = initRepoWithFallbackWorktrees();
-
-    const state = inspectFallbackWorktree(dirtyWt);
-
-    expect(state.dirty).toBe(true);
-    expect(state.changes).toContain("?? uncommitted.txt");
-    expect(state.ref).not.toBe("unknown");
-  });
-
-  it("treats a matching live tmux session name as fallback worktree liveness", () => {
-    const wt = path.join(tmp, "repo", ".worktrees", "cron", "cron-autopilot-0618-1505");
-
-    expect(worktreeInUse(wt, [], ["cron-autopilot-0618-1505"])).toBe(true);
-    expect(worktreeInUse(wt, [path.join(wt, "nested")], [])).toBe(true);
-    expect(worktreeInUse(wt, [path.join(tmp, "elsewhere")], ["autopilot-feat-445-example"])).toBe(false);
-  });
-
-  it("does not prune a clean fallback worktree while a matching tmux session is live", () => {
-    const { repo, cleanWt } = initRepoWithFallbackWorktrees();
-    const priorCwd = process.cwd();
-    const priorPath = process.env.PATH;
-    const binDir = path.join(tmp, "bin");
-    const fakeTmux = path.join(binDir, "tmux");
-    mkdirSync(binDir, { recursive: true });
-    writeFileSync(
-      fakeTmux,
-      `#!/usr/bin/env bash
-set -euo pipefail
-case "$1" in
-  list-panes) printf '%s\\n' '${path.join(tmp, "elsewhere").replace(/'/g, "'\\''")}' ;;
-  ls) printf '%s\\n' 'cron-autopilot-clean' ;;
-  *) exit 1 ;;
-esac
-`,
-    );
-    chmodSync(fakeTmux, 0o755);
-
-    try {
-      process.chdir(repo);
-      process.env.PATH = `${binDir}:${priorPath ?? ""}`;
-
-      expect(pruneAndCountFallbackWorktrees("autopilot")).toBe(1);
-    } finally {
-      process.env.PATH = priorPath;
-      process.chdir(priorCwd);
-    }
-
-    expect(existsSync(cleanWt)).toBe(true);
-  });
-
-  it("preserves dirty dead fallback worktrees but removes clean dead ones", () => {
-    const { repo, dirtyWt, cleanWt } = initRepoWithFallbackWorktrees();
-    const priorCwd = process.cwd();
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
-
-    try {
-      process.chdir(repo);
-      expect(pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
-    } finally {
-      process.chdir(priorCwd);
-    }
-
-    expect(existsSync(dirtyWt)).toBe(true);
-    expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
-    expect(existsSync(cleanWt)).toBe(false);
-    expect(
-      appendSpy.mock.calls.some((c) =>
-        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
-        String(c[1]).includes("?? uncommitted.txt"),
-      ),
-    ).toBe(true);
-  });
-
-
-  it("reports an orphaned fallback worktree as orphaned, not dirty", () => {
-    const { repo } = initRepoWithFallbackWorktrees();
-    const orphanWt = orphanWorktree(repo, "cron-autopilot-orphan");
-
-    const state = inspectFallbackWorktree(orphanWt);
-
-    expect(state.orphaned).toBe(true);
-    expect(state.dirty).toBe(false);
-    expect(state.changes).toEqual([]);
-    expect(state.reason ?? "").not.toBe("");
-  });
-
-  const orphanWorktree = (repo: string, name: string): string => {
-    const wt = path.join(repo, ".worktrees", "cron", name);
-    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
-    rmSync(path.join(repo, ".git", "worktrees", name), { recursive: true, force: true });
-    return wt;
-  };
-
-  it("does NOT classify a worktree as orphaned when its .git file is unreadable", () => {
-    const { repo } = initRepoWithFallbackWorktrees();
-    const wt = path.join(repo, ".worktrees", "cron", "cron-autopilot-unreadable");
-    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
-    const dotGit = path.join(wt, ".git");
-    chmodSync(dotGit, 0o000);
-    try {
-      const state = inspectFallbackWorktree(wt);
-      expect(state.orphaned ?? false).toBe(false);
-    } finally {
-      chmodSync(dotGit, 0o644);
-    }
-  });
-
-  it("does NOT classify a worktree as orphaned when its .git file is corrupt", () => {
-    const { repo } = initRepoWithFallbackWorktrees();
-    const wt = path.join(repo, ".worktrees", "cron", "cron-autopilot-corrupt");
-    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
-    writeFileSync(path.join(wt, ".git"), "this is not a gitdir pointer\n");
-
-    const state = inspectFallbackWorktree(wt);
-
-    expect(state.orphaned ?? false).toBe(false);
-  });
-
-  it("does not count an orphaned worktree toward the live count", () => {
-    const { repo } = initRepoWithFallbackWorktrees();
-    orphanWorktree(repo, "cron-autopilot-orphan-count");
-    const priorCwd = process.cwd();
-    let live: number;
-    try {
-      process.chdir(repo);
-      live = pruneAndCountFallbackWorktrees("autopilot");
-    } finally {
-      process.chdir(priorCwd);
-    }
-    expect(live).toBe(0);
-  });
-
-  it("removes an orphaned fallback worktree while still preserving a dirty one", () => {
-    const { repo, dirtyWt } = initRepoWithFallbackWorktrees();
-    const orphanWt = orphanWorktree(repo, "cron-autopilot-orphan");
-    const priorCwd = process.cwd();
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
-
-    try {
-      process.chdir(repo);
-      pruneAndCountFallbackWorktrees("autopilot");
-    } finally {
-      process.chdir(priorCwd);
-    }
-
-    expect(existsSync(orphanWt)).toBe(false);
-    expect(
-      appendSpy.mock.calls.some((c) =>
-        String(c[1]).includes("\tautopilot\tWORKTREE_ORPHANED\t"),
-      ),
-    ).toBe(true);
-
-    expect(
-      appendSpy.mock.calls.some((c) =>
-        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
-        String(c[1]).includes("cron-autopilot-orphan"),
-      ),
-    ).toBe(false);
-
-    expect(existsSync(dirtyWt)).toBe(true);
-    expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
-    expect(
-      appendSpy.mock.calls.some((c) =>
-        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
-        String(c[1]).includes("?? uncommitted.txt"),
-      ),
-    ).toBe(true);
   });
 });
 
@@ -1520,7 +1261,6 @@ describe("runPreflight + the fire() preflight gate", () => {
     overlap: false,
     catchup: false,
     tmux: true,
-    worktree: true,
     preflight,
     repo: undefined as string | undefined,
     body: "body\n",
@@ -1578,7 +1318,7 @@ describe("runPreflight + the fire() preflight gate", () => {
     const script = preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" });
     writeFileSync(
       cronFile,
-      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\nworktree: true\npreflight: ${script}\n---\nbody\n`,
+      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\npreflight: ${script}\n---\nbody\n`,
     );
     fire({ ...entry(script), filePath: cronFile });
     const lines = loggedLines();
@@ -1592,7 +1332,7 @@ describe("runPreflight + the fire() preflight gate", () => {
     const script = preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" });
     writeFileSync(
       cronFile,
-      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\nworktree: true\npreflight: ${script}\nrepo: mifunedev/openharness\n---\nbody\n`,
+      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\npreflight: ${script}\nrepo: mifunedev/openharness\n---\nbody\n`,
     );
     fire({ ...entry(undefined), filePath: cronFile });
 
@@ -1625,7 +1365,7 @@ describe("runPreflight + the fire() preflight gate", () => {
     const cronFile = path.join(tmp, "autopilot.md");
     writeFileSync(
       cronFile,
-      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\nworktree: true\npreflight: scripts/definitely-missing-preflight.sh\n---\nbody\n`,
+      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\npreflight: scripts/definitely-missing-preflight.sh\n---\nbody\n`,
     );
     fire({ ...entry("scripts/definitely-missing-preflight.sh"), filePath: cronFile });
     const lines = loggedLines();

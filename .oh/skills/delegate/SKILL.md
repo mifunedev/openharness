@@ -3,8 +3,9 @@ name: delegate
 description: |
   TRIGGER when: asked to delegate work, execute or parallelize a plan, "run this
   plan", "delegate this", or after /prd or plan creation. Decomposes work by
-  dependency, launches worker sub-agents in parallel waves, validates completion,
-  and reports results while preserving failure isolation and recursion limits.
+  dependency, launches bounded provider-native workers in parallel waves, validates
+  completion, and reports results while preserving failure isolation and recursion
+  limits. Keeps work in the active session when phases share substantial context.
 argument-hint: "[--plan <path>] [--dry-run]"
 ---
 
@@ -15,6 +16,28 @@ a dependency-ordered task graph, and spawn worker sub-agents in parallel waves. 
 completes before the next begins. Results are collected, validated, and reported.
 
 **Core principle: maximize parallelism while respecting dependencies absolutely.**
+
+## When a worker is justified
+
+> Use a worker only when the task is self-contained and gains from parallelism,
+> isolated context, restricted tools, or containment of verbose disposable output.
+> Keep work in the active session when phases share substantial context or require
+> iterative refinement.
+
+A worker is a **bounded execution context**, not a project role. The active coding
+agent is the runtime and stays the owner of the work; skills — `/architect`,
+`/spec`, `/audit`, `/retro` — are how it adopts a role. Delegation buys isolation
+or parallelism and nothing else.
+
+| Delegate it | Keep it in the active session |
+|---|---|
+| Independent parallel research or source sweeps | Planning, implementation, and testing that share one evolving picture |
+| Verbose disposable output — logs, search dumps, test runs | Work that needs iterative refinement against operator feedback |
+| Disjoint file ownership with no shared mutable state | Two tasks that touch the same file |
+| A deliberate tool or permission restriction | Anything whose result you would have to re-derive to use |
+
+Do not invent named architectural roles for workers. `/delegate` owns fan-out
+policy; other skills must not grow a competing worker hierarchy beside it.
 
 ## Worker model and thinking policy
 
@@ -179,7 +202,7 @@ Worker configuration:
   or `xhigh`). Never pass `max`. If unsupported, use the nearest supported thinking
   level while keeping the inherited or explicitly overridden model unchanged.
 - **run_in_background**: true (for waves with 2+ tasks)
-- **subagent_type** (read-only trap): the `implementer`, `pm`, and `critic` sub-agent types are **read-only** (`tools: Read, Glob, Grep, Bash` — no `Write`/`Edit`) and will **silently make zero file changes** if a worker is told to create or edit files. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) in the `Agent` tool call; reserve `implementer`/`pm`/`critic` for analysis-only workers.
+- **subagent_type**: use a **provider-native built-in** type only. This repository defines no project agents, so no `subagent_type` resolves to a repository file. For a worker that must `Write`/`Edit`, use `general-purpose` (or `claude`); for a read-only sweep whose verbose output should stay out of this context, use a read-only built-in such as `Explore`. Verify a type is offered by the running provider before naming it — an unrecognized `subagent_type` either errors or silently degrades. Never name a type on the assumption that a repository agent definition backs it.
 
 **a.1) Recursion-authorization gate**
 
@@ -287,9 +310,13 @@ level without changing models.
 
 | Resource | Path |
 |----------|------|
-| Agent: Implementer | `.claude/agents/implementer.md` — read-only (no Write/Edit) |
-| Agent: Critic | `.claude/agents/critic.md` — read-only (no Write/Edit) |
-| Agent: PM | `.claude/agents/pm.md` — read-only (no Write/Edit) |
-| Agent: Council | `.claude/agents/council.md` |
+| Write-capable worker | `subagent_type: general-purpose` (or `claude`) — provider built-in |
+| Read-only sweep worker | a read-only provider built-in such as `Explore` |
+| Worker boundary rule | **When a worker is justified** above |
+| Architecture decisions | `/architect` — runs inline, never as a worker identity |
 
-The `implementer`/`pm`/`critic` agent types above are read-only and will silently make zero file changes. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) — both are built-in agent types with no agent-definition file, so there is no `.claude/agents/` path to reference.
+There is **no** repository-authored agent catalog: no `.oh/agents/` pack and no
+`.claude/agents/` or `.codex/agents/` provider mirror. Every `subagent_type` above
+is a provider built-in with no definition file behind it, so there is no repository
+path to cite. A read-only built-in makes zero file changes by design — never assign
+one a task that must `Write` or `Edit`.

@@ -20,8 +20,8 @@ Harness, write `.oh/skills/<name>/SKILL.md`; `.claude/skills`, `.codex/skills`, 
 Use this type for conventions, domain knowledge, decision guidance, or contextual
 instructions Claude should consult while doing another task. If the request is a
 deliberate end-to-end procedure such as deploy, release, publish, sync, or sweep,
-use `/builder command` instead. Use an agent only when the work needs a durable
-specialist identity and isolated context.
+use `/builder command` instead. A durable specialist role is a skill too — the
+active session adopts it; there is no project-agent artifact to author.
 
 Reference skills should usually remain model-invocable. They may use `paths:` when
 specific files provide a reliable loading signal. Do not use `context: fork` for
@@ -82,7 +82,7 @@ Common fields:
 | `user-invocable` | Set `false` only when hiding the slash-menu entry is intentional. |
 | `disable-model-invocation` | Usually false or omitted for reference skills. `true` makes it manual-only and prevents subagent preload. |
 | `model` / `effort` | Omit to inherit unless a stable task requirement justifies an override. |
-| `context: fork` / `agent` | Avoid for passive reference content; use only when the body is an actionable isolated task. |
+| `context: fork` | Avoid for passive reference content; use only when the body is an actionable isolated task. |
 | `shell` / `hooks` | Add only after verifying local runtime support and a concrete need. |
 
 Place matching information in frontmatter. The body is invisible until the skill
@@ -136,8 +136,7 @@ must not require another chain of references to become usable.
 - [ ] `name` matches the directory and uses lowercase kebab-case.
 - [ ] Frontmatter delimiters and YAML structure are valid.
 - [ ] Description front-loads triggers and stays within the listing limit.
-- [ ] Positive and negative trigger examples distinguish it from agents and task
-      skills.
+- [ ] Positive and negative trigger examples distinguish it from task skills.
 - [ ] `paths:` globs are narrow and match real files when present.
 - [ ] Every declared argument, tool, script, reference, and asset is used and exists.
 - [ ] SKILL.md is below 500 lines; references over 100 lines have a contents list.

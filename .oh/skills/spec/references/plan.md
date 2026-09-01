@@ -38,6 +38,26 @@ folder for `/spec execute` to consume.
 
 ---
 
+## Architecture-significance check
+
+Before deriving the slug, judge once whether the topic is architecture-significant
+— it materially changes system or module boundaries, the execution or ownership
+model, persistent state, a security or isolation boundary, a public API or
+compatibility contract, a lifecycle, provider portability, shared vocabulary,
+cross-skill control-plane behavior, or introduces or retires a reusable
+abstraction.
+
+- **Not significant** (the common case): continue straight into the pipeline. Most
+  changes are ordinary and need no architecture pass.
+- **Significant**: run `/architect <topic>` inline in this session first, then plan
+  against its accepted recommendation. `/architect` decides what the system should
+  become; `plan` turns that direction into the task folder.
+
+This is a one-line judgment, not a phase. `/architect` is never mandatory, never
+spawns a session, and never owns the build.
+
+---
+
 ## The pipeline
 
 Run these in order; each is an existing primitive — compose, don't re-derive.

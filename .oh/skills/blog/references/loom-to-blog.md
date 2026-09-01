@@ -263,7 +263,7 @@ Expected actions:
 1. Read `.claude/specs/openharness-demo/demo.md`.
 2. Extract/download every Loom screenshot.
 3. Audit all source sections and images.
-4. Use Advisor plus the three default delegates.
+4. Obtain the `/delegate` briefing, then spawn the three default delegates.
 5. Write the Docusaurus post under `openharness-web/blog/`.
 6. Embed selected safe screenshots with exact `demo.md` URLs or local files downloaded from those exact URLs if Loom hotlinks break.
 7. Generate `promos/<date-slug>.md` if social promotion was requested.

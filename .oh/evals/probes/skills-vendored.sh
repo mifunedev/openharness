@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # tier: A
-# source: absorb .mifune submodule into .oh — the skills/agents/hooks pack is vendored
+# source: absorb .mifune submodule into .oh — the skills/hooks pack is vendored
 #         directly under .oh/ (no submodule); provider symlinks resolve into it from a clean clone
-# desc: there is NO .mifune submodule; .oh/skills|agents|hooks are tracked in-repo and the
+# desc: there is NO .mifune submodule; .oh/skills|hooks are tracked in-repo and the
 #       provider symlinks resolve into .oh/ with no init/network step; the Hermes link is
 #       created when the hermes binary is on PATH and not otherwise (#920 replaced the
 #       INSTALL_HERMES flag with that presence check, so it works in both sandbox flavors)
@@ -31,7 +31,7 @@ for path in \
   git ls-files --error-unmatch "$path" >/dev/null 2>&1 || fail "pack file not tracked in-repo: $path"
 done
 
-for link in .pi/skills .claude/skills .codex/skills .claude/agents .claude/hooks .codex/agents; do
+for link in .pi/skills .claude/skills .codex/skills .claude/hooks; do
   [ -L "$link" ] || fail "$link is not a symlink"
   [ -e "$link" ] || fail "$link target does not resolve"
 done
@@ -64,5 +64,5 @@ if [ "${SKILLS_VENDORED_SKIP_CLEAN_CLONE:-0}" != "1" ]; then
   cd "$ROOT"
 fi
 
-echo "PASS: skills/agents/hooks are vendored under .oh/ (no submodule) and provider symlinks resolve from a clean clone" >&2
+echo "PASS: skills/hooks are vendored under .oh/ (no submodule) and provider symlinks resolve from a clean clone" >&2
 exit 0

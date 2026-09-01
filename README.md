@@ -159,9 +159,9 @@ defaults. Details: [lifecycle commands](docs/lifecycle-commands.md#vs-code-reope
 
 ## 🧩 How the primitive pack ships
 
-Open Harness vendors the shared skills/agents/hooks primitive pack directly into the `.oh/` control plane: `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, and `.oh/skills.lock` are tracked as ordinary files in this repo. The `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has the skills immediately — no submodule, no recursive clone, no network step.
+Open Harness vendors the shared skills/hooks primitive pack directly into the `.oh/` control plane: `.oh/skills/`, `.oh/hooks/`, and `.oh/skills.lock` are tracked as ordinary files in this repo. Skills are the reusable-behavior primitive; the harness ships no repository-authored agent definitions, and provider-native sub-agents remain available as a bounded execution primitive through `/delegate`. The `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has the skills immediately — no submodule, no recursive clone, no network step.
 
-Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and `.codex/skills` point at `.oh/skills`; `.claude/agents` → `.oh/agents`; `.claude/hooks` → `.oh/hooks`. `.pi/` itself remains the Pi provider surface in v1.
+Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and `.codex/skills` point at `.oh/skills`; `.claude/hooks` → `.oh/hooks`. `.pi/` itself remains the Pi provider surface in v1.
 
 ## 🚀 Use it
 

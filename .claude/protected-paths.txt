@@ -23,6 +23,7 @@ cloudflared
 agent-browser
 prd
 ralph
+architect
 audit
 delegate
 strategic-proposal

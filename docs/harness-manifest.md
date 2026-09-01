@@ -20,8 +20,7 @@ control-plane surfaces described in the [`.oh/` directory layout](oh-directory-l
 name: openharness
 version: 1
 
-agents:
-  definitions: .oh/agents/
+primitives:
   skills: .oh/skills/
   hooks: .oh/hooks/
 
@@ -40,8 +39,10 @@ policies:
 
 - `name` and `version` are plain labels for humans. They do not imply a manifest
   version registry.
-- `agents` points at the real provider-portable primitive pack: agent
-  definitions, skills, and hooks already live under `.oh/`.
+- `primitives` points at the real provider-portable primitive pack: skills and
+  hooks already live under `.oh/`. There is no agent-definitions entry — skills
+  are the reusable-role primitive, and provider-native sub-agents are a bounded
+  execution choice made by `/delegate`, not a repository artifact.
 - `loops` points at today's scheduled cron prompts and task artifact directory.
   `/spec execute` owns implementation directly; it does not delegate to a separate
   implementation process.

@@ -31,7 +31,7 @@ under `.worktrees/`.
 
 **Track/preserve** deliberate, durable harness changes, including:
 
-- `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, `.oh/scripts/`, `.devcontainer/`,
+- `.oh/skills/`, `.oh/hooks/`, `.oh/scripts/`, `.devcontainer/`,
   `.github/`, docs, templates, and supported configuration
   defaults.
 - `.worktrees/AGENTS.md`, `projects/AGENTS.md`, and other lifecycle

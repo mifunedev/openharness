@@ -19,7 +19,7 @@ This **supersedes** the earlier "earned by EXPORT only" rule *and* the later
 is obsolete):
 
 - **`.oh/`** — *OpenHarness's own machinery* as one unit, including the
-  provider-portable *primitives* — `skills/`, `agents/`, `hooks/` (+ `skills.lock`)
+  provider-portable *primitives* — `skills/`, `hooks/` (+ `skills.lock`)
   — exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
   `.pi/`, `.hermes/`): the `oh` CLI (`cli/`), installer + lifecycle scripts
   (`scripts/`), container-install inputs (`install/`), the
@@ -104,7 +104,7 @@ root `docs/` (Markdown only — no build machinery; guarded by
 
 ## How the skill pack is wired
 
-The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/agents`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh init`/`oh update` lay the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
+The shared skills and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh init`/`oh update` lay the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
 
 `.pi/` remains the Pi provider surface in v1; its `.pi/skills` is one of the symlinks into `.oh/skills`.
 
@@ -276,7 +276,7 @@ the top-level directories its own patterns name — never the whole repo root.
 patterns are relative to `.oh/`, and the existing path-escape guard (writes land
 only under `<target>/.oh/`) is **unchanged** — the manifest *narrows* the
 payload, it never widens the write surface. The vendored skill pack
-(`skills/**`, `agents/**`, `hooks/**`, `skills.lock`) ships through this same
+(`skills/**`, `hooks/**`, `skills.lock`) ships through this same
 manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/`.
 
 > **`oh init` seam:** both `oh init` and `oh update` honor this manifest — they
@@ -287,4 +287,4 @@ manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/
 ## Pointers
 
 - `.oh/skills/harness-context/references/directory-readme.md` — the README-as-directory-anchor convention this file follows.
-- `.oh/skills/` — the vendored provider-portable primitive pack (skills/agents/hooks), absorbed from the former `.mifune` submodule.
+- `.oh/skills/` — the vendored provider-portable primitive pack (skills/hooks), absorbed from the former `.mifune` submodule.

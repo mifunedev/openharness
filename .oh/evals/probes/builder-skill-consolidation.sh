@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #643 — consolidate artifact builders behind one /builder dispatcher
-# desc: /builder owns agent, skill, command, and rule authoring while legacy builder entry points stay removed
+# desc: /builder owns skill, command, and rule authoring while legacy builder entry points stay removed
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -15,7 +15,6 @@ fail() {
 
 required=(
   "$SKILL"
-  "$REFS/agent.md"
   "$REFS/skill.md"
   "$REFS/command.md"
   "$REFS/rule.md"
@@ -25,10 +24,6 @@ for path in "${required[@]}"; do
 done
 
 legacy=(
-  ".oh/agents/agent-builder.md"
-  ".oh/agents/skill-builder.md"
-  ".oh/agents/command-builder.md"
-  ".oh/agents/rule-builder.md"
   ".oh/skills/skill-builder"
 )
 for rel in "${legacy[@]}"; do
@@ -42,25 +37,20 @@ frontmatter="$(awk '
 ' "$SKILL")"
 [ -n "$frontmatter" ] || fail "builder SKILL.md lacks YAML frontmatter"
 grep -qxF 'name: builder' <<<"$frontmatter" || fail "builder frontmatter name is not exact"
-grep -qxF 'argument-hint: "agent|skill|command|rule <name-or-request>"' <<<"$frontmatter" || fail "builder argument hint does not expose all four public types"
+grep -qxF 'argument-hint: "skill|command|rule <name-or-request>"' <<<"$frontmatter" || fail "builder argument hint does not expose all three public types"
 grep -qxF 'allowed-tools: Read, Write, Edit, Glob, Grep, Bash' <<<"$frontmatter" || fail "builder allowed-tools contract drifted"
 if grep -qE '^model:' <<<"$frontmatter"; then
   fail "builder must inherit the session model"
 fi
 
-for type in agent skill command rule; do
+for type in skill command rule; do
   grep -qF "| \`$type\` | \`references/$type.md\` |" "$SKILL" || fail "dispatcher route missing for type: $type"
 done
-grep -qF 'Usage: /builder <agent|skill|command|rule> <name-or-request>' "$SKILL" || fail "missing exact invalid-argument usage"
+grep -qF 'Usage: /builder <skill|command|rule> <name-or-request>' "$SKILL" || fail "missing exact invalid-argument usage"
 grep -qF 'remaining request is empty or only' "$SKILL" || fail "dispatcher does not reject an empty request after a valid type"
 grep -qF 'stop without reading' "$SKILL" || fail "missing fail-closed invalid-type behavior"
 if grep -qF '.oh/memory' "$SKILL"; then fail "builder references the deleted .oh/memory tier"; fi
 if grep -qF 'MEMORY_DIR' "$SKILL"; then fail "builder reintroduced the MEMORY_DIR override"; fi
-
-AGENT_REF="$REFS/agent.md"
-grep -qF '.oh/agents/<name>.md' "$AGENT_REF" || fail "agent type omits canonical Open Harness placement"
-grep -qiF 'least privilege' "$AGENT_REF" || fail "agent type omits least-privilege tool design"
-grep -qF 'Provider-link check passes' "$AGENT_REF" || fail "agent type omits provider exposure validation"
 
 SKILL_REF="$REFS/skill.md"
 grep -qF '.oh/skills/<name>/SKILL.md' "$SKILL_REF" || fail "skill type omits canonical Open Harness placement"
@@ -97,5 +87,5 @@ if grep -qF 'skill-builder' "$ROOT/docs/oh-directory-layout.md"; then
   fail "current directory-layout docs still advertise skill-builder as an agent"
 fi
 
-echo "PASS: /builder dispatches four artifact references and legacy builders remain removed" >&2
+echo "PASS: /builder dispatches three artifact references and legacy builders remain removed" >&2
 exit 0

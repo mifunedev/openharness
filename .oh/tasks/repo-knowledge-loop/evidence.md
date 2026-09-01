@@ -427,6 +427,18 @@ Both planning probes were rewritten to assert the block by exact line
   `/audit implementation` did exactly that on this build and was right to. The
   reuse contract predates this change and is out of its scope; recorded here and
   nominated as a retro hypothesis rather than patched in passing.
+- **The undraft ran against an earlier head than the final one.** `gh pr ready`
+  was called at `d1aebc75`, whose four checks were green, but two further commits
+  followed — the terminal-state `progress.txt` entry and this documentation-mirror
+  closeout — and the second was pushed while the compose/image build was still
+  running. Caught by orchestrator verification, not by this run. Every pushed head
+  on the branch has since completed **all four checks green**
+  (`d1aebc75`, `b0ee168a`, `b2b83e29`, `9e54a9dd`), and a fresh `/audit pr` on the
+  final head returned `PR-AUDIT-PROMOTABLE`. The outcome is correct; the
+  *ordering* was not, and the contract this PR ships says the promotable audit
+  runs "immediately before any undraft" — a post-undraft push re-opens that gate
+  and nothing in the procedure says so. Nominated as a follow-up rather than
+  patched here.
 - **The diff grew 384 lines after the last simplify round, and the loop ended on
   the monotone rule rather than on the diff getting smaller.** The post-merge
   audit flagged this, correctly. The growth is attributable, not unexamined work:
@@ -529,6 +541,6 @@ which is the ordering the change exists to guarantee.
 |---|---|
 | Audit run id | `audit-20260901T022121Z-1697369` (post-merge; the pre-merge pass was `audit-20260901T014837Z-1436087`) |
 | Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 0` (gates: graph 7/7 · eval rc=0 131 probes · promotable true · ui n/a · slop no blocking finding) |
-| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T024245Z-1853136` (CI PASS · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`). Two earlier passes preceded the development merges. |
+| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T025218Z-1902369` on the final head `9e54a9dd` (CI PASS on all four checks · MERGEABLE · CLEAN · evidenceComplete true · promotable true; advisory flag `size-convention`). Three earlier passes preceded the development merges and the documentation-mirror closeout. |
 | Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
 | Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

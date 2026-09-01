@@ -401,6 +401,32 @@ which is the ordering the change exists to guarantee.
 
 ---
 
+## 7. Benchmark verdict
+
+`/benchmark` — **`BENEFICIAL` (justified hold)**.
+
+- **Floor**: the record was stale against HEAD, so the suite was re-run rather
+  than inherited: 127 probes, exit 0, zero new `green→red`, four SKIPPED that are
+  the same four skipped on base.
+- **Ceiling**: suite score **held at 1.44/2.00** against the counterfactual. That
+  is a *justified* hold rather than "machinery without movement", because the
+  disqualifier for the latter is no capability task crediting the change — and
+  CB-005 credits it directly: its success signal asks for a tracked pattern page
+  with a `path:line` root cause and pinned `<path>@<short-sha>` provenance, and
+  this run produced two and patched two more.
+- **`REDIRECT-FLAG` raised.** The suite has **no task that measures
+  recall-before-plan**, which is the capability this change adds, so the ceiling
+  cannot see it in either direction. This is the shape CB-004 was retired for — a
+  row that held at `Δ +0.00` because nothing was ever measured. Recommended
+  redirect: author a CB task scoring whether a plan consumed tracked knowledge
+  before its PRD existed.
+- **No ledger write.** `/benchmark` writes an `SI-nnnn-V` record only for a
+  `/builder` proposal under evaluation; none covers #926.
+- Instrument grooming (`/audit eval-quality`) was not run — that follow-on does
+  not exist yet, and is named rather than silently skipped.
+
+---
+
 ## Correlation
 
 | Field | Value |

@@ -408,27 +408,25 @@ Both planning probes were rewritten to assert the block by exact line
   `/audit implementation` did exactly that on this build and was right to. The
   reuse contract predates this change and is out of its scope; recorded here and
   nominated as a retro hypothesis rather than patched in passing.
-- **The PR carries the advisory `size-convention` flag** — 106 files, past the
+- **The diff grew 384 lines after the last simplify round, and the loop ended on
+  the monotone rule rather than on the diff getting smaller.** The post-merge
+  audit flagged this, correctly. The growth is attributable, not unexamined work:
+  of the 733 lines added since the round-1 commit, **537 arrived with the
+  `development` merge** — PR #930's four new probes and the `/spec`, `/delegate`,
+  `/rlm`, `/ste`, `/t3`, `/audit`, capability, cron and docs surfaces it rewrote —
+  plus this run's two compiled pattern pages. Round 2 found **no blocking
+  finding** and `SIMPLICITY-RESIDUAL: 0`; the two residuals round 1 disclosed were
+  re-examined and cleared (`--format slugs` has real call sites in two probes, and
+  extracting the probes' one-line `ROOT=` preamble would add a file rather than
+  remove lines). The round record carries the attribution so a reviewer does not
+  have to reconstruct it.
+- **The PR carries the advisory `size-convention` flag** — 113 files after the merge, past the
   50-changed-file convention. It is not splittable without breaking the thing the
   issue asks for: requirement H says every moved-path consumer, doc, probe,
   script, provider wiring, and CI filter is updated **atomically**, and a
   migration landed in two PRs leaves a window with two writable knowledge
   locations, which is the acceptance criterion's explicit failure case. Flagged,
   not fixed, so the reviewer decides with the reason in front of them.
-- **`SIMPLICITY-RESIDUAL: 2`** — gate 5 stopped blocking on the monotone rule
-  (`netAdded` 4113 did not fall below the previous round's 4112), so two findings
-  are disclosed for the operator to judge rather than acted on:
-  1. `knowledge-impact.sh --format slugs` has no production call site — both
-     documented consumers use the default tsv, and only the probes that test it
-     call it. Deleting it would remove ~8 lines and push a `awk -F'\t'` filter
-     into five probe call sites. Left in place because the flag exists so an
-     oracle can assert the finding *set* rather than parse a report, which is the
-     shape `[[pattern-wiki-ungated-check-drift]]` argues for; the operator may
-     disagree.
-  2. The nine new probes repeat the ~10-line preamble every probe in the suite
-     uses. Extracting a shared `lib.sh` is a repo-wide refactor across 119
-     existing probes, not something this unit can absorb; recorded so the decision
-     is made once, globally.
 - **Public-documentation mirror to `mifunedev/openharness-web`** is not done here.
   Repository docs (`docs/oh-directory-layout.md`, `docs/glossary.md`, the RFCs,
   `.oh/README.md`) are updated in this change; the external site mirror is the
@@ -491,8 +489,8 @@ which is the ordering the change exists to guarantee.
 
 | Field | Value |
 |---|---|
-| Audit run id | `audit-20260901T014837Z-1436087` |
-| Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 2` (gates: graph 7/7 · eval rc=0 · promotable true · ui n/a · slop non-blocking) |
+| Audit run id | `audit-20260901T022121Z-1697369` (post-merge; the pre-merge pass was `audit-20260901T014837Z-1436087`) |
+| Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 0` (gates: graph 7/7 · eval rc=0 131 probes · promotable true · ui n/a · slop no blocking finding) |
 | PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T020036Z-1538941` (CI PASS · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`) |
 | Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
 | Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

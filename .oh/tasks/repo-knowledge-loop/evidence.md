@@ -355,6 +355,20 @@ Both planning probes were rewritten to assert the block by exact line
   `/audit implementation` did exactly that on this build and was right to. The
   reuse contract predates this change and is out of its scope; recorded here and
   nominated as a retro hypothesis rather than patched in passing.
+- **`SIMPLICITY-RESIDUAL: 2`** — gate 5 stopped blocking on the monotone rule
+  (`netAdded` 4113 did not fall below the previous round's 4112), so two findings
+  are disclosed for the operator to judge rather than acted on:
+  1. `knowledge-impact.sh --format slugs` has no production call site — both
+     documented consumers use the default tsv, and only the probes that test it
+     call it. Deleting it would remove ~8 lines and push a `awk -F'\t'` filter
+     into five probe call sites. Left in place because the flag exists so an
+     oracle can assert the finding *set* rather than parse a report, which is the
+     shape `[[pattern-wiki-ungated-check-drift]]` argues for; the operator may
+     disagree.
+  2. The nine new probes repeat the ~10-line preamble every probe in the suite
+     uses. Extracting a shared `lib.sh` is a repo-wide refactor across 119
+     existing probes, not something this unit can absorb; recorded so the decision
+     is made once, globally.
 - **Public-documentation mirror to `mifunedev/openharness-web`** is not done here.
   Repository docs (`docs/oh-directory-layout.md`, `docs/glossary.md`, the RFCs,
   `.oh/README.md`) are updated in this change; the external site mirror is the
@@ -366,8 +380,8 @@ Both planning probes were rewritten to assert the block by exact line
 
 | Field | Value |
 |---|---|
-| Audit run id | `<AUDIT_RUN_ID>` |
-| Native verdict | `<AUDIT-VERDICT>` |
+| Audit run id | `audit-20260901T014837Z-1436087` |
+| Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 2` (gates: graph 7/7 · eval rc=0 · promotable true · ui n/a · slop non-blocking) |
 | PR audit verdict | `<PR-AUDIT-VERDICT>` |
 | Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
 | Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

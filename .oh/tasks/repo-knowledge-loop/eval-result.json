@@ -1,7 +1,7 @@
 {
-  "commit": "75068b506c055955472e6343631560c8522881d0",
+  "commit": "556478bd54df75e141e6073665c749ccbb9c4a99",
   "runnerExit": 0,
-  "ranAt": "2026-09-01T01:43:58Z",
+  "ranAt": "2026-09-01T01:56:03Z",
   "probesRun": 127,
   "newRegressions": [],
   "preExistingReds": [],
@@ -11,5 +11,5 @@
     "next-dev-prod",
     "registry-portability"
   ],
-  "notes": "Zero green->red transitions; runner exit 0. The four SKIPPED probes are the same four SKIPPED on base ecc49800. Three further probes (oh-compose-env-wiring, oh-destroy-guard, oh-init-headless-config) SKIP in a fresh worktree only because .oh/cli/dist is unbuilt; after 'npm install && node build.mjs' all three PASS, and they PASS in this run. Two probes (wiki-pattern-persistence, wiki-skill-impact-append-only) SKIP in CI's depth-1 checkout for lack of a merge-base; they SKIP identically on the scaffold commit dc8043da, before this change existed. This is the third suite run of the cycle: run 1 found a self-inflicted regression (wiki-compile-contract pinned schema sections this change renumbered) and run 2 preceded the shallow-clone fix; each ran against a different commit after a real change, which is what the once-per-cycle rule is about. Committing this record moves HEAD past the commit it names, so a reader following the commit==HEAD reuse rule will re-run; see evidence.md 'What remains unverified'."
+  "notes": "Zero green->red transitions; runner exit 0. The four SKIPPED probes are the same four SKIPPED on base ecc49800. Three further probes (oh-compose-env-wiring, oh-destroy-guard, oh-init-headless-config) SKIP in a fresh worktree only because .oh/cli/dist is unbuilt; after 'npm install && node build.mjs' all three PASS, and they PASS in this run. Two probes (wiki-pattern-persistence, wiki-skill-impact-append-only) SKIP in CI's depth-1 checkout for lack of a merge-base; they SKIP identically on the scaffold commit dc8043da, before this change existed. This is the fourth suite run of the cycle: run 1 found a self-inflicted regression (wiki-compile-contract pinned schema sections this change renumbered) and run 2 preceded the shallow-clone fix and run 3 preceded /wiki compile; each ran against a different commit after a real change, which is what the once-per-cycle rule is about. Committing this record moves HEAD past the commit it names, so a reader following the commit==HEAD reuse rule will re-run; see evidence.md 'What remains unverified'."
 }

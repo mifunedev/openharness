@@ -80,8 +80,6 @@ seed_workspace_volume() {
 # <<< seed_workspace_volume <<<
 
 # >>> oh_config >>>
-# `oh config show`, not a narrower verb: a baked `oh` in an already-running
-# container can predate a new verb, and this is the boot path.
 OH_CONFIG_JSON=""
 oh_config() {
   local filter="$1" fallback="${2-}" out
@@ -107,8 +105,6 @@ HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
 seed_home /home/sandbox || echo "[entrypoint] WARNING: home seed incomplete; some baked dotfiles may be missing" >&2
 
-# ─── Host UID reconciliation ────────────────────────────────────────
-
 uid_reconcile_step() {
   local description="$1"
   shift
@@ -122,10 +118,6 @@ uid_reconcile_step() {
 }
 
 HARNESS_DIR="$OH_PROJECT_ROOT"
-# The sandbox flavor is observable, not declared. Both conditions are load-bearing:
-# mountpoint alone would misread an empty bind (a runtime that mounts a fresh host
-# directory straight at the project root) as a checkout, and the .oh/ test alone
-# would send a seeded no-bind volume through the host-UID sync on its second boot.
 if mountpoint -q "$HARNESS_DIR" 2>/dev/null && [ -d "$HARNESS_DIR/.oh" ]; then
   echo "[entrypoint] checkout bind detected at $HARNESS_DIR — syncing host UID/GID"
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
@@ -166,7 +158,6 @@ PW="${SANDBOX_PASSWORD:-test1234}"
 echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox password" >&2
 unset PW
 
-# UID/GID reconciliation can change the numeric identity behind the sandbox
 repair_home_mount_ownership
 
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
@@ -193,7 +184,6 @@ if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
   fi
 fi
 
-# Hermes keeps all runtime state — including auth.json — inside the home mount.
 if command -v hermes >/dev/null 2>&1; then
   HERMES_RUNTIME="$HARNESS/.hermes"
   HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
@@ -368,8 +358,6 @@ if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh aut
   fi
 fi
 
-# from the marker stored alongside node_modules. Set build.skipPnpmInstall in
-# oh.json (`oh config set build.skipPnpmInstall true`) to opt
 pnpm_workspace_package_patterns() {
   local workspace="$1/pnpm-workspace.yaml"
   [ -f "$workspace" ] || return 0
@@ -565,20 +553,12 @@ else
   echo "[entrypoint] Slack not configured (or pi missing) — skipping client-slack-pi"
 fi
 
-# tailscaled defaults its control socket to /var/run/tailscale/tailscaled.sock,
-# and t3-code.sh calls a bare `tailscale status` that expects exactly that path.
-# Only root can create it, so the entrypoint must — unconditionally: `oh tool
-# install tailscale` promises the tool is usable in the already-running
-# container, and creating this lazily would make an install-now/use-now flow wait
-# for a reboot. An empty directory costs nothing. The install itself belongs to
-# the tool catalog, which is the sole owner of the pinned version and checksums.
 install -d -o sandbox -g sandbox -m 0755 /var/run/tailscale 2>/dev/null || true
 
 for hook in /usr/local/bin/*-entrypoint-hook.sh; do
   [ -x "$hook" ] && "$hook"
 done
 
-# First-boot message if onboarding not complete
 if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo ""
   echo "  ┌─────────────────────────────────────────────────┐"

@@ -15,7 +15,6 @@ const compose = readFileSync(COMPOSE, "utf-8");
 describe("devcontainer entrypoint pnpm install", () => {
   it("reads the opt-out from oh.json through the CLI, not from the environment", () => {
     expect(entrypoint).toContain("oh_config_truthy '.build.skipPnpmInstall'");
-    expect(entrypoint).toContain("oh config set build.skipPnpmInstall true");
     expect(entrypoint).not.toContain("SKIP_PNPM_INSTALL");
   });
 

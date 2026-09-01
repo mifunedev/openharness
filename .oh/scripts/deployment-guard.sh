@@ -67,13 +67,7 @@ names_matching_run() {
   done
 }
 
-compose() {
-  SANDBOX_NAME="$RUN" \
-  OH_SANDBOX_IMAGE="$IMAGE" \
-  OH_PULL_POLICY=never \
-  OH_DEPLOY_DOCKER_CONFIG="$DOCKER_CONFIG_DIR" \
-    bash "$COMPOSE_DRIVER" "$@"
-}
+compose() { bash "$COMPOSE_DRIVER" "$@"; }
 
 TORN_DOWN=0
 TEARDOWN_FAILED=0
@@ -137,6 +131,8 @@ done
 
 DOCKER_CONFIG_DIR=$(mktemp -d)
 printf '{}\n' >"$DOCKER_CONFIG_DIR/config.json"
+export SANDBOX_NAME="$RUN" OH_SANDBOX_IMAGE="$IMAGE" OH_PULL_POLICY=never \
+       OH_DEPLOY_DOCKER_CONFIG="$DOCKER_CONFIG_DIR"
 
 hc=$(awk '/^ *healthcheck:/ {inb=1} inb && /^ *(interval|retries|start_period):/ {print} inb && /^ *restart:/ {inb=0}' "$COMPOSE_FILE")
 hc_interval=$(grep -Eo 'interval: *[0-9]+' <<<"$hc" | grep -Eo '[0-9]+' | head -1)
@@ -171,11 +167,7 @@ else
   fail "verify-sandbox-image.sh rejected $IMAGE"
 fi
 
-if SANDBOX_NAME="$RUN" \
-   OH_SANDBOX_IMAGE="$IMAGE" \
-   OH_PULL_POLICY=never \
-   OH_DEPLOY_DOCKER_CONFIG="$DOCKER_CONFIG_DIR" \
-   GIT_USER_NAME="$GUARD_GIT_NAME" \
+if GIT_USER_NAME="$GUARD_GIT_NAME" \
    GIT_USER_EMAIL="$GUARD_GIT_EMAIL" \
    BOOT_SMOKE_FLAVOR=image-only \
    BOOT_SMOKE_COMPOSE="$COMPOSE_DRIVER" \

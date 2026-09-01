@@ -41,7 +41,6 @@ code_only() { grep -v '^[[:space:]]*#' <<<"$1" || true; }
 
 has() { grep -Fq -- "$2" <<<"$1" || missing+=("$3"); }
 has_line() { grep -qxF -- "$2" <<<"$1" || missing+=("$3"); }
-has_re() { grep -Eq -- "$2" <<<"$1" || missing+=("$3"); }
 hasnt_re() { ! grep -Eq -- "$2" <<<"$(code_only "$1")" || missing+=("$3"); }
 
 has "$skill" 'bash .oh/scripts/deployment-guard.sh' \

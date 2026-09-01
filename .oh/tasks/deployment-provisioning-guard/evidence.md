@@ -301,6 +301,64 @@ that basis. Running them for real changed the outcome:
 | `/spec retro` | — | RETRO-DONE, 8 hypotheses, 1 promotion (`pattern-shared-runner-owns-teardown`) |
 | `/benchmark` | — | **NOT-BENEFICIAL** — see below |
 | `/audit implementation` (3rd, after the CI removal and the repair) | `audit-20260901T185327Z-1047052` | **AUDIT-FAIL (gate 5)** — 3 blocking simplifications, ~117 removable lines |
+| `/audit implementation` (4th) | `audit-20260901T190538Z-1133824` | **AUDIT-FAIL (gate 4)** — the gate's own preflight could not run |
+| `/audit implementation` (5th) | `audit-20260901T193105Z-1651666` | **AUDIT-PASS** — all five gates; gate 4 ran the browser preflight for real |
+
+### Gate 4 — the gate was broken, and fixing it was the work
+
+Gate 4 failed with `FAIL gate4: Chromium launch`. The unit was fine; **the gate
+could not pass for any unit**. Two independent defects, both reproduced against an
+identical fixture root:
+
+1. **The isolated `HOME` hid the browser.** The preflight runs `agent-browser`
+   under a throwaway `HOME`, but Playwright resolves its cache at
+   `$HOME/.cache/ms-playwright`, and the preflight is forbidden from downloading.
+   Fixed by capturing the cache before overriding `HOME` and passing
+   `PLAYWRIGHT_BROWSERS_PATH` through, so the profile stays isolated and the
+   executable stays reachable. An absent cache now fails closed naming the path
+   and the install command instead of surfacing as an opaque launch error.
+2. **The daemon socket overflowed the unix path limit.** `agent-browser` opens
+   `$XDG_RUNTIME_DIR/agent-browser/<session>.sock`, falling back under `HOME`.
+   With `XDG_RUNTIME_DIR` unset and `HOME` under `AUDIT_TMP_ROOT`, that path
+   exceeds the 107-byte `sun_path` limit and the daemon silently fails to start —
+   which is why the first symptom seen was `Daemon failed to start` and only the
+   second was `Executable doesn't exist`. Fixed with a short isolated runtime
+   directory under `TMPDIR`, plus an explicit length assertion before launch.
+
+Measured on one fixture root: **pre-fix exit 1 (`FAIL gate4: Chromium launch`),
+post-fix exit 0, absent cache exit 1** with the new message. The 5th audit then
+ran the real preflight — `about:blank` opened and closed, repo snapshots
+identical — so the fix is confirmed in the audit's own path, not only in a
+fixture.
+
+**The existing probe passed through all of this.** `audit-implementation-behavior.sh`
+mocks `agent-browser` with a script that exits 0, so its oracle never touched the
+daemon or the cache — `[[pattern-evals-unexercised-oracle]]` again, in the
+subsystem that enforces it. The probe now records the environment the preflight
+hands the browser and asserts the cache is passed through, `XDG_RUNTIME_DIR` is
+set, the derived socket path fits, and an absent cache fails closed without
+launching. It supplies its own cache fixture, so it does not require a real
+browser install. **Four fault injections, four caught, baseline green.**
+
+Deliberately **not** changed: the applicability oracle at
+`implementation-gates.sh:45` is `grep -qi 'agent-browser\|Verify in browser'`,
+which false-positives here because US-010 installs that CLI. Narrowing it risks
+silently skipping real UI verification, which the route's own tie-break calls the
+worse failure. A false positive now costs one `about:blank`.
+
+### Gate 5 residuals (disclosed, non-gating)
+
+The 5th audit passed gate 5 on the monotone rule (`netAdded` 1711 → 1782 did not
+strictly fall) with `SIMPLICITY-RESIDUAL: 4`. Three were applied anyway because
+they are unambiguous: an uncalled `has_re()` in the probe, four environment
+variables restated in `deployment-guard.sh` that a single `export` now covers, and
+a `clear_marker()` wrapper with one call site. **The fourth was not applied and is
+the operator's to judge:** replacing the ten-line `awk`/`grep` read of the
+healthcheck window with `docker compose config --format json | jq`. It is
+structurally better, but it reorders the script — the compose driver must be fully
+configured before the timeout is derived — and swaps a pure text read for a
+subprocess in the preflight path. That is a change, not a trim, and the loop had
+already terminated.
 
 ### Gate 5 round 1 — the simplify loop
 

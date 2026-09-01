@@ -21,10 +21,6 @@ mark_failed() {
   printf '%s\n' "$*" >"$PROVISION_MARKER" 2>/dev/null || true
 }
 
-clear_marker() {
-  rm -f "$PROVISION_MARKER" 2>/dev/null || true
-}
-
 die() {
   echo "[provision-defaults] ERROR: $1" >&2
   shift
@@ -191,7 +187,7 @@ if ((${#failed[@]})); then
       "  bash .oh/scripts/provision-defaults.sh"
 fi
 
-clear_marker
+rm -f "$PROVISION_MARKER" 2>/dev/null || true
 
 if [ "$MODE" = "verify" ]; then
   log "OK  all $provisioned default harnesses and tools present under $NPM_USER_PREFIX"

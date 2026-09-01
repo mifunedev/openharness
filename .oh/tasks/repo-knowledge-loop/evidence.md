@@ -156,6 +156,7 @@ Union with `prd.md`'s `Expected Knowledge Impact`, and the state each page ended
 | `pattern-wiki-ungated-check-drift` | **UPDATED** | corroborating evidence appended per schema § 11a; this change applied its prescribed workaround to the whole check list |
 | `pattern-wiki-external-model-over-mapping` | **UPDATED** | corroborating evidence appended; two exclusions written down alongside the structures that transferred |
 | `plan-vs-built-reconciliation` | **UPDATED again after the merge** | `execute.md` moved a second time when #930 landed; all nine line anchors re-verified against the merged file and `verified_at` advanced |
+| `oh-cli-portable-lifecycle` | **UPDATED again after the second merge** | #931 removed `agents/**` from the manifest and the two agent provider links from `init.ts`; the page's manifest paragraph records both and `verified_at` advanced |
 | `document-ingestion` | **REVERIFIED** | `ingest.md` moved under it, but only paths and kind guidance changed; its conversion claims still hold. `verified_at` advanced, body untouched |
 | `audit-architecture` | **NOT-AFFECTED** (no declared source is in the changed set; the audit subsystem is untouched by this change) | named in the prediction, not in the diff |
 
@@ -364,6 +365,16 @@ Both planning probes were rewritten to assert the block by exact line
     subject is session decoupling — and #926 retires that sentinel. The probe now
     asserts the same decoupling against `prd.json` structured state. Both
     contracts hold; neither was weakened.
+
+11. **`development` moved a second time, and PR #931 landed too.** It made skills
+    the only role primitive, retired the `agents/**` payload and the agent
+    provider links, and added `/architect` plus five probes. Two follow-on edits
+    were required and made: "Advisor" is now a retired role identity, so
+    `plan.md` and the `/retro --task` section say *owner*; and `roles-are-skills.sh`
+    carried two exclusions for the retired corpus path, which after this change
+    protect nothing while re-introducing the retired literal into a tracked file
+    and tripping `knowledge-path-single-owner`. Both exclusions were removed
+    rather than the guard being widened.
 
 ---
 

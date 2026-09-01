@@ -1,12 +1,10 @@
 {
-  "commit": "a6b8d18c5e60489acf0b5b5e05b7be2d5bb7fe29",
+  "commit": "7ee9f2d17685081da23d90752101812e1eb2b1e6",
   "runnerExit": 0,
-  "ranAt": "2026-09-01T04:33:50Z",
+  "ranAt": "2026-09-01T19:44:54Z",
   "probeCount": 139,
   "newRegressions": [],
-  "preExistingReds": [
-    "compose-config-path-parity (authoring checkout only; PASS in a clean worktree of this commit and in CI)"
-  ],
-  "ranIn": "the authoring checkout; corroborated by a clean detached worktree of the same commit",
-  "note": "The authoring checkout carries an untracked machine-local root dotenv, which makes docker-compose.sh prefer it over .devcontainer/.env and turns compose-config-path-parity red there. /audit implementation gate 2 failed closed on that, correctly, and independently attributed it to the dirty audit root. A clean detached worktree of this commit runs 139 probes with ZERO non-PASS rows, which is the evidence for the committed PASS row. The committed RESULTS.md is the authoring-checkout run with that one row corrected, NOT the clean-worktree run wholesale: a bare worktree has no installed dependencies, so drift-check-cron-staleness-glob, oh-compose-env-wiring, oh-destroy-guard and oh-init-headless-config each degrade PASS->SKIPPED there. Committing those would hide four exercised oracles to fix one row."
+  "preExistingReds": ["compose-config-path-parity (authoring checkout only; PASS in a clean worktree and in CI)"],
+  "ranIn": "a clean detached worktree, by /audit implementation gate 2 (audit-20260901T194031Z-1733681)",
+  "note": "Gate 2 re-ran the suite rather than inheriting this record, which is pattern-spec-self-staling-reuse-record working as documented: a commit-keyed record cannot equal HEAD once it is committed. 139 probes, zero REGRESSION rows, zero reds in the clean root."
 }

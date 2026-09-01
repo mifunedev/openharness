@@ -355,6 +355,13 @@ Both planning probes were rewritten to assert the block by exact line
   `/audit implementation` did exactly that on this build and was right to. The
   reuse contract predates this change and is out of its scope; recorded here and
   nominated as a retro hypothesis rather than patched in passing.
+- **The PR carries the advisory `size-convention` flag** — 106 files, past the
+  50-changed-file convention. It is not splittable without breaking the thing the
+  issue asks for: requirement H says every moved-path consumer, doc, probe,
+  script, provider wiring, and CI filter is updated **atomically**, and a
+  migration landed in two PRs leaves a window with two writable knowledge
+  locations, which is the acceptance criterion's explicit failure case. Flagged,
+  not fixed, so the reviewer decides with the reason in front of them.
 - **`SIMPLICITY-RESIDUAL: 2`** — gate 5 stopped blocking on the monotone rule
   (`netAdded` 4113 did not fall below the previous round's 4112), so two findings
   are disclosed for the operator to judge rather than acted on:
@@ -433,6 +440,6 @@ which is the ordering the change exists to guarantee.
 |---|---|
 | Audit run id | `audit-20260901T014837Z-1436087` |
 | Native verdict | `AUDIT-PASS` · `SIMPLICITY-RESIDUAL: 2` (gates: graph 7/7 · eval rc=0 · promotable true · ui n/a · slop non-blocking) |
-| PR audit verdict | `<PR-AUDIT-VERDICT>` |
+| PR audit verdict | `PR-AUDIT-PROMOTABLE` · run `audit-20260901T020036Z-1538941` (CI PASS · MERGEABLE · CLEAN · evidenceComplete true; advisory flag `size-convention`) |
 | Eval record | `.oh/tasks/repo-knowledge-loop/eval-result.json` (commit-keyed) |
 | Task graph | `.oh/tasks/repo-knowledge-loop/prd.json` — 7/7 stories passing |

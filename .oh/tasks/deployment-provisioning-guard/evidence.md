@@ -318,3 +318,16 @@ audit independently attributed to the authoring checkout's untracked machine-loc
 root dotenv rather than to the branch — the same conclusion reached by the worktree
 test above, reached independently. It still failed closed, which is the correct
 behavior for a dirty audit root.
+
+**The clean-root re-run, and why its scoreboard was not adopted wholesale.** A
+detached worktree of `a6b8d18c` with no dirty files runs 139 probes with **zero**
+non-PASS rows — that is the evidence behind the committed `PASS` row for
+`compose-config-path-parity`. But its `RESULTS.md` is not simply better: a bare
+worktree has no installed dependencies, so `drift-check-cron-staleness-glob`,
+`oh-compose-env-wiring`, `oh-destroy-guard`, and `oh-init-headless-config` each
+degrade `PASS → SKIPPED` there. Adopting it would hide four exercised oracles to
+correct one row — the failure mode `[[pattern-evals-unexercised-oracle]]` names,
+where a SKIPPED that fires in the environment which normally runs the probe leaves
+the subject unexercised while the suite stays green. The committed scoreboard is
+therefore the authoring-checkout run with the one environment-caused row corrected,
+and `eval-result.json` records both runs and this tradeoff.

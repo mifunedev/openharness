@@ -1,9 +1,12 @@
 {
-  "commit": "084dfaa0fbb7822b3c3dcb1f1cad3da126949f63",
+  "commit": "a6b8d18c5e60489acf0b5b5e05b7be2d5bb7fe29",
   "runnerExit": 0,
-  "ranAt": "2026-09-01T04:21:05Z",
+  "ranAt": "2026-09-01T04:33:50Z",
   "probeCount": 139,
   "newRegressions": [],
-  "preExistingReds": ["compose-config-path-parity"],
-  "note": "compose-config-path-parity reports REGRESSION only in this checkout, because an untracked machine-local root .env makes docker-compose.sh prefer it over .devcontainer/.env. A fresh worktree of the same origin/development tree reports PASS, so the committed RESULTS.md row keeps PASS; the local red is disclosed in evidence.md and is not caused by this branch. The runner classified it PERSISTENT RED, not gating, delta=unchanged."
+  "preExistingReds": [
+    "compose-config-path-parity (authoring checkout only; PASS in a clean worktree of this commit and in CI)"
+  ],
+  "ranIn": "the authoring checkout; corroborated by a clean detached worktree of the same commit",
+  "note": "The authoring checkout carries an untracked machine-local root dotenv, which makes docker-compose.sh prefer it over .devcontainer/.env and turns compose-config-path-parity red there. /audit implementation gate 2 failed closed on that, correctly, and independently attributed it to the dirty audit root. A clean detached worktree of this commit runs 139 probes with ZERO non-PASS rows, which is the evidence for the committed PASS row. The committed RESULTS.md is the authoring-checkout run with that one row corrected, NOT the clean-worktree run wholesale: a bare worktree has no installed dependencies, so drift-check-cron-staleness-glob, oh-compose-env-wiring, oh-destroy-guard and oh-init-headless-config each degrade PASS->SKIPPED there. Committing those would hide four exercised oracles to fix one row."
 }

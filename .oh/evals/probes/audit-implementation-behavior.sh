@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #645 — implementation root/repo/browser behavior
-# desc: browser preflight is conditional, isolated, non-installing, and repository-nonmutating
+# desc: browser preflight is conditional, isolated, non-installing, and repository-nonmutating;
+#   and it stays RUNNABLE — the isolated HOME must not hide Playwright's browser cache
+#   (PLAYWRIGHT_BROWSERS_PATH is passed through) and the daemon socket under XDG_RUNTIME_DIR
+#   must fit the 107-byte unix limit, both of which the mock cannot exercise on its own
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; GATE="$REPO/.oh/skills/audit/scripts/implementation-gates.sh"
-root=$(mktemp -d); bin=$(mktemp -d); runtime=$(mktemp -d); calls=$(mktemp); trap 'rm -rf "$root" "$bin" "$runtime" "$calls"' EXIT
+root=$(mktemp -d); bin=$(mktemp -d); runtime=$(mktemp -d); calls=$(mktemp); envlog=$(mktemp)
+cache=$(mktemp -d)
+trap 'rm -rf "$root" "$bin" "$runtime" "$calls" "$envlog" "$cache"' EXIT
 mkdir -p "$root/.oh/tasks/no-ui" "$root/.oh/tasks/ui"
 printf '{"userStories":[{"passes":true,"acceptanceCriteria":["shell only"]}]}' >"$root/.oh/tasks/no-ui/prd.json"
 printf '{"userStories":[{"passes":true,"acceptanceCriteria":["Verify in browser"]}]}' >"$root/.oh/tasks/ui/prd.json"
@@ -12,11 +17,12 @@ git -C "$root" init -q; git -C "$root" config user.email test@example.invalid; g
 cat >"$bin/agent-browser" <<'MOCK'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$CALLS"
+printf '%s\t%s\n' "${PLAYWRIGHT_BROWSERS_PATH:-<unset>}" "${XDG_RUNTIME_DIR:-<unset>}" >>"$ENVLOG"
 mkdir -p "$HOME/mock-profile"
 [[ -z ${MUTATE_FILE:-} || $1 != open ]] || printf browser-change >>"$MUTATE_FILE"
 exit 0
 MOCK
-chmod +x "$bin/agent-browser"; export CALLS="$calls"
+chmod +x "$bin/agent-browser"; export CALLS="$calls" ENVLOG="$envlog" PLAYWRIGHT_BROWSERS_PATH="$cache"
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
 if AUDIT_ROOT="$root" PATH="$bin:$PATH" bash "$GATE" browser-required no-ui; then fail 'non-UI story selected browser'; fi
 [[ ! -s $calls ]] || fail 'non-UI applicability invoked browser'
@@ -28,6 +34,25 @@ after=$(git -C "$root" status --porcelain=v1 --untracked-files=all)
 [[ $(grep -c '^--version$' "$calls") -eq 1 && $(grep -c '^open about:blank --session audit-audit-20260717T120000Z-fixture$' "$calls") -eq 1 ]] || fail 'preflight command sequence'
 ! grep -Eqi 'install|npm|pnpm|https?://' "$calls" || fail 'preflight installed or navigated externally'
 [[ -z $(find "$runtime" -mindepth 1 -print -quit) ]] || fail 'browser profile not cleaned'
+
+# The isolated HOME hides ~/.cache/ms-playwright, so the browser executable is
+# unreachable unless the cache is passed through; and the daemon socket lives at
+# $XDG_RUNTIME_DIR/agent-browser/<session>.sock, which AUDIT_TMP_ROOT-length paths
+# overflow. A mocked agent-browser exits 0 through both, so assert the env instead.
+[[ -s $envlog ]] || fail 'preflight recorded no environment'
+while IFS=$'\t' read -r pbp xrd; do
+  [[ $pbp == "$cache" ]] || fail "preflight did not pass PLAYWRIGHT_BROWSERS_PATH through the isolated HOME (got '$pbp')"
+  [[ $xrd != '<unset>' && -n $xrd ]] || fail 'preflight did not set XDG_RUNTIME_DIR, so the daemon socket falls back under the isolated HOME'
+  sock="$xrd/agent-browser/audit-audit-20260717T120000Z-fixture.sock"
+  ((${#sock} < 108)) || fail "daemon socket path would be ${#sock} bytes, over the 107-byte unix limit: $sock"
+done <"$envlog"
+
+: >"$envlog"
+if AUDIT_ROOT="$root" AUDIT_RUN_ID='audit-20260717T120003Z-fixture' AUDIT_TMP_ROOT="$runtime" \
+  PLAYWRIGHT_BROWSERS_PATH="$cache/absent" PATH="$bin:$PATH" bash "$GATE" browser-preflight >/dev/null 2>&1; then
+  fail 'preflight passed with no Playwright browser cache present'
+fi
+[[ ! -s $envlog ]] || fail 'preflight launched the browser despite an absent cache'
 printf preexisting-change >>"$root/.oh/tasks/ui/prd.json"
 if AUDIT_ROOT="$root" AUDIT_RUN_ID='audit-20260717T120001Z-fixture' AUDIT_TMP_ROOT="$runtime" \
   MUTATE_FILE="$root/.oh/tasks/ui/prd.json" PATH="$bin:$PATH" bash "$GATE" browser-preflight >/dev/null 2>&1; then

@@ -48,6 +48,11 @@ case $mode in
     : "${AUDIT_RUN_ID:?AUDIT_RUN_ID is required}"
     : "${AUDIT_TMP_ROOT:?AUDIT_TMP_ROOT is required}"
     command -v agent-browser >/dev/null || { echo 'FAIL gate4: agent-browser not found' >&2; exit 1; }
+    browsers=${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}
+    [[ -d $browsers ]] || {
+      echo "FAIL gate4: no Playwright browser cache at $browsers; install one with: agent-browser install --with-deps" >&2
+      exit 1
+    }
     snapshot_repo(){
       local out=$1 path rel
       {
@@ -69,11 +74,18 @@ case $mode in
     snapshot_repo "$before"
     profile=$(mktemp -d "$AUDIT_TMP_ROOT/browser-profile.XXXXXX")
     session="audit-$AUDIT_RUN_ID"
-    close_browser(){ HOME="$profile" agent-browser close --session "$session" >/dev/null 2>&1 || true; rm -rf "$profile"; }
+    runtime=$(mktemp -d "${TMPDIR:-/tmp}/oh-audit-xdg.XXXXXX")
+    sock="$runtime/agent-browser/$session.sock"
+    ((${#sock} < 108)) || {
+      echo "FAIL gate4: daemon socket path is ${#sock} bytes, over the 107-byte unix limit: $sock" >&2
+      rm -rf "$runtime"; exit 1
+    }
+    browser_env=(HOME="$profile" XDG_RUNTIME_DIR="$runtime" PLAYWRIGHT_BROWSERS_PATH="$browsers")
+    close_browser(){ env "${browser_env[@]}" agent-browser close --session "$session" >/dev/null 2>&1 || true; rm -rf "$profile" "$runtime"; }
     trap close_browser EXIT INT TERM HUP
-    HOME="$profile" agent-browser --version >/dev/null 2>&1 \
+    env "${browser_env[@]}" agent-browser --version >/dev/null 2>&1 \
       || { echo 'FAIL gate4: agent-browser version check' >&2; exit 1; }
-    HOME="$profile" agent-browser open about:blank --session "$session" >/dev/null 2>&1 \
+    env "${browser_env[@]}" agent-browser open about:blank --session "$session" >/dev/null 2>&1 \
       || { echo 'FAIL gate4: Chromium launch' >&2; exit 1; }
     close_browser; trap - EXIT INT TERM HUP
     snapshot_repo "$after"

@@ -14,8 +14,6 @@ esac
 
 log() { echo "[provision-defaults] $*"; }
 
-PROVISION_MARKER="${OH_PROVISION_MARKER:-$HOME/.local/share/oh/provision-failed}"
-
 mark_failed() {
   mkdir -p "$(dirname "$PROVISION_MARKER")" 2>/dev/null || return 0
   printf '%s\n' "$*" >"$PROVISION_MARKER" 2>/dev/null || true
@@ -68,9 +66,15 @@ fi
 HOME="${HOME:-$(getent passwd "$(id -u)" | cut -d: -f6)}"
 export HOME
 
+PROVISION_MARKER="${OH_PROVISION_MARKER:-$HOME/.local/share/oh/provision-failed}"
+
 NPM_USER_PREFIX="${NPM_USER_PREFIX:-$HOME/.local}"
 export NPM_USER_PREFIX
 export PATH="$NPM_USER_PREFIX/bin:$PATH"
+
+if [ "$MODE" = "provision" ]; then
+  mark_failed "provisioning started at $(date -u +%Y-%m-%dT%H:%M:%SZ) and has not reported completion"
+fi
 
 check_writable() {
   local dir="$1"

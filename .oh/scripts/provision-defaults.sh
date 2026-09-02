@@ -14,6 +14,11 @@ esac
 
 log() { echo "[provision-defaults] $*"; }
 
+mark_failed() {
+  mkdir -p "$(dirname "$PROVISION_MARKER")" 2>/dev/null || return 0
+  printf '%s\n' "$*" >"$PROVISION_MARKER" 2>/dev/null || true
+}
+
 die() {
   echo "[provision-defaults] ERROR: $1" >&2
   shift
@@ -61,9 +66,15 @@ fi
 HOME="${HOME:-$(getent passwd "$(id -u)" | cut -d: -f6)}"
 export HOME
 
+PROVISION_MARKER="${OH_PROVISION_MARKER:-$HOME/.local/share/oh/provision-failed}"
+
 NPM_USER_PREFIX="${NPM_USER_PREFIX:-$HOME/.local}"
 export NPM_USER_PREFIX
 export PATH="$NPM_USER_PREFIX/bin:$PATH"
+
+if [ "$MODE" = "provision" ]; then
+  mark_failed "provisioning started at $(date -u +%Y-%m-%dT%H:%M:%SZ) and has not reported completion"
+fi
 
 check_writable() {
   local dir="$1"
@@ -166,17 +177,21 @@ if ((provisioned == 0)); then
 fi
 
 if [ "$MODE" = "verify" ] && ((${#missing[@]})); then
+  mark_failed "not installed: ${missing[*]}"
   die "defaults are not installed: ${missing[*]}" \
       "run inside the sandbox (\`oh shell\` from the host):" \
       "  bash .oh/scripts/provision-defaults.sh"
 fi
 
 if ((${#failed[@]})); then
+  mark_failed "failed to install: ${failed[*]}"
   die "failed to install: ${failed[*]}" \
       "each install runs as '$SANDBOX_USER' into $NPM_USER_PREFIX; a network outage is the usual cause." \
       "re-run inside the sandbox once it has network:" \
       "  bash .oh/scripts/provision-defaults.sh"
 fi
+
+rm -f "$PROVISION_MARKER" 2>/dev/null || true
 
 if [ "$MODE" = "verify" ]; then
   log "OK  all $provisioned default harnesses and tools present under $NPM_USER_PREFIX"

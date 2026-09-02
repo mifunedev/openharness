@@ -260,9 +260,10 @@ if [ -z "$candidate" ]; then
   fail "no kind:\"optional\" harness is both un-enabled and uninstalled, so the persist-and-install check would pass vacuously"
 else
   binary=$(jq -r --arg id "$candidate" 'first(.[] | select(.id == $id) | .binary)' <<<"$catalog")
-  if ! docker exec -u sandbox "$CID" bash -lc "oh harness install '$candidate'" >/tmp/deployment-guard-install.out 2>&1; then
+  install_log="$DOCKER_CONFIG_DIR/harness-install.out"
+  if ! docker exec -u sandbox "$CID" bash -lc "oh harness install '$candidate'" >"$install_log" 2>&1; then
     fail "'oh harness install $candidate' failed"
-    tail -20 /tmp/deployment-guard-install.out >&2 || true
+    tail -20 "$install_log" >&2 || true
   else
     after=$(docker exec -u sandbox "$CID" bash -lc 'oh harness list --json' 2>/dev/null || true)
     enabled=$(jq -r --arg id "$candidate" 'first(.[] | select(.id == $id) | .enabled)' <<<"$after")

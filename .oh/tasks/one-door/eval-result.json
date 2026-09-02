@@ -1,8 +1,13 @@
 {
-  "commit": "5b08c004224318c0606dc10bbb26e6c885a2446d",
+  "commit": "0fe00420ceaf42a05bc8cc3fffb64f21f2ed893c",
   "runnerExit": 0,
-  "ranAt": "2026-09-02T17:17:39Z",
+  "ranAt": "2026-09-02T17:25:49Z",
   "newRegressions": [],
-  "preExistingReds": ["cc-safety-net-wiring", "debugmcp-availability", "next-dev-prod", "registry-portability"],
+  "preExistingReds": [
+    "cc-safety-net-wiring",
+    "debugmcp-availability",
+    "next-dev-prod",
+    "registry-portability"
+  ],
   "notes": "138 probes; the four listed rows are SKIPPED (environmental) and unchanged from the base; tailscale-tool-boundary moved REGRESSION->PASS; default-provisioning and provision-marker-fail-closed retired; harness-one-door added (PASS)"
 }

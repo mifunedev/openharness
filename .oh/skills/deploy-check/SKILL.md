@@ -2,14 +2,16 @@
 name: deploy-check
 description: |
   Validate a deployment of the sandbox image end to end in a throwaway container,
-  without touching the operator's own sandbox. Pulls the image, verifies its
-  contract, boots the image-only flavor with no host checkout behind it, asserts
-  resource provisioning (container, volume, network) and internal provisioning
-  (the defaults installed at boot), then destroys everything it created.
+  without touching the operator's own sandbox. Pulls the image — or takes one you
+  built locally, with --local — verifies its contract, boots the image-only flavor
+  with no host checkout behind it, asserts resource provisioning (container,
+  volume, network) and internal provisioning (the defaults installed at boot),
+  then destroys everything it created.
   TRIGGER when: asked to validate, verify, smoke, or sanity-check a deployment,
-  a published image, a release image, or the image-only / no-checkout / Flavor B
-  path; "does :latest actually work", "test the deploy recipe", "check the
-  published image", or before pointing someone at a published tag.
+  a published image, a release image, a locally built image, or the image-only /
+  no-checkout / Flavor B path; "does :latest actually work", "test the deploy
+  recipe", "check the image I just built", or before pointing someone at a
+  published tag.
 argument-hint: "[scenario] [--image <ref>] [--local] [--keep] [--run <token>]"
 allowed-tools: Bash, Read, Grep
 ---
@@ -87,7 +89,7 @@ leak check; add only what the new scenario asserts.
 | Flag | Effect |
 |---|---|
 | `--image <ref>` | Image to validate. Default `ghcr.io/mifunedev/openharness:latest`. |
-| `--local` | **Not yet supported by the mechanism.** `deployment-guard.sh` pulls unconditionally, so a local-only tag fails with `could not pull <ref>`. Say so and stop rather than running it. |
+| `--local` | Validate an image already on this daemon instead of pulling one. The guard asserts the ref is present and reports its id and build time; an absent ref is a fail, never a silent pull. Use it after `docker build`. |
 | `--keep` | Skip teardown for interactive triage. The guard prints the exact cleanup command it did not run; surface that line verbatim. |
 | `--run <token>` | Override the run token. Use only to reproduce a specific failure. |
 
@@ -104,27 +106,50 @@ deploy-check: unknown scenario '<x>'. Known scenarios: provisioning
 IMAGE=${IMAGE:-ghcr.io/mifunedev/openharness:latest}
 ```
 
-The ref must be pullable. `deployment-guard.sh` starts with `docker pull`, so a
-tag that exists only on this daemon fails immediately with
-`FAIL: could not pull <ref>` — see *Known gaps*.
+Without `--local` the ref must be pullable: the guard's first step is
+`docker pull`, under its own empty `DOCKER_CONFIG`, so a published tag is fetched
+fresh and a tag that exists only on this daemon fails with
+`FAIL: could not pull <ref>`. Pass `--local` for that case.
 
-## Known gaps
+**Whether to pull is the operator's call, not an inference.** The guard never
+falls back from a failed pull to whatever is already on the daemon — that would
+silently validate a stale object and report it as the published image. `--local`
+is the explicit way to say "the object I built is the one I mean".
 
-Both are real and unfixed; do not paper over them in a report.
+With `--local`, build first, then name the tag you built:
 
-- **`--local` does not work.** The guard pulls unconditionally, so it cannot
-  validate a locally built image — which is exactly what you want after changing
-  the Dockerfile. Closing this means making the pull conditional on the ref not
-  already being present locally.
-- **There is no "leave me a child to poke at" mode.** The guard boots, asserts,
-  and destroys. Ad-hoc QA — reproducing a reported failure by hand inside a fresh
-  sandbox — currently means driving `.oh/scripts/deployment-compose.sh` yourself.
-  `--keep` is the nearest thing, but it still runs the full assertion pass first.
+```bash
+docker build -f .devcontainer/Dockerfile -t oh-local:test .
+bash .oh/scripts/deployment-guard.sh --local oh-local:test
+```
+
+`--local` with no `--image` means the tag `.devcontainer/docker-compose.yml`
+builds, `sandbox-${SANDBOX_NAME:-openharness}`. Resolve it, and if it is not on
+the daemon, show the candidates and ask rather than picking one:
+
+```bash
+docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E '^(oh-|sandbox-|openharness)'
+```
+
+The guard prints the resolved image's id and build time, so read that line back:
+`--local` names an object, and an object built weeks ago is a stale answer to
+"does the current Dockerfile work".
+
+**A local build bakes your working tree, dirty files included.** The Dockerfile
+does `COPY . /opt/oh-seed/`, and the image-only boot seeds the child's control
+plane from that — so an uncommitted `oh.json` opt-in becomes something the child
+installs at boot, and the run reports on a configuration no published image has.
+Check before you build, and say which tree the image came from when you report:
+
+```bash
+git status --porcelain
+git diff --stat HEAD -- oh.json
+```
 
 ### 3. Run the guard
 
 ```bash
-bash .oh/scripts/deployment-guard.sh [--keep] [--run <token>] "$IMAGE"
+bash .oh/scripts/deployment-guard.sh [--local] [--keep] [--run <token>] "$IMAGE"
 ```
 
 Expect **5–10 minutes**: the boot installs the default harnesses and tools from
@@ -148,6 +173,15 @@ run is the assertion list.
   container alive for it), and the report says which of the two it looks like.
 - Never report a pass the guard did not print. A timeout, a missing daemon, or a
   killed run is a failure to report, not a skip.
+
+## Known gap
+
+Real and unfixed; do not paper over it in a report.
+
+- **There is no "leave me a child to poke at" mode.** The guard boots, asserts,
+  and destroys. Ad-hoc QA — reproducing a reported failure by hand inside a fresh
+  sandbox — currently means driving `.oh/scripts/deployment-compose.sh` yourself.
+  `--keep` is the nearest thing, but it still runs the full assertion pass first.
 
 ## When NOT to use
 

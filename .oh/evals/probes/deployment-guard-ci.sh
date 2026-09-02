@@ -57,7 +57,15 @@ has "$guard" 'sandbox-boot-smoke.sh' \
 has "$guard" 'BOOT_SMOKE_FLAVOR=image-only' \
   "the guard no longer requests the image-only flavor, so it would boot the bind stack"
 has "$guard" 'docker pull' \
-  "the guard no longer pulls the image, so it could validate a stale local object"
+  "the guard no longer pulls the image by default, so it could validate a stale local object"
+has "$guard" '--local) LOCAL=1' \
+  "the guard no longer accepts --local, so a locally built image cannot be validated"
+has "$guard" 'docker image inspect' \
+  "the guard no longer asserts a --local ref is present on the daemon before booting it"
+hasnt_re "$guard" 'docker pull[^|]*\|\|' \
+  "the guard falls back from a failed pull to whatever is already on the daemon — --local must be the explicit way to validate a local object, never an inference from a pull failure"
+has "$skill" '--local' \
+  "the /deploy-check skill no longer passes --local through to the guard, so the flag is unreachable from the door"
 
 has_line "$guard" 'trap teardown EXIT INT TERM' \
   "the guard no longer traps EXIT INT TERM — an interrupted run would leak its container, volume, and network"
@@ -81,5 +89,5 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS deployment guard instrument: /deploy-check drives .oh/scripts/deployment-guard.sh, which reuses the image verifier and the image-only boot smoke, traps EXIT INT TERM, prunes nothing, and leaves the bind-flavor ownership check intact; no CI leg has reappeared" >&2
+echo "PASS deployment guard instrument: /deploy-check drives .oh/scripts/deployment-guard.sh, which reuses the image verifier and the image-only boot smoke, traps EXIT INT TERM, pulls by default and takes a local image only under an explicit --local, prunes nothing, and leaves the bind-flavor ownership check intact; no CI leg has reappeared" >&2
 exit 0

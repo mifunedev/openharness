@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Usage: deployment-guard.sh [--keep] [--run <token>] [<image-ref>]
-# Env:   OH_SANDBOX_IMAGE, OH_DEFAULT_SANDBOX_IMAGE, OH_DEPLOY_RUN, OH_DEPLOY_KEEP,
-#        OH_DEPLOY_TIMEOUT_SECONDS, OH_DEPLOY_DOCKER_CONFIG
+# Usage: deployment-guard.sh [--local] [--keep] [--run <token>] [<image-ref>]
+# Env:   OH_SANDBOX_IMAGE, OH_DEFAULT_SANDBOX_IMAGE, OH_DEPLOY_LOCAL, OH_DEPLOY_RUN,
+#        OH_DEPLOY_KEEP, OH_DEPLOY_TIMEOUT_SECONDS, OH_DEPLOY_DOCKER_CONFIG
 
 set -euo pipefail
 
@@ -20,15 +20,17 @@ GUARD_GIT_NAME="openharness deployment guard"
 GUARD_GIT_EMAIL="deployment-guard@openharness.invalid"
 
 KEEP=${OH_DEPLOY_KEEP:-0}
+LOCAL=${OH_DEPLOY_LOCAL:-0}
 IMAGE=""
 
 usage() {
-  echo "usage: ${0##*/} [--keep] [--run <token>] [<image-ref>]" >&2
+  echo "usage: ${0##*/} [--local] [--keep] [--run <token>] [<image-ref>]" >&2
   exit 2
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --local) LOCAL=1; shift ;;
     --keep) KEEP=1; shift ;;
     --run) [ "$#" -ge 2 ] || usage; OH_DEPLOY_RUN="$2"; shift 2 ;;
     --help|-h) usage ;;
@@ -48,6 +50,7 @@ SCOPES=("container:$RUN_CONTAINER" "volume:$RUN_VOLUME" "network:$RUN_NETWORK")
 failures=()
 fail() { failures+=("$1"); echo "FAIL: $1" >&2; }
 ok() { echo "ok: $1"; }
+report_failures() { printf '\ndeployment guard: %d check(s) failed for %s\n' "${#failures[@]}" "$IMAGE" >&2; }
 
 docker_names() {
   case "$1" in
@@ -153,11 +156,19 @@ fi
 
 echo "deployment guard: image=$IMAGE run=$RUN timeout=${TIMEOUT}s (healthcheck deadline ${HC_DEADLINE}s)"
 
-if DOCKER_CONFIG="$DOCKER_CONFIG_DIR" docker pull "$IMAGE" >/dev/null; then
+if [ "$LOCAL" = "1" ]; then
+  if built=$(docker image inspect "$IMAGE" --format '{{slice .Id 7 19}} built {{.Created}}' 2>/dev/null); then
+    ok "--local: $IMAGE is already on this daemon ($built); not pulling"
+  else
+    fail "--local: $IMAGE is not on this daemon; build or pull it before running with --local"
+    report_failures
+    exit 1
+  fi
+elif DOCKER_CONFIG="$DOCKER_CONFIG_DIR" docker pull "$IMAGE" >/dev/null; then
   ok "pulled $IMAGE"
 else
   fail "could not pull $IMAGE"
-  printf '\ndeployment guard: %d check(s) failed for %s\n' "${#failures[@]}" "$IMAGE" >&2
+  report_failures
   exit 1
 fi
 
@@ -182,7 +193,7 @@ fi
 CID=$(compose ps -q sandbox 2>/dev/null || true)
 if [ -z "$CID" ]; then
   fail "no container for project $RUN after boot; cannot run the post-boot assertions"
-  printf '\ndeployment guard: %d check(s) failed for %s\n' "${#failures[@]}" "$IMAGE" >&2
+  report_failures
   exit 1
 fi
 
@@ -290,7 +301,7 @@ if [ "$KEEP" != "1" ]; then
 fi
 
 if ((${#failures[@]})) || [ "$TEARDOWN_FAILED" = "1" ]; then
-  printf '\ndeployment guard: %d check(s) failed for %s\n' "${#failures[@]}" "$IMAGE" >&2
+  report_failures
   if ((${#failures[@]})); then printf '  - %s\n' "${failures[@]}" >&2; fi
   exit 1
 fi

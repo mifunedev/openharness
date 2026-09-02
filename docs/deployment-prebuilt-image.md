@@ -296,8 +296,8 @@ host. It cannot cover an actual live boot, and health alone is not evidence that
 provisioning worked: the entrypoint runs `provision-defaults.sh` under `timeout`
 and, on failure, logs a warning and continues.
 
-`.oh/scripts/deployment-guard.sh` is that live check. It pulls the image, runs the
-image-contract verifier, boots this flavor with no host checkout behind it, and
+`.oh/scripts/deployment-guard.sh` is that live check. It pulls the image — or
+takes one you built locally, under `--local` — runs the image-contract verifier, boots this flavor with no host checkout behind it, and
 asserts the seed branch, the seed marker, the default harness and tool catalogs,
 the container shape, and the `oh harness install` persist-and-install contract —
 then destroys everything it created and fails if anything leaked.
@@ -306,10 +306,22 @@ then destroys everything it created and fails if anything leaked.
 # validate the published image (~5-10 min; the boot installs defaults from upstream)
 bash .oh/scripts/deployment-guard.sh
 
-# or another ref
+# or another published ref
 bash .oh/scripts/deployment-guard.sh ghcr.io/mifunedev/openharness:0.6.0
-OH_SANDBOX_IMAGE=my-local-tag bash .oh/scripts/deployment-guard.sh
+
+# or an image you just built, which is not pullable
+docker build -f .devcontainer/Dockerfile -t oh-local:test .
+bash .oh/scripts/deployment-guard.sh --local oh-local:test
 ```
+
+`--local` is explicit on purpose: the guard never falls back from a failed pull to
+whatever is already on the daemon, because that would validate a stale object and
+report it as the published image.
+
+A local build also bakes the working tree — the Dockerfile does
+`COPY . /opt/oh-seed/`, which is what the image-only boot seeds from — so an
+uncommitted `oh.json` opt-in is installed by the child at boot. Build from a clean
+tree when the question is "does the published recipe work".
 
 Every resource it creates is named from one unique run token; it aborts rather
 than reuse a token that already names something, removes only its own resources,

@@ -19,8 +19,8 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit 56fccb4b; typecheck 0, build 0, pnpm test 960/960 with SANDBOX_SSH unset, D4 grep under .oh/cli returns only runtime-catalog.test.ts:85"
     },
     {
       "id": "US-002",
@@ -38,8 +38,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit 56fccb4b; oh-config tolerates a stale install object; init wizard renumbered 1-4"
     },
     {
       "id": "US-003",
@@ -55,8 +55,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit 55ceece1; provision-defaults.sh deleted, entrypoint block and healthcheck marker gone"
     },
     {
       "id": "US-004",
@@ -73,8 +73,8 @@
         "Tests pass"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit 55ceece1 + 8c898945; harness-one-door probe bites on 8 injected faults; eval run exit 0"
     },
     {
       "id": "US-005",
@@ -89,8 +89,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit a6a00674; D9 greps clean; overview.md and installation.md read as one door"
     },
     {
       "id": "US-006",
@@ -121,8 +121,8 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit c6aabd11 + 45aee31f; compose-env-boundary and fresh-machine-setup UPDATED; sandbox-dependency-installs, managed-agents, oh-cli-portable-lifecycle REVERIFIED; index regenerated; knowledge probes PASS"
     }
   ]
 }

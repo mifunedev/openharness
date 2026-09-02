@@ -103,13 +103,7 @@ function liveHost(extra: (cmd: string, args: string[]) => RunResult | undefined 
 const isInstallCall = (c: RecordedCall): boolean =>
   c.cmd === "docker" && c.args[0] === "exec" && c.args.some((a) => a.includes("--with-deps"));
 
-const agentBrowserFlag = (root: string): unknown =>
-  (JSON.parse(readFileSync(ohConfigPath(root), "utf8")) as { install?: Record<string, unknown> })
-    .install?.agentBrowser;
-
-const tailscaleFlag = (root: string): unknown =>
-  (JSON.parse(readFileSync(ohConfigPath(root), "utf8")) as { install?: Record<string, unknown> })
-    .install?.tailscale;
+const configText = (root: string): string => readFileSync(ohConfigPath(root), "utf8");
 
 const absentTailscale = (cmd: string, args: string[]): RunResult | undefined =>
   isExecOf(cmd, args, "command -v tailscale") ? { status: 1, stdout: "", stderr: "" } : undefined;
@@ -140,8 +134,12 @@ describe("oh tool — argument parsing", () => {
     expect(parseToolArgs(["install", "x", "-y"]).ok).toBe(true);
   });
 
-  it("rejects the conflicting persist flags", () => {
-    expect(parseToolArgs(["install", "x", "--persist-only", "--no-persist"]).ok).toBe(false);
+  it("rejects the retired persistence flags as unknown", () => {
+    for (const flag of ["--persist" + "-only", "--no-" + "persist", "--" + "defaults"]) {
+      const r = parseToolArgs(["install", "x", flag]);
+      expect(r.ok, flag).toBe(false);
+      expect(!r.ok && r.error, flag).toMatch(/unknown flag/);
+    }
   });
 
   it("rejects unknown flags, subcommands, and stray arguments", () => {
@@ -168,6 +166,15 @@ describe("oh tool — help", () => {
     expect(text).toContain("agent-browser");
     expect(text).toContain("gh");
   });
+
+  it("keeps --yes and promises no later boot-time install", () => {
+    const w = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    printToolHelp();
+    const text = w.mock.calls.map((c) => String(c[0])).join("");
+    expect(text).toContain("--yes");
+    expect(text).not.toMatch(/next (image build|container start|build)/);
+    expect(text).not.toMatch(/persist-only|no-persist|install\.\*/);
+  });
 });
 
 describe("oh tool list / status", () => {
@@ -179,8 +186,10 @@ describe("oh tool list / status", () => {
     for (const id of ["agent-browser", "herdr", "cloudflared", "docker-cli", "gh", "tailscale"]) {
       expect(text, id).toContain(id);
     }
+    expect(text).toMatch(/^TOOL\s+KIND\s+INSTALLED$/m);
+    expect(text).not.toMatch(/ENABLED/);
     expect(text).toContain("baked-in");
-    expect(text).toContain("opt-in");
+    expect(text).toContain("installable");
   });
 
   it("reports a version for tools that declare a probe", async () => {
@@ -245,12 +254,15 @@ describe("oh tool install — the ~1 GB download gate", () => {
     expect(text).toContain("--yes");
   });
 
-  it("still persists the flag when the download is declined", async () => {
+  it("fails and promises nothing when the download is declined", async () => {
     const root = makeRepo();
+    const before = configText(root);
+    const { calls, run } = liveHost();
     const { io, out } = makeIo(false);
-    await runToolInstall("agent-browser", { cwd: root, run: liveHost().run }, io);
-    expect(agentBrowserFlag(root)).toBe(true);
-    expect(out.join("")).toContain("next container start");
+    expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(1);
+    expect(calls.some(isInstallCall)).toBe(false);
+    expect(configText(root)).toBe(before);
+    expect(out.join("")).not.toMatch(/oh\.json|next container start/);
   });
 
   it("asks before downloading, naming the size", async () => {
@@ -280,16 +292,6 @@ describe("oh tool install — the ~1 GB download gate", () => {
     expect(calls.some(isInstallCall)).toBe(true);
   });
 
-  it("--persist-only never prompts and never downloads", async () => {
-    const root = makeRepo();
-    const { calls, run } = liveHost();
-    const { io, asked } = makeIo(false);
-    expect(await runToolInstall("agent-browser", { cwd: root, run, persistOnly: true }, io)).toBe(0);
-    expect(asked).toEqual([]);
-    expect(calls.some((c) => c.args[0] === "exec")).toBe(false);
-    expect(agentBrowserFlag(root)).toBe(true);
-  });
-
   it("does not ask when the tool is already installed", async () => {
     const root = makeRepo();
     const { calls, run } = liveHost((cmd, args) =>
@@ -317,33 +319,38 @@ describe("oh tool install — the other exits", () => {
     expect(calls.length).toBe(0);
   });
 
-  it("persists and exits 0 when the sandbox is stopped", async () => {
+  it("fails and execs nothing when the sandbox is stopped", async () => {
     const root = makeRepo();
+    const before = configText(root);
     const { calls, run } = makeRunner((cmd, args) => (isInspect(cmd, args) ? exited : undefined));
-    const { io, out } = makeIo(true);
-    expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(0);
+    const { io, err } = makeIo(true);
+    expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(1);
     expect(calls.some((c) => c.args[0] === "exec")).toBe(false);
-    expect(agentBrowserFlag(root)).toBe(true);
-    expect(out.join("")).toContain("oh sandbox");
+    expect(configText(root)).toBe(before);
+    expect(err.join("")).toContain("oh sandbox");
+    expect(err.join("")).not.toMatch(/next|picks it up/);
   });
 
-  it("--no-persist leaves oh.json untouched", async () => {
+  it("never writes oh.json on a successful install", async () => {
     const root = makeRepo();
-    const before = readFileSync(ohConfigPath(root), "utf8");
-    const { io } = makeIo(true);
-    await runToolInstall("agent-browser", { cwd: root, run: liveHost().run, noPersist: true }, io);
-    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
+    const before = configText(root);
+    const { io, out } = makeIo(true);
+    expect(await runToolInstall("agent-browser", { cwd: root, run: liveHost().run }, io)).toBe(0);
+    expect(configText(root)).toBe(before);
+    expect(out.join("")).not.toMatch(/oh\.json/);
   });
 
-  it("keeps the flag set when the installer fails", async () => {
+  it("surfaces the installer's exit code and promises no retry", async () => {
     const root = makeRepo();
+    const before = configText(root);
     const { run } = liveHost((cmd, args) =>
       isExecOf(cmd, args, "--with-deps") ? { status: 7, stdout: "", stderr: "" } : undefined,
     );
     const { io, err } = makeIo(true);
     expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(7);
-    expect(agentBrowserFlag(root)).toBe(true);
-    expect(err.join("")).toContain("next container start");
+    expect(configText(root)).toBe(before);
+    expect(err.join("")).toContain("failed (exit 7)");
+    expect(err.join("")).not.toMatch(/oh\.json|will install it|will retry it/);
   });
 
   it("rejects an unknown tool", async () => {
@@ -356,16 +363,6 @@ describe("oh tool install — the other exits", () => {
 });
 
 describe("oh tool install tailscale", () => {
-  it("--persist-only writes the flag and execs nothing", async () => {
-    const root = makeRepo();
-    const { calls, run } = liveHost(absentTailscale);
-    const { io, out } = makeIo();
-    expect(await runToolInstall("tailscale", { cwd: root, run, persistOnly: true }, io)).toBe(0);
-    expect(tailscaleFlag(root)).toBe(true);
-    expect(calls.length).toBe(0);
-    expect(out.join("")).toContain("oh.json: set install.tailscale=true");
-  });
-
   it("execs the pinned install argv as the sandbox user, with no download prompt", async () => {
     const root = makeRepo();
     const { calls, run } = liveHost(absentTailscale);
@@ -378,7 +375,6 @@ describe("oh tool install tailscale", () => {
     expect(install!.args.join(" ")).toContain("-u sandbox");
     expect(install!.args.join(" ")).not.toContain("-u root");
     expect(install!.args.join(" ")).toContain("pkgs.tailscale.com/stable/");
-    expect(tailscaleFlag(root)).toBe(true);
     expect(out.join("")).toContain("installed");
   });
 
@@ -395,36 +391,36 @@ describe("oh tool install tailscale", () => {
     expect(out.join("")).toContain("already installed");
   });
 
-  it("keeps the flag set when the installer fails", async () => {
+  it("surfaces the installer's exit code and writes no oh.json", async () => {
     const root = makeRepo();
+    const before = configText(root);
     const { run } = liveHost((cmd, args) => {
       if (isExecOf(cmd, args, "sha256sum -c -")) return { status: 9, stdout: "", stderr: "" };
       return absentTailscale(cmd, args);
     });
     const { io, err } = makeIo(true);
     expect(await runToolInstall("tailscale", { cwd: root, run }, io)).toBe(9);
-    expect(tailscaleFlag(root)).toBe(true);
-    expect(err.join("")).toContain("next container start");
+    expect(configText(root)).toBe(before);
+    expect(err.join("")).toContain("failed (exit 9)");
+    expect(err.join("")).not.toMatch(/oh\.json/);
   });
 });
 
 describe("oh tool status tailscale", () => {
-  it("reports enabled, installed and version as JSON", async () => {
+  it("reports kind, installed and version as JSON, with no enabled field", async () => {
     const root = makeRepo();
     const { run } = liveHost((cmd, args) =>
       isTailscaleVersionExec(cmd, args)
         ? { status: 0, stdout: "1.102.3\n  tailscale commit: abc\n", stderr: "" }
         : undefined,
     );
-    const { io: persistIo } = makeIo();
-    await runToolInstall("tailscale", { cwd: root, run, persistOnly: true }, persistIo);
 
     const { io, out } = makeIo();
     expect(await runToolStatus("tailscale", { cwd: root, run, json: true }, io)).toBe(0);
-    const status = JSON.parse(out.join(""));
+    const status = JSON.parse(out.join("")) as Record<string, unknown>;
     expect(status.id).toBe("tailscale");
-    expect(status.kind).toBe("opt-in");
-    expect(status.enabled).toBe(true);
+    expect(status.kind).toBe("installable");
+    expect(Object.keys(status)).not.toContain("enabled");
     expect(status.installed).toBe(true);
     expect(status.version).toBe("1.102.3");
     expect(status.installable).toBe(true);
@@ -435,8 +431,8 @@ describe("oh tool status tailscale", () => {
     const { calls, run } = liveHost(absentTailscale);
     const { io, out } = makeIo();
     await runToolStatus("tailscale", { cwd: root, run, json: true }, io);
-    const status = JSON.parse(out.join(""));
-    expect(status.enabled).toBe(false);
+    const status = JSON.parse(out.join("")) as Record<string, unknown>;
+    expect(Object.keys(status)).not.toContain("enabled");
     expect(status.installed).toBe(false);
     expect(status.version).toBeNull();
     expect(calls.some((c) => isTailscaleVersionExec(c.cmd, c.args))).toBe(false);
@@ -472,11 +468,10 @@ describe("oh tool — inside the sandbox", () => {
     const { calls, run } = inBox();
     const { io, out } = makeIo(true);
     expect(await runToolInstall("agent-browser", { cwd: root, run, env: INSIDE }, io)).toBe(0);
-    expect(out.join("")).not.toContain("skipping the live install");
+    expect(out.join("")).toContain("installed");
     expect(
       calls.some((c) => c.cmd === "bash" && c.args.some((a) => a.includes("--with-deps"))),
     ).toBe(true);
-    expect(agentBrowserFlag(root)).toBe(true);
   });
 
   it("reports an already-installed tool without running the installer", async () => {

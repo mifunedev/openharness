@@ -5,11 +5,9 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertInRoot,
-  installFieldPath,
-  isInstallFlagEnabled,
+  CONFIG_FIELD_BY_ENV_KEY,
   setConfigField,
   setEnvValue,
-  setInstallFlag,
   setKeyInEnv,
 } from "../lib/env-file.js";
 import { ohConfigPath } from "../lib/oh-config.js";
@@ -99,41 +97,16 @@ describe("setKeyInEnv", () => {
   });
 });
 
-describe("install flags", () => {
-  it("maps an install key to its oh.json field", () => {
-    expect(installFieldPath("opencode")).toBe("install.opencode");
-    expect(installFieldPath("grok_build")).toBe("install.grokBuild");
-    expect(installFieldPath("agent_browser")).toBe("install.agentBrowser");
-    expect(installFieldPath("tailscale")).toBe("install.tailscale");
+describe("the env-key bridge", () => {
+  it("routes exactly one compose variable — installs go through the verb", () => {
+    expect(Object.keys(CONFIG_FIELD_BY_ENV_KEY)).toEqual(["DOCKER_SOCKET"]);
   });
 
-  it("writes the flag to oh.json and never to a dotenv", () => {
+  it("is idempotent — a second identical write rewrites nothing", () => {
     const root = makeRepo();
-    expect(isInstallFlagEnabled(root, "hermes")).toBe(false);
-
-    expect(setInstallFlag(root, "hermes")).toBe("updated");
-
-    expect(readConfig(root)).toMatchObject({ install: { hermes: true } });
-    expect(isInstallFlagEnabled(root, "hermes")).toBe(true);
-    expectNoDotenv(root);
-  });
-
-  it("writes install.tailscale from the tailscale flag", () => {
-    const root = makeRepo();
-    expect(isInstallFlagEnabled(root, "tailscale")).toBe(false);
-
-    expect(setInstallFlag(root, "tailscale")).toBe("updated");
-
-    expect(readConfig(root)).toMatchObject({ install: { tailscale: true } });
-    expect(isInstallFlagEnabled(root, "tailscale")).toBe(true);
-    expectNoDotenv(root);
-  });
-
-  it("is idempotent — a second call rewrites nothing", () => {
-    const root = makeRepo();
-    setInstallFlag(root, "opencode");
+    setConfigField(root, "access.dockerSocket", "true");
     const after = readFileSync(ohConfigPath(root), "utf8");
-    expect(setInstallFlag(root, "opencode")).toBe("already-set");
+    expect(setConfigField(root, "access.dockerSocket", "true")).toBe("already-set");
     expect(readFileSync(ohConfigPath(root), "utf8")).toBe(after);
   });
 
@@ -151,10 +124,9 @@ describe("setEnvValue", () => {
     expectNoDotenv(root);
   });
 
-  it("routes INSTALL_TAILSCALE to install.tailscale", () => {
+  it("refuses a retired INSTALL_* key rather than resurrecting an install field", () => {
     const root = makeRepo();
-    expect(setEnvValue(root, "INSTALL_TAILSCALE", "true")).toBe("updated");
-    expect(readConfig(root)).toMatchObject({ install: { tailscale: true } });
+    expect(() => setEnvValue(root, "INSTALL_TAILSCALE", "true")).toThrow(/oh config set/);
     expectNoDotenv(root);
   });
 

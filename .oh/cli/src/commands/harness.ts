@@ -7,12 +7,6 @@ import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import {
-  installFieldPath,
-  isInstallFlagEnabled,
-  setInstallFlag,
-} from "../lib/env-file.js";
-import {
-  defaultHarnesses,
   findHarness,
   harnessIds,
   HARNESS_CATALOG,
@@ -31,12 +25,6 @@ export interface HarnessOptions {
   run?: LifecycleRunner;
   json?: boolean;
   env?: NodeJS.ProcessEnv;
-  defaultsOnly?: boolean;
-}
-
-export interface HarnessInstallOptions extends HarnessOptions {
-  persistOnly?: boolean;
-  noPersist?: boolean;
 }
 
 interface HarnessState {
@@ -44,7 +32,6 @@ interface HarnessState {
   title: string;
   binary: string;
   kind: string;
-  enabled: boolean | null;
   installed: boolean | null;
   docs: string;
 }
@@ -110,8 +97,6 @@ async function collectStates(
       title: entry.title,
       binary: entry.binary,
       kind: entry.kind,
-      enabled:
-        entry.harnessKey === undefined ? null : isInstallFlagEnabled(root, entry.harnessKey),
       installed: reachable ? await probeInstalled(target, entry) : null,
       docs: sourceDocsUrl(entry.docsPath),
     });
@@ -125,13 +110,8 @@ function cell(value: boolean | null, absent: string): string {
 }
 
 function renderTable(states: HarnessState[], io: HarnessIO): void {
-  const header = ["HARNESS", "KIND", "ENABLED", "INSTALLED"];
-  const rows = states.map((s) => [
-    s.id,
-    s.kind,
-    cell(s.enabled, "n/a"),
-    cell(s.installed, "?"),
-  ]);
+  const header = ["HARNESS", "KIND", "INSTALLED"];
+  const rows = states.map((s) => [s.id, s.kind, cell(s.installed, "?")]);
   const widths = header.map((h, i) =>
     Math.max(h.length, ...rows.map((r) => r[i].length)),
   );
@@ -147,12 +127,7 @@ function renderTable(states: HarnessState[], io: HarnessIO): void {
 export async function runHarnessList(opts: HarnessOptions, io: HarnessIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const states = await collectStates(
-    root,
-    run,
-    opts.env,
-    opts.defaultsOnly === true ? defaultHarnesses() : undefined,
-  );
+  const states = await collectStates(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(states, null, 2)}\n`);
   } else {
@@ -192,7 +167,7 @@ export async function runHarnessStatus(
 
 export async function runHarnessInstall(
   name: string,
-  opts: HarnessInstallOptions,
+  opts: HarnessOptions,
   io: HarnessIO,
 ): Promise<number> {
   const run = opts.run ?? spawnRunner;
@@ -200,24 +175,6 @@ export async function runHarnessInstall(
 
   const entry = findHarness(name);
   if (!entry) return unknownHarness(name, io);
-
-  if (!opts.noPersist) {
-    if (entry.harnessKey === undefined) {
-      io.stdout(
-        `${entry.id}: ${entry.kind} harness — no oh.json install field, nothing to persist\n`,
-      );
-    } else {
-      const field = installFieldPath(entry.harnessKey);
-      const outcome = setInstallFlag(root, entry.harnessKey);
-      io.stdout(
-        outcome === "already-set"
-          ? `oh.json: ${field} already true\n`
-          : `oh.json: set ${field}=true (${outcome})\n`,
-      );
-    }
-  }
-
-  if (opts.persistOnly) return 0;
 
   const target = targetFor(root, run, opts.env);
   let status: string;
@@ -232,11 +189,11 @@ export async function runHarnessInstall(
   }
 
   if (!isReachable(status)) {
-    io.stdout(
-      `sandbox not running (${status}) — skipping the live install.\n` +
-        "Start it with `oh sandbox`, then re-run this command; or the next build picks it up.\n",
+    io.stderr(
+      `oh harness: the sandbox is not running (${status}).\n` +
+        "Start it with `oh sandbox`, then re-run this command.\n",
     );
-    return 0;
+    return 1;
   }
 
   const already = await probeInstalled(target, entry);
@@ -256,12 +213,7 @@ export async function runHarnessInstall(
     stdio: "inherit",
   });
   if (r.exitCode !== 0) {
-    io.stderr(
-      `oh harness: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
-        (entry.harnessKey !== undefined && !opts.noPersist
-          ? `oh.json keeps ${installFieldPath(entry.harnessKey)}=true — the next image build will install it.\n`
-          : ""),
-    );
+    io.stderr(`oh harness: installing ${entry.id} failed (exit ${r.exitCode}).\n`);
     return r.exitCode;
   }
 

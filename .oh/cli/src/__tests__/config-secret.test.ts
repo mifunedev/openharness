@@ -113,7 +113,8 @@ describe("oh config show", () => {
     expect(await runConfigShow({ cwd: root }, io)).toBe(0);
     const printed = JSON.parse(out.join(""));
     expect(printed.version).toBe(1);
-    expect(printed.install).toBeDefined();
+    expect(printed.access).toBeDefined();
+    expect(printed.install).toBeUndefined();
   });
 });
 

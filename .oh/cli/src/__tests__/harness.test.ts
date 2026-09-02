@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 vi.mock("node:os", async (importOriginal) => {
@@ -17,7 +17,7 @@ import {
 } from "../commands/harness.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
 import { HARNESS_CATALOG } from "../lib/harnesses/catalog.js";
-import { defaultOhConfig, ohConfigPath, type OhConfig } from "../lib/oh-config.js";
+import { defaultOhConfig, ohConfigPath } from "../lib/oh-config.js";
 
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
@@ -86,10 +86,6 @@ function makeIo(): { out: string[]; err: string[]; io: HarnessIO } {
 }
 
 const text = (lines: string[]): string => lines.join("");
-const readConfig = (root: string): OhConfig =>
-  JSON.parse(readFileSync(ohConfigPath(root), "utf8")) as OhConfig;
-const installFlag = (root: string, key: keyof NonNullable<OhConfig["install"]>): unknown =>
-  readConfig(root).install?.[key];
 const execCalls = (calls: RecordedCall[]): RecordedCall[] =>
   calls.filter((c) => c.cmd === "docker" && c.args[0] === "exec");
 
@@ -111,16 +107,18 @@ describe("parseHarnessArgs", () => {
     expect(install.ok && install.args.subcommand).toBe("install");
   });
 
-  it("parses the flags", () => {
-    const p = parseHarnessArgs(["install", "hermes", "--persist-only", "--json"]);
-    expect(p.ok && p.args.persistOnly).toBe(true);
+  it("parses --json, the only flag left", () => {
+    const p = parseHarnessArgs(["status", "hermes", "--json"]);
     expect(p.ok && p.args.json).toBe(true);
+    expect(Object.keys(p.ok ? p.args : {}).sort()).toEqual(["help", "json", "name", "subcommand"]);
   });
 
-  it("rejects --persist-only together with --no-persist", () => {
-    const p = parseHarnessArgs(["install", "hermes", "--persist-only", "--no-persist"]);
-    expect(p.ok).toBe(false);
-    expect(!p.ok && p.error).toMatch(/conflicts with/);
+  it("rejects the retired persistence flags as unknown", () => {
+    for (const flag of ["--persist" + "-only", "--no-" + "persist", "--" + "defaults"]) {
+      const p = parseHarnessArgs(["install", "hermes", flag]);
+      expect(p.ok, flag).toBe(false);
+      expect(!p.ok && p.error, flag).toMatch(/unknown flag/);
+    }
   });
 
   it("requires a name for install", () => {
@@ -154,14 +152,18 @@ describe("help", () => {
     expect(captureStdout(printOhHelp)).toMatch(/^ {2}oh harness /m);
   });
 
-  it("documents all three subcommands and all three flags", () => {
+  it("documents all three subcommands and the one flag", () => {
     const help = captureStdout(printHarnessHelp);
     for (const s of ["oh harness list", "oh harness install", "oh harness status"]) {
       expect(help).toContain(s);
     }
-    for (const f of ["--persist-only", "--no-persist", "--json"]) {
-      expect(help).toContain(f);
-    }
+    expect(help).toContain("--json");
+  });
+
+  it("promises no boot-time or rebuild-time install", () => {
+    const help = captureStdout(printHarnessHelp);
+    expect(help).not.toMatch(/next (image build|container start|build)/);
+    expect(help).not.toMatch(/persist-only|no-persist|install\.\*/);
   });
 
   it("names every installable harness so `<name>` is discoverable", () => {
@@ -173,76 +175,50 @@ describe("help", () => {
 });
 
 
-describe("runHarnessInstall persists the flag", () => {
-  it("sets INSTALL_OPENCODE and says so", async () => {
-    const root = makeRepo();
-    const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
-    const { out, io } = makeIo();
+describe("runHarnessInstall never touches oh.json", () => {
+  const live = (): { calls: RecordedCall[]; run: LifecycleRunner } =>
+    makeRunner((c, a) => {
+      if (isInspect(c, a)) return running;
+      if (isExecOf(c, a, "--version")) return { status: 1, stdout: "", stderr: "" };
+      return undefined;
+    });
 
-    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
-    expect(installFlag(root, "opencode")).toBe(true);
-    expect(text(out)).toContain("install.opencode");
-  });
+  it.each(["opencode", "grok-build", "hermes", "claude-code"])(
+    "%s: leaves the config byte-identical",
+    async (id) => {
+      const root = makeRepo();
+      const before = readFileSync(ohConfigPath(root), "utf8");
+      const { out, io } = makeIo();
 
-  it("maps the slug to the underscored key — grok-build -> INSTALL_GROK_BUILD", async () => {
-    const root = makeRepo();
-    const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
-    expect(await runHarnessInstall("grok-build", { cwd: root, run }, makeIo().io)).toBe(0);
-    expect(installFlag(root, "grokBuild")).toBe(true);
-  });
+      expect(await runHarnessInstall(id, { cwd: root, run: live().run }, io)).toBe(0);
+      expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
+      expect(text(out)).not.toMatch(/oh\.json/);
+    },
+  );
 
-  it("does NOT write oh.json for a harness with no install field", async () => {
-    const root = makeRepo();
-    const before = readFileSync(ohConfigPath(root), "utf8");
-    const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
-    const { out, io } = makeIo();
-
-    expect(await runHarnessInstall("claude-code", { cwd: root, run }, io)).toBe(0);
-    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
-    expect(text(out)).toMatch(/no oh\.json install field/);
-  });
-
-  it("--no-persist leaves oh.json untouched", async () => {
-    const root = makeRepo();
-    const before = readFileSync(ohConfigPath(root), "utf8");
-    const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
-
-    await runHarnessInstall("hermes", { cwd: root, run, noPersist: true }, makeIo().io);
-    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
-  });
-
-  it("--persist-only writes the flag and never touches the container", async () => {
-    const root = makeRepo();
-    const { calls, run } = makeRunner();
-    expect(
-      await runHarnessInstall("hermes", { cwd: root, run, persistOnly: true }, makeIo().io),
-    ).toBe(0);
-    expect(installFlag(root, "hermes")).toBe(true);
-    expect(calls.filter((c) => c.cmd === "docker")).toEqual([]);
-  });
-
-  it("creates oh.json when it is missing", async () => {
+  it("does not create oh.json when it is missing", async () => {
     const root = makeRepo();
     rmSync(ohConfigPath(root));
-    const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     const { out, io } = makeIo();
 
-    expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(0);
-    expect(text(out)).toContain("install.hermes");
-    expect(installFlag(root, "hermes")).toBe(true);
+    expect(await runHarnessInstall("hermes", { cwd: root, run: live().run }, io)).toBe(0);
+    expect(existsSync(ohConfigPath(root))).toBe(false);
+    expect(text(out)).toContain("installed");
   });
 });
 
 
 describe("runHarnessInstall against the container", () => {
-  it("on a stopped sandbox: exits 0, sets the flag, hints, and runs zero docker exec", async () => {
+  it("on a stopped sandbox: fails, points at `oh sandbox`, and runs zero docker exec", async () => {
     const root = makeRepo();
+    const before = readFileSync(ohConfigPath(root), "utf8");
     const { calls, run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
-    const { out, io } = makeIo();
+    const { err, io } = makeIo();
 
-    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
-    expect(installFlag(root, "opencode")).toBe(true);
-    expect(text(out)).toContain("oh sandbox");
+    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(1);
+    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
+    expect(text(err)).toContain("oh sandbox");
+    expect(text(err)).not.toMatch(/next|later|picks it up/);
     expect(execCalls(calls)).toEqual([]);
   });
 
@@ -251,10 +227,10 @@ describe("runHarnessInstall against the container", () => {
     const { calls, run } = makeRunner((c, a) =>
       isInspect(c, a) ? { status: 1, stdout: "", stderr: "No such object" } : undefined,
     );
-    const { out, io } = makeIo();
+    const { err, io } = makeIo();
 
-    expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(0);
-    expect(text(out)).toContain("oh sandbox");
+    expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(1);
+    expect(text(err)).toContain("oh sandbox");
     expect(execCalls(calls)).toEqual([]);
   });
 
@@ -297,11 +273,11 @@ describe("runHarnessInstall against the container", () => {
     expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
     expect(execCalls(calls).some((c) => c.args.includes("opencode-ai"))).toBe(false);
     expect(text(out)).toContain("already installed");
-    expect(installFlag(root, "opencode")).toBe(true);
   });
 
-  it("keeps the persisted flag when the installer fails, and says the rebuild will pick it up", async () => {
+  it("surfaces the installer's exit code and promises no retry", async () => {
     const root = makeRepo();
+    const before = readFileSync(ohConfigPath(root), "utf8");
     const { run } = makeRunner((c, a) => {
       if (isInspect(c, a)) return running;
       if (isExecOf(c, a, "--version")) return { status: 1, stdout: "", stderr: "" };
@@ -310,11 +286,12 @@ describe("runHarnessInstall against the container", () => {
     const { err, io } = makeIo();
 
     expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(7);
-    expect(installFlag(root, "opencode")).toBe(true);
-    expect(text(err)).toContain("install.opencode=true");
+    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
+    expect(text(err)).toContain("failed (exit 7)");
+    expect(text(err)).not.toMatch(/oh\.json|will install it|will retry it/);
   });
 
-  it("reports a missing docker binary without losing the persisted flag", async () => {
+  it("reports a missing docker binary", async () => {
     const root = makeRepo();
     const run: LifecycleRunner = () => ({
       status: null,
@@ -324,7 +301,6 @@ describe("runHarnessInstall against the container", () => {
 
     expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(1);
     expect(text(err)).toMatch(/docker is required/);
-    expect(installFlag(root, "hermes")).toBe(true);
   });
 
   it("rejects an unknown harness with the valid ids and writes nothing", async () => {
@@ -362,7 +338,8 @@ describe("runHarnessList", () => {
 
     expect(await runHarnessList({ cwd: root, run }, io)).toBe(0);
     const rendered = text(out);
-    expect(rendered).toMatch(/HARNESS\s+KIND\s+ENABLED\s+INSTALLED/);
+    expect(rendered).toMatch(/^HARNESS\s+KIND\s+INSTALLED$/m);
+    expect(rendered).not.toMatch(/ENABLED/);
     for (const id of ["claude-code", "opencode", "grok-build", "hermes", "t3code"]) {
       expect(rendered).toMatch(new RegExp(`^${id}\\s`, "m"));
     }
@@ -378,26 +355,29 @@ describe("runHarnessList", () => {
     expect(execCalls(calls)).toEqual([]);
   });
 
-  it("--json emits the same data machine-readably", async () => {
+  it("--json emits the same data machine-readably, with no enabled field", async () => {
     const root = makeRepo();
     writeFileSync(
       ohConfigPath(root),
       `${JSON.stringify({ ...defaultOhConfig("probe"), install: { hermes: true } }, null, 2)}\n`,
     );
-    const { run } = makeRunner((c, a) => {
-      if (isInspect(c, a)) return exited;
-      if (c === "sh" && a.includes("INSTALL_HERMES")) {
-        return { status: 0, stdout: "true\n", stderr: "" };
-      }
-      return undefined;
-    });
+    const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     const { out, io } = makeIo();
 
     await runHarnessList({ cwd: root, run, json: true }, io);
-    const parsed = JSON.parse(text(out));
+    const parsed = JSON.parse(text(out)) as Record<string, unknown>[];
     expect(parsed).toHaveLength(HARNESS_CATALOG.length);
-    expect(parsed.find((h: { id: string }) => h.id === "hermes").enabled).toBe(true);
-    expect(parsed.find((h: { id: string }) => h.id === "codex").enabled).toBeNull();
+    for (const row of parsed) {
+      expect(Object.keys(row).sort(), String(row.id)).toEqual([
+        "binary",
+        "docs",
+        "id",
+        "installed",
+        "kind",
+        "title",
+      ]);
+      expect(["installable", "on-demand"], String(row.id)).toContain(row.kind);
+    }
   });
 
   it("reports a harness as installed when its verify probe exits 0", async () => {
@@ -439,24 +419,6 @@ describe("runHarnessList — a hung verify probe cannot stall the boot path", ()
     const parsed = JSON.parse(text(out));
     expect(parsed.find((h: { id: string }) => h.id === "t3code").installed).toBeNull();
     expect(parsed.find((h: { id: string }) => h.id === "claude-code").installed).toBe(true);
-  });
-
-  it("--defaults probes only the default harnesses, never the registry-touching ones", async () => {
-    const root = makeRepo();
-    const { calls, run } = makeRunner();
-    const { out, io } = makeIo();
-    expect(
-      await runHarnessList(
-        { cwd: root, run, env: INSIDE_SANDBOX, json: true, defaultsOnly: true },
-        io,
-      ),
-    ).toBe(0);
-    expect(JSON.parse(text(out)).map((h: { id: string }) => h.id)).toEqual([
-      "claude-code",
-      "codex",
-      "pi",
-    ]);
-    expect(calls.map((c) => c.cmd).sort()).toEqual(["claude", "codex", "pi"]);
   });
 });
 
@@ -503,13 +465,12 @@ describe("oh harness — inside the sandbox", () => {
     );
     const { io, out } = makeIo();
     expect(await runHarnessInstall("opencode", { cwd: root, run, env: INSIDE }, io)).toBe(0);
-    expect(text(out)).not.toContain("skipping the live install");
+    expect(text(out)).toContain("installed");
     // #908: this previously asserted `cmd === "sudo"`, codifying the very defect
     // that made `oh harness install opencode` hang inside the sandbox —
     // stdio:"inherit" selects plain `sudo --`, and sandbox has no NOPASSWD.
     expect(calls.some((c) => c.cmd === "sudo")).toBe(false);
     expect(calls.some((c) => c.args.includes("opencode-ai"))).toBe(true);
-    expect(installFlag(root, "opencode")).toBe(true);
   });
 
   it("verifies as the sandbox user, never through sudo", async () => {

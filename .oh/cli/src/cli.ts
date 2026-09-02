@@ -268,20 +268,16 @@ export function printHarnessHelp(): void {
   process.stdout.write(`oh harness — Install and inspect agent CLI harnesses
 
 Usage:
-  oh harness list [--defaults]        List known harnesses and their state
+  oh harness list                     List known harnesses and their state
   oh harness install <name>           Install a harness into the sandbox
-  oh harness status [name]            Show installed/enabled state
+  oh harness status [name]            Show installed state
 
-\`install\` does BOTH halves: it sets the \`oh.json\` install.* field so the choice
-survives the next image build, AND installs into the already-running container
-so the harness is usable now. It never rebuilds or restarts the
-sandbox. When the sandbox is not running it persists the flag, prints a hint,
-and exits 0.
+\`install\` is the only door: it probes the running sandbox, installs the harness
+into the persistent home volume, and reports. It reads and writes no \`oh.json\`
+field, and it never rebuilds or restarts the sandbox. It requires a running
+sandbox — start one with \`oh sandbox\` first.
 
 Flags:
-  --persist-only   Only set the oh.json install.* field (no container work)
-  --no-persist     Live-install only; leave oh.json unchanged
-  --defaults       List only kind:"default" harnesses (list)
   --json           Machine-readable output (list/status)
 
 Harnesses:
@@ -370,24 +366,21 @@ runtime (see \`oh runtime\`) — a headless browser, a tunnel client, the
 GitHub CLI.
 
 Usage:
-  oh tool list [--defaults]         List known tools and their state
+  oh tool list                      List known tools and their state
   oh tool status [name]             Show installed state and version
   oh tool install <name>            Install a tool into the sandbox
 
 Most tools are baked into the image and are report-only; \`install\` works on:
 ${installableToolIds().map((t) => `  ${t}`).join("\n")}
 
-\`install\` does BOTH halves: it sets the \`oh.json\` install.* field so the choice
-survives the next container start, AND installs into the already-running
-container. It never rebuilds or restarts the sandbox. A large download is
+\`install\` is the only door: it probes the running sandbox, installs the tool
+into the persistent home volume, and reports. It reads and writes no \`oh.json\`
+field, and it never rebuilds or restarts the sandbox. A large download is
 confirmed first, and a non-interactive run without --yes installs nothing.
 
 Flags:
-  --persist-only   Only set the oh.json install.* field (no container work)
-  --no-persist     Live-install only; leave oh.json unchanged
   --yes            Accept a large download without prompting
   --json           Machine-readable output (list/status)
-  --defaults       List only kind:"default" tools (list)
 
 Tools:
 ${toolIds().map((t) => `  ${t}`).join("\n")}
@@ -820,18 +813,12 @@ export interface HarnessArgs {
   help: boolean;
   subcommand?: "list" | "install" | "status";
   name?: string;
-  persistOnly: boolean;
-  noPersist: boolean;
-  defaultsOnly: boolean;
   json: boolean;
 }
 
 export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   const args: HarnessArgs = {
     help: false,
-    persistOnly: false,
-    noPersist: false,
-    defaultsOnly: false,
     json: false,
   };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
@@ -840,13 +827,7 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
 
   const positionals: string[] = [];
   for (const token of rest) {
-    if (token === "--persist-only") {
-      args.persistOnly = true;
-    } else if (token === "--no-persist") {
-      args.noPersist = true;
-    } else if (token === "--defaults") {
-      args.defaultsOnly = true;
-    } else if (token === "--json") {
+    if (token === "--json") {
       args.json = true;
     } else if (token.startsWith("-")) {
       return { ok: false, error: `oh harness: unknown flag "${token}"` };
@@ -872,19 +853,6 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   if (sub === "list" && name !== undefined) {
     return { ok: false, error: `oh harness list: unexpected argument "${name}"` };
   }
-  if (args.defaultsOnly && sub !== "list") {
-    return {
-      ok: false,
-      error: `oh harness ${sub}: --defaults applies to \`oh harness list\` only`,
-    };
-  }
-  if (args.persistOnly && args.noPersist) {
-    return {
-      ok: false,
-      error: "oh harness: --persist-only conflicts with --no-persist — pass at most one",
-    };
-  }
-
   args.subcommand = sub;
   if (name !== undefined) args.name = name;
   return { ok: true, args };
@@ -940,31 +908,22 @@ export function parseRuntimeArgs(rest: string[]): ParseResult<RuntimeArgs> {
 
 interface ToolArgs {
   help: boolean;
-  persistOnly: boolean;
-  noPersist: boolean;
   yes: boolean;
   json: boolean;
-  defaultsOnly: boolean;
   subcommand?: "list" | "install" | "status";
   name?: string;
 }
 
 export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
-  const args: ToolArgs = {
-    help: false, persistOnly: false, noPersist: false, yes: false, json: false,
-    defaultsOnly: false,
-  };
+  const args: ToolArgs = { help: false, yes: false, json: false };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
     return { ok: true, args: { ...args, help: true } };
   }
 
   const positionals: string[] = [];
   for (const token of rest) {
-    if (token === "--persist-only") args.persistOnly = true;
-    else if (token === "--no-persist") args.noPersist = true;
-    else if (token === "--yes" || token === "-y") args.yes = true;
+    if (token === "--yes" || token === "-y") args.yes = true;
     else if (token === "--json") args.json = true;
-    else if (token === "--defaults") args.defaultsOnly = true;
     else if (token.startsWith("-")) {
       return { ok: false, error: `oh tool: unknown flag "${token}"` };
     } else positionals.push(token);
@@ -987,19 +946,6 @@ export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
   if (sub === "list" && name !== undefined) {
     return { ok: false, error: `oh tool list: unexpected argument "${name}"` };
   }
-  if (args.persistOnly && args.noPersist) {
-    return {
-      ok: false,
-      error: "oh tool: --persist-only conflicts with --no-persist — pass at most one",
-    };
-  }
-  if (args.defaultsOnly && sub !== "list") {
-    return {
-      ok: false,
-      error: `oh tool ${sub}: --defaults applies to \`oh tool list\` only`,
-    };
-  }
-
   args.subcommand = sub;
   if (name !== undefined) args.name = name;
   return { ok: true, args };
@@ -1361,16 +1307,12 @@ async function main(argv: string[]): Promise<number> {
       stderr: (s) => process.stderr.write(s),
     };
     if (a.subcommand === "list") {
-      return await runHarnessList({ json: a.json, defaultsOnly: a.defaultsOnly }, io);
+      return await runHarnessList({ json: a.json }, io);
     }
     if (a.subcommand === "status") {
       return await runHarnessStatus(a.name, { json: a.json }, io);
     }
-    return await runHarnessInstall(
-      a.name as string,
-      { persistOnly: a.persistOnly, noPersist: a.noPersist },
-      io,
-    );
+    return await runHarnessInstall(a.name as string, {}, io);
   }
 
   if (first === "runtime") {
@@ -1415,16 +1357,12 @@ async function main(argv: string[]): Promise<number> {
       stderr: (s) => process.stderr.write(s),
     };
     if (a.subcommand === "list") {
-      return await runToolList({ json: a.json, defaultsOnly: a.defaultsOnly }, io);
+      return await runToolList({ json: a.json }, io);
     }
     if (a.subcommand === "status") {
       return await runToolStatus(a.name, { json: a.json }, io);
     }
-    return await runToolInstall(
-      a.name as string,
-      { persistOnly: a.persistOnly, noPersist: a.noPersist, yes: a.yes },
-      io,
-    );
+    return await runToolInstall(a.name as string, { yes: a.yes }, io);
   }
 
   if (first === "cloud") {

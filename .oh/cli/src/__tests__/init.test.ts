@@ -393,8 +393,6 @@ describe("runInit", () => {
       if (q.includes("Timezone")) return "America/New_York";
       if (q.includes("Git user name")) return "Ada Lovelace";
       if (q.includes("Git user email")) return "ada@example.com";
-      if (q.includes("agent_browser")) return "y";
-      if (q.includes("tailscale")) return "y";
       return "";
     };
     const askSecret = async (q: string): Promise<string> =>
@@ -416,9 +414,7 @@ describe("runInit", () => {
     expect(config.name).toBe("my-cool-sandbox");
     expect(config.timezone).toBe("America/New_York");
     expect(config.git).toEqual({ userName: "Ada Lovelace", userEmail: "ada@example.com" });
-    expect(config.install.agentBrowser).toBe(true);
-    expect(config.install.tailscale).toBe(true);
-    expect(config.install.hermes).toBe(false);
+    expect(config.install).toBeUndefined();
     expect(config.access.ssh).toBe(false);
     expect(config.access.dockerSocket).toBe(false);
 
@@ -476,13 +472,7 @@ describe("runInit", () => {
     expect(asked).toBe(0);
     const config = JSON.parse(readFileSync(join(t, "oh.json"), "utf8"));
     expect(config.version).toBe(1);
-    expect(config.install).toEqual({
-      opencode: false,
-      grokBuild: false,
-      hermes: false,
-      agentBrowser: false,
-      tailscale: false,
-    });
+    expect(config.install).toBeUndefined();
     expect(existsSync(join(t, ".env"))).toBe(false);
     expect(lstatSync(join(t, ".devcontainer/.env")).isSymbolicLink()).toBe(true);
   });
@@ -508,7 +498,7 @@ describe("runInit", () => {
 
     const config = JSON.parse(readFileSync(join(t, "oh.json"), "utf8"));
     expect(config.name).toBe("legacy-box");
-    expect(config.install.hermes).toBe(true);
+    expect(config.install).toBeUndefined();
     expect(config.access.sshPort).toBe(2299);
     expect(readFileSync(join(t, "oh.json"), "utf8")).not.toContain("ghp_legacytoken");
     expect(readFileSync(join(t, "oh.json"), "utf8")).not.toContain("MY_CUSTOM_THING");

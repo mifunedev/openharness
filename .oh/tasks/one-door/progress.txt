@@ -1,0 +1,3 @@
+# progress
+
+2026-09-02T16:30:16Z plan: base 7dd218c056507259cf484cbbbc796d0c0e853636; queries "cli harness sandbox install boot evals tool" and "--patterns"; read sandbox-dependency-installs, compose-env-boundary, fresh-machine-setup, pattern-wiki-ungated-check-drift, pattern-wiki-external-model-over-mapping, pattern-spec-self-staling-reuse-record, pattern-evals-prose-literal-pinning, pattern-evals-pipefail-early-exit; issue #948; 7 stories; Intent preserved: YES

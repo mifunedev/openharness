@@ -13,7 +13,7 @@
   <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
 </p>
 
-**Open Harness provides the sandbox; you choose the harness.** It's a Docker-based workspace, agent-tended over time: clone-and-own the repo, set one `.env`, and `oh sandbox` boots a long-lived container where the coding agent of your choice — Claude Code, Codex, Pi (Hermes, Grok, and more opt-in) — works on its own branch and identity. Because it's just Docker, it runs **identically on your laptop or a remote VM** — and remote is the default: deployed on a VM, Open Harness becomes a **lights-out software factory**, where the agent works unattended, on a schedule and reachable over Slack, fanning out across isolated **git worktrees** — parallel branches, delegated sub-agents, even other cloned repos — while you're away and your laptop stays clean.
+**Open Harness provides the sandbox; you choose the harness.** It's a Docker-based workspace, agent-tended over time: clone-and-own the repo, set one `.env`, and `oh sandbox` boots a long-lived container where the coding agent of your choice — Claude Code, Codex, Pi, Hermes, Grok, and more, each installed with one `oh harness install` command — works on its own branch and identity. Because it's just Docker, it runs **identically on your laptop or a remote VM** — and remote is the default: deployed on a VM, Open Harness becomes a **lights-out software factory**, where the agent works unattended, on a schedule and reachable over Slack, fanning out across isolated **git worktrees** — parallel branches, delegated sub-agents, even other cloned repos — while you're away and your laptop stays clean.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
@@ -22,7 +22,7 @@
 - **Host dependencies: Docker, Git, and Node.js ≥ 20.** No Python, no pnpm, no agent CLIs, no toolchain rot on your laptop — Node runs the `oh` CLI and nothing else. (`get-oh.sh` installs Node for you if you don't have it — see [Prerequisites](docs/installation.md#prerequisites).) The same `oh` verbs work on the host and inside the sandbox — see [lifecycle commands](docs/lifecycle-commands.md).
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
-- **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
+- **Herdr-first interactive work.** Nothing installs at boot: every harness and tool arrives through `oh harness install <id>` or `oh tool install <id>`. After entering the sandbox, install and run [Herdr](docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
 
 ---
 
@@ -78,19 +78,22 @@ oh sandbox          # build + start the container (~10 min cold, ~30s warm)
 oh shell            # attach as the sandbox user
 ```
 
-Then, inside the sandbox, open the persistent interactive workspace first:
+Then, inside the sandbox, install and open the persistent interactive workspace
+first — a fresh sandbox has no `herdr`, because nothing installs at boot:
 
 ```bash
+oh tool install herdr
 herdr
 ```
 
 `oh init` vendors the `.oh/` control plane into **your** repo rather than cloning
-this one, and runs the interactive setup — sandbox name, timezone, git identity,
-optional installs — writing non-secrets to the tracked `oh.json` and secrets to a
+this one, and runs the interactive setup — sandbox name, timezone, git
+identity — writing non-secrets to the tracked `oh.json` and secrets to a
 gitignored, `0600` `.env`. Your own repo mounts at `/home/sandbox/project`; a
 clone of this one mounts at `/home/sandbox/harness`.
 
-`herdr` should be your first inside-sandbox command. Run the remaining setup,
+`oh tool install herdr`, then `herdr`, should be your first inside-sandbox
+commands. Run the remaining setup,
 authentication, agents, tests, and servers from its panes. That is already a
 working sandbox. To make it **yours** (private `origin` + `upstream`) and
 authenticate the agents, continue with the optional full setup.
@@ -103,7 +106,7 @@ authenticate the agents, continue with the optional full setup.
 
 ### 3. Full setup (optional) — private repo, remotes, agent auth
 
-Run these **inside the initial Herdr pane** (`oh shell`, then `herdr`). Per-step depth + troubleshooting:
+Run these **inside the initial Herdr pane** (`oh shell`, then `oh tool install herdr`, then `herdr`). Per-step depth + troubleshooting:
 [quickstart → End-to-end setup walkthrough](docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
@@ -125,10 +128,11 @@ git push -u origin HEAD
 # Authenticate the agents you'll use. Simplest cross-provider path: launch the agent,
 # run /login, and pick DEVICE MODE (a code + URL that works headless/remote). The
 # one-liners below are equivalents where a provider exposes them:
-claude auth login            # Claude Code   (or /login in-session)
-codex login --device-auth    # Codex         (device mode; or /login in-session)
-pi                           # Pi            (first run walks provider auth; /login in-session)
-hermes setup                 # Hermes        (optional; needs install.hermes: true)
+# Each CLI arrives only through `oh harness install <id>` — nothing installs at boot.
+oh harness install claude-code && claude auth login   # Claude Code (or /login in-session)
+oh harness install codex && codex login --device-auth # Codex (device mode; or /login in-session)
+oh harness install pi && pi                           # Pi (first run walks provider auth)
+oh harness install hermes && hermes setup             # Hermes
 
 # Configure Slack, then run + verify the gateways (sandbox-only):
 #   config: docs/integrations/slack.md  ·  docs/harnesses/hermes.md
@@ -167,15 +171,16 @@ Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and 
 
 ```bash
 cd ~/.openharness
-oh shell         # enter the isolated sandbox
-herdr            # first command: open the primary interactive workspace
-# from Herdr panes, launch any core agent:
-#   claude     # Claude Code (default)
-#   codex      # OpenAI Codex CLI
-#   pi         # Pi Coding Agent
-#   opencode   # OpenCode   (optional: oh harness install opencode)
-#   hermes     # Nous Research Hermes (optional: oh harness install hermes)
-#   grok       # xAI Grok Build       (optional: oh harness install grok-build)
+oh shell              # enter the isolated sandbox
+oh tool install herdr # nothing installs at boot; install the workspace first
+herdr                 # open the primary interactive workspace
+# install an agent CLI the same way, then launch it from a Herdr pane:
+#   oh harness install claude-code  → claude    # Claude Code
+#   oh harness install codex        → codex     # OpenAI Codex CLI
+#   oh harness install pi           → pi        # Pi Coding Agent
+#   oh harness install opencode     → opencode  # OpenCode
+#   oh harness install hermes       → hermes    # Nous Research Hermes
+#   oh harness install grok-build   → grok      # xAI Grok Build
 oh stop          # stop the sandbox, keeping volumes
 oh destroy       # stop and remove the sandbox
 oh --help        # every verb
@@ -190,8 +195,9 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 ## ⚙️ Configure (optional)
 
 Configuration is split by kind across two files at the repository root. Tracked
-`oh.json` holds every non-secret setting — sandbox identity, git identity,
-optional `install.*` builds, the SSH and Docker-socket toggles. A gitignored,
+`oh.json` holds every non-secret setting — sandbox identity, git identity, the
+SSH and Docker-socket toggles. It holds no install field: `oh harness install
+<id>` and `oh tool install <id>` are the only door. A gitignored,
 mode-`0600` `.env` holds nothing but secrets (`GH_TOKEN`, `SANDBOX_PASSWORD`,
 `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`, …); the tracked `.env.example`
 documents every allow-listed key. Set one field with `oh config set <field>
@@ -222,7 +228,7 @@ the image-mode recipe.
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `projects/` |
 | **Crons** | Markdown-defined schedules in `crons/*.md` driven by the in-container croner runtime |
-| **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](docs/integrations/slack.md) |
+| **Multi-agent** | Claude, Codex, Pi, Hermes, Grok — each via `oh harness install <id>`; Slack bridging via [pi-messenger-bridge](docs/integrations/slack.md) |
 
 ## 📚 Where to go next
 

@@ -1,18 +1,23 @@
 # Herdr
 
-[Herdr](https://herdr.dev/) is Open Harness's primary interactive workspace. It is installed in every image.
+[Herdr](https://herdr.dev/) is Open Harness's primary interactive workspace. It is not in the image. It enters the sandbox only through `oh tool install herdr`.
 
 ## Start here
 
-After entering the sandbox, make `herdr` your first command:
+A fresh sandbox has no `herdr`. After entering the sandbox, install it, then run it:
 
 ```bash
 # host
 oh shell
 
-# first command inside the sandbox
+# first commands inside the sandbox
+oh tool install herdr
 herdr
 ```
+
+The install lands in `~/.local/bin` inside the persistent home volume, so later
+boots find `herdr` on PATH immediately. `oh destroy` removes the volume and the
+install with it.
 
 Bare Herdr works before GitHub or provider authentication. It creates or reattaches a workspace for the current repository. Complete GitHub setup, provider authentication, agent sessions, tests, development servers, and reviews from Herdr panes so interactive work stays together.
 

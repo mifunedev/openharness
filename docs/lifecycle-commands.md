@@ -65,6 +65,12 @@ exists **and** `SANDBOX_NAME` is set. Override it with
 `oh runtime install` and `oh sandbox` change the sandbox's own Docker
 configuration, so they stay host-only rather than failing halfway.
 
+`oh harness install <id>` and `oh tool install <id>` are the only way a harness
+or a tool enters the sandbox. Nothing installs at boot, so a fresh sandbox has
+no `herdr` until you run `oh tool install herdr`. Each install lands in
+`~/.local` in the persistent home volume; `oh destroy` removes it. See
+[Harnesses Overview](harnesses/overview.md#installing-a-harness).
+
 ## `oh destroy` and its confirmation policy
 
 `down -v` wipes the sandbox home volume, and that volume holds provider

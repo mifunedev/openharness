@@ -148,14 +148,13 @@ expose to whichever trust level you choose.
   can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:
   [Integrations → SSH](integrations/sshd.md).
 
-- **Caveat 4 — the optional Tailscale tool (opt-in, private-by-default).** Installing
-  `tailscale` (`oh tool install tailscale`, persisted as `install.tailscale` in the
-  tracked `oh.json`) adds **no container capability**: `tailscaled` runs inside the
+- **Caveat 4 — the Tailscale tool (install-on-request, private-by-default).** Installing
+  `tailscale` with `oh tool install tailscale` adds **no container capability**: `tailscaled` runs inside the
   sandbox in **userspace-networking** mode as the unprivileged `sandbox` user, so
   there is no `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, and no host
-  socket mount. There is no compose addition at all — the opt-in lives in
-  `oh.json` and boot provisioning installs from the tool catalog; daemon state
-  lives in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount. **No host port is published** — T3 Code stays on
+  socket mount. There is no compose addition at all — the verb is the only door,
+  nothing installs Tailscale at boot, and daemon state lives in
+  `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount. **No host port is published** — T3 Code stays on
   container loopback `127.0.0.1:3773` and Tailscale Serve proxies tailnet HTTPS to
   it, so a device outside the tailnet has nothing to reach. The posture:
   - **Private tailnet only. Tailscale Funnel is never enabled by default and the

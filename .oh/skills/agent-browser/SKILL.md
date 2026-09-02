@@ -66,9 +66,9 @@ Notes:
 - **0.8.5** — later majors have breaking CLI changes; the rest of this
   skill targets 0.8.5's flags. The catalog owns the pin.
 - **Do not reach for `sudo npm install -g`.** It lands under
-  `/usr/lib/node_modules`, which no running sandbox can upgrade in place —
-  `provision-defaults.sh` rejects that path by name. The catalog installs
-  into `$PNPM_HOME` under the sandbox user's own home.
+  `/usr/lib/node_modules`, which no running sandbox can upgrade in place.
+  Use `oh tool install agent-browser`: the catalog installs into `$PNPM_HOME`
+  under the sandbox user's own home.
 - If `agent-browser install --with-deps` ever ends with
   `sh: 1: playwright: not found`, the playwright CLI is missing:
   `npx playwright install chromium` after `pnpm add -g playwright@latest`.

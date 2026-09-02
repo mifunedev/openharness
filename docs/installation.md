@@ -25,7 +25,7 @@ cd <your-clone>
 bash .oh/scripts/install.sh
 ```
 
-The installer prompts for sandbox name, timezone, git identity and optional installs, writes the non-secrets to the tracked `oh.json` and any secrets to the gitignored root `.env`, and starts the sandbox. No `OH_GITHUB_REPO` environment variable required.
+The installer prompts for sandbox name, timezone, and git identity, writes the non-secrets to the tracked `oh.json` and any secrets to the gitignored root `.env`, and starts the sandbox. No `OH_GITHUB_REPO` environment variable required.
 
 ### Fork-and-clone
 
@@ -55,13 +55,14 @@ there is the one used for pushes.
    ```bash
    git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
    cd ~/.openharness
-   nano oh.json        # non-secrets: name, timezone, git identity, install.* —
+   nano oh.json        # non-secrets: name, timezone, git identity —
                        # see Configuration. Do this BEFORE building.
    cp .env.example .env && chmod 600 .env   # secrets only; gitignored
    nano .env           # GH_TOKEN, SANDBOX_PASSWORD, … (or use `oh secret set`)
-   oh sandbox        # build + start the container (~10 min cold)
-   oh shell          # attach as the sandbox user
-   herdr              # first inside-sandbox command
+   oh sandbox             # build + start the container (~10 min cold)
+   oh shell               # attach as the sandbox user
+   oh tool install herdr  # a fresh sandbox has no herdr
+   herdr                  # first inside-sandbox command
    ```
 2. **Inside the initial Herdr pane**, authenticate GitHub over SSH — choose SSH as the protocol
    and let `gh` generate a key (details: [GitHub auth](./integrations/github.md)):
@@ -116,7 +117,7 @@ The installer:
 
 1. Verifies Docker and git are present, and installs Node ≥ 20 and the `oh` CLI when they are missing.
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
-3. Prompts for sandbox name, timezone, git identity and optional installs, then writes the non-secrets to the tracked `oh.json`.
+3. Prompts for sandbox name, timezone, and git identity, then writes the non-secrets to the tracked `oh.json`.
 4. Creates the gitignored, mode-`0600` root `.env` from the tracked `.env.example` when missing (all keys commented — inert until you edit), and links `.devcontainer/.env` to it so VS Code "Reopen in Container" reads the same file. Non-secret settings stay in the tracked `oh.json`.
 5. Provisions the sandbox (`oh sandbox`, i.e. `docker compose … up -d --build`).
 6. Prints the next-step `oh` commands (open a shell, stop, tear down).
@@ -171,7 +172,7 @@ cd openharness
 cp .env.example .env && chmod 600 .env
 ```
 
-Edit `oh.json` for non-secret settings — `name`, `timezone`, `git`, `install.*`, `access.*` — and `.env` for secrets such as `GH_TOKEN`. See [Configuration](./configuration.md) for the field reference, and the comments in `.env.example` for every allow-listed secret.
+Edit `oh.json` for non-secret settings — `name`, `timezone`, `git`, `access.*` — and `.env` for secrets such as `GH_TOKEN`. See [Configuration](./configuration.md) for the field reference, and the comments in `.env.example` for every allow-listed secret.
 
 ### 3. Build and start the sandbox
 
@@ -253,6 +254,8 @@ oh init                 # equip the repo — vendors the .oh/ payload from the l
 oh sandbox              # provision + start the sandbox (docker compose up -d --build)
 oh sandbox --image      # ...or pull the prebuilt release image and skip the local build
 oh shell                # zsh in the running container (or: oh shell <container>)
+oh tool install herdr   # install the terminal workspace — nothing installs at boot
+oh harness install pi   # install an agent CLI the same way
 oh gateway status       # manage messaging client sessions (pi|hermes)
 ```
 
@@ -280,49 +283,41 @@ Docker's apt repository tracks the `trixie` suite, and it is now the only third-
 
 ### AI agent CLIs
 
-Default CLIs are not baked into the image. The entrypoint runs
-`.oh/scripts/provision-defaults.sh` on every boot, which installs any missing
-default **harness** (Claude Code, Codex, Pi) and default **tool** (Herdr,
-cloudflared) into `~/.local` — inside the home mount — as the `sandbox` user.
-That is what makes `oh harness install <id>` and `oh tool install <id>` able to
-upgrade one in place: a copy in a root-owned system path is unwritable from a
-running sandbox. Consequences worth knowing:
+No agent CLI is baked into the image, and nothing installs one at boot. A
+harness enters the sandbox only when you run `oh harness install <id>`, which
+installs into `~/.local` — inside the home mount — as the `sandbox` user. That
+placement is what makes an in-place upgrade possible: a copy in a root-owned
+system path is unwritable from a running sandbox. Consequences worth knowing:
 
-- A **first boot on a fresh home mount needs network**. Measured at 21s on a
-  GitHub Actions runner; budget 60–180s on a slower link. The compose
-  healthcheck's `start_period` is 600s to cover it.
-- If the network is unreachable the sandbox still comes up as a usable shell,
-  with a warning and no agent CLIs — **and no Herdr**, so `oh shell` lands you in
-  a plain shell and `tmux` is the fallback multiplexer. Re-run
-  `bash .oh/scripts/provision-defaults.sh` once you have network.
-- An existing install is never replaced, so the provisioner is a no-op on every
-  boot after the first. Upgrade deliberately with `oh harness install <id>` or
-  `oh tool install <id>`.
+- A **fresh sandbox has no agent CLI and no Herdr**. `oh shell` lands you in a
+  plain shell, and `tmux` is the fallback multiplexer until you run
+  `oh tool install herdr`.
+- Every install needs network. Run the verb when you have a link.
+- An existing install is never replaced. The verb reports `already installed`
+  and exits 0.
 - Every download is pinned and `sha256sum`-verified before it is installed.
-- npm's cache now lives in the home mount at `~/.npm` and grows across upgrades.
+- npm's cache lives in the home mount at `~/.npm` and grows across upgrades.
   `npm cache clean --force` reclaims it.
-- Set `OH_PROVISION_DEFAULTS=false` to skip the step entirely.
+- The install persists because the home volume persists. `oh destroy` removes
+  the volume, and every install with it.
 
-Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
-
-| Tool | Command | Source | Status |
+| Tool | Command | Source | Install |
 |------|---------|--------|--------|
-| Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) | default |
-| OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) | default |
-| Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) | default |
-| OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | optional: `oh harness install opencode` |
-| Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: `oh harness install hermes` |
-| Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: `oh harness install grok-build` |
-| agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `oh tool install agent-browser` |
-| Tailscale | `tailscale` | Private tailnet access for remote/mobile T3 Code (userspace networking; no container capabilities) | optional: `oh tool install tailscale` |
+| Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) | `oh harness install claude-code` |
+| OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) | `oh harness install codex` |
+| Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) | `oh harness install pi` |
+| OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | `oh harness install opencode` |
+| Hermes | `hermes` | Nous Research's self-improving agent CLI | `oh harness install hermes` |
+| Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | `oh harness install grok-build` |
+| T3 Code | `npx t3` | Browser UI over Claude/Codex/OpenCode | on demand, no install |
 
-Two tools are **not** baked in and install on demand with `oh tool install <name>`:
-`agent-browser` and `tailscale`. `oh tool install` persists the opt-in in the
-tracked `oh.json` (`install.agentBrowser`, `install.tailscale`) so it survives
-container recreation, and installs into a running sandbox when one is up. Both
-installs are idempotent. If no sandbox is running, only the flag is persisted —
-run `oh sandbox` and the entrypoint installs the tool on boot. Neither needs an
-image rebuild.
+Tools follow the same rule. `herdr`, `cloudflared`, `agent-browser`, and
+`tailscale` are `kind: "installable"` and enter the sandbox only through
+`oh tool install <name>`. `gh` and the Docker CLI are `kind: "baked-in"`: they
+are in the image, and `oh tool install` refuses them. Every install is
+idempotent, and none needs an image rebuild. `oh tool install agent-browser`
+downloads about 1 GB, so it asks for confirmation first; `--yes` accepts that
+download in a non-interactive run and changes nothing else.
 
 Installing `tailscale` places the `tailscale` and `tailscaled` binaries in
 `~/.local/bin` and nothing more. It starts no daemon and joins no tailnet.
@@ -346,16 +341,16 @@ recreate.
 
 `oh tool list` reports which of these are present, and `oh tool status <name>`
 adds a version where the tool has a verified version flag. Herdr and cloudflared
-are `kind: "default"` — provisioned into `~/.local/bin` at boot from a pinned,
-checksum-verified binary, and upgradeable in place. The rest are baked into the
-image, so there is nothing to install.
+are `kind: "installable"` — `oh tool install <name>` puts a pinned,
+checksum-verified binary into `~/.local/bin`, and upgrades it in place. The rest
+are baked into the image, so there is nothing to install.
 
 | Tool | Purpose |
 |------|---------|
-| Herdr (`herdr`) | Default multi-agent terminal workspace; provisioned at boot, state and binary both persist in the home mount |
+| Herdr (`herdr`) | Multi-agent terminal workspace; run `oh tool install herdr`, after which state and binary both persist in the home mount |
 | Docker CLI + Compose | Container management from inside the sandbox (host docker socket bind-mounted by the base compose) |
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
-| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill); provisioned at boot |
+| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill); run `oh tool install cloudflared` |
 | tmux | Detachable terminal sessions for long-running agents |
 | croner | Markdown-frontmatter cron scheduler for autonomous agent tasks |
 
@@ -413,8 +408,8 @@ CLI's `~/.newtool`, say) and leaves everything you already have alone. It does
 not merge new files into a directory the mount already has, which is what the
 per-tool volumes did before.
 
-Hermes is split: when the `hermes` binary is present (`install.hermes: true` in
-`oh.json`, or `oh harness install hermes`), `HERMES_HOME` is the project-local
+Hermes is split: when the `hermes` binary is present (after
+`oh harness install hermes`), `HERMES_HOME` is the project-local
 bind-mounted `~/harness/.hermes/` directory. The entrypoint links `.hermes/skills/openharness` to the tracked
 shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as
 Claude, Codex, and Pi without copying them into runtime state. Project-local

@@ -169,13 +169,23 @@ printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
 [ -n "$dashboard_status" ] && printf '    %-6s %-11s %s\n' "$dashboard_status" "dashboard" "$dashboard_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"         "oh"          "$oh_detail"
 printf '\n'
-shortcuts="claude · codex · pi"
-command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
-command -v grok >/dev/null 2>&1 && shortcuts="$shortcuts · grok"
-command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
-printf '  Recovery commands: %s · tmux attach -t cron-system\n' "$shortcuts"
+shortcuts=""
+for _oh_binary in claude codex pi opencode grok hermes herdr cloudflared tailscale agent-browser; do
+  command -v "$_oh_binary" >/dev/null 2>&1 || continue
+  if [ -z "$shortcuts" ]; then shortcuts="$_oh_binary"; else shortcuts="$shortcuts · $_oh_binary"; fi
+done
+if [ -n "$shortcuts" ]; then
+  printf '  Recovery commands: %s · tmux attach -t cron-system\n' "$shortcuts"
+else
+  printf '  Recovery commands: tmux attach -t cron-system\n'
+  printf '  No harness or tool is installed. Add one with `oh harness install <id>` or `oh tool install <id>`.\n'
+fi
 printf '\n'
-printf '  Next: run `herdr` to open your persistent Open Harness workspace.\n'
+if command -v herdr >/dev/null 2>&1; then
+  printf '  Next: run `herdr` to open your persistent Open Harness workspace.\n'
+else
+  printf '  Next: run `oh tool install herdr`, then `herdr`, to open your persistent Open Harness workspace.\n'
+fi
 printf '  Complete setup, authentication, agents, tests, and servers inside Herdr.\n'
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'

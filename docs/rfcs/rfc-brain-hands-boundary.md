@@ -110,7 +110,7 @@ Two consequences that must not be forgotten when a second execution target lands
    was toggled by a compose overlay (retired in #920; `hermesDashboard.enabled` in `oh.json` now starts it on container loopback),
    so brain-side policy rides on substrate configuration.
 
-This is accepted for Phase-0 because Hermes is opt-in and off by default (`install.hermes`).
+This is accepted for Phase-0 because Hermes is present only after `oh harness install hermes`.
 It is recorded so that a later slice which finds the taxonomy "already violated" knows it was
 a decision, not an oversight.
 

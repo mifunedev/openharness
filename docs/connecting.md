@@ -23,7 +23,7 @@ oh shell
 ```
 Pass an optional container name to attach to a different running container, e.g. `oh shell portfolio-advisor`. `oh shell` always attaches as the `sandbox` user; if the target container has no such user, use `docker exec -it -u <user> <container> zsh` instead.
 
-You land inside the container as the `sandbox` user. Run `herdr` first, then launch CLI agents and complete interactive setup from its panes. Container ports are **not** forwarded to your laptop — you cannot open `localhost:3000` in your browser via this method alone.
+You land inside the container as the `sandbox` user. A fresh sandbox has no `herdr`: run `oh tool install herdr`, then `herdr`, then launch CLI agents and complete interactive setup from its panes. Container ports are **not** forwarded to your laptop — you cannot open `localhost:3000` in your browser via this method alone.
 
 > **Attach, do not "Reopen in Container".** *Dev Containers: Reopen in Container*
 > reads `.devcontainer/devcontainer.json`, which names `docker-compose.yml` alone,
@@ -68,7 +68,7 @@ preflight, and the nginx multi-tenant recipe — is in
 
 Attaching via VSCode is the easiest way to reach container UIs on your laptop browser. The auto-forwarding is session-scoped: ports appear under the **Ports** panel while attached and disappear when you close or detach from the VSCode window.
 
-If you only need a terminal (no browser UI), Option A is fine. Whichever attach path you choose, make `herdr` the first command in the sandbox.
+If you only need a terminal (no browser UI), Option A is fine. Whichever attach path you choose, make `oh tool install herdr` and then `herdr` the first commands in the sandbox.
 
 ## What happens when you close VSCode
 
@@ -118,10 +118,10 @@ This is the supported path for reaching T3 Code from a phone, and the supported 
 
 - No `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, no host socket mount. Userspace networking needs none of them, and Tailscale Serve is fully supported in that mode.
 - **No host port is published.** T3 Code stays on container loopback `127.0.0.1:3773`. Tailscale Serve inside the container proxies tailnet HTTPS to that loopback address. A device outside the tailnet has nothing to reach.
-- **There is no compose change at all.** The opt-in is `install.tailscale` in `oh.json`; `.oh/scripts/provision-defaults.sh` installs from the tool catalog on every boot. Node identity and daemon state live in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount, so the node does not re-authenticate on every container recreate without any per-tool volume.
+- **There is no compose change at all.** `oh tool install tailscale` is the only door, and nothing installs Tailscale at boot. Node identity and daemon state live in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount, so the node does not re-authenticate on every container recreate without any per-tool volume.
 - Because the container is the node, the MagicDNS name your phone saved does not change when you move the workspace to another VM.
 
-Installing the binary does **not** join a tailnet. Nothing on the boot path runs `tailscaled` or `tailscale up`. Joining is an explicit human act.
+Installing the binary does **not** join a tailnet. Nothing runs `tailscaled` or `tailscale up` for you. Joining is an explicit human act.
 
 ### Prerequisites
 
@@ -145,9 +145,9 @@ The phone and the sandbox must share one tailnet. There is no other reachability
 oh tool install tailscale
 ```
 
-This persists `install.tailscale: true` in the tracked `oh.json` so the opt-in survives container recreation, and installs the binary into a running sandbox when one is up. It is idempotent.
+This installs the binary into the running sandbox, from the tool catalog, which is the sole owner of the pinned version and its checksums. It is idempotent, and it needs no image rebuild. The install lands in `~/.local/bin` inside the persistent home volume, so it survives a container recreate.
 
-If the sandbox was not running, the flag is persisted only. Run `oh sandbox` to recreate the container; boot provisioning reads `install.tailscale` from `oh.json` and installs the binary from the tool catalog, which is the sole owner of the pinned version and its checksums. No image rebuild is required. Nothing about networking activates until you start the daemon in the next step.
+The command needs a running sandbox. If the sandbox is not running, start it with `oh sandbox`, then re-run the command. Nothing about networking activates until you start the daemon in the next step.
 
 Check the state at any time:
 
@@ -307,7 +307,7 @@ tmux capture-pane -t client-slack-pi -p | grep -i 'Bot user ID'
 
 ### Step 3 — Launch T3 Code
 
-T3 Code is not preinstalled; the first invocation downloads it via `npx`. If an agent is running, prefer the `/t3` skill:
+T3 Code is on demand: it is never installed, and the first invocation downloads it via `npx`. If an agent is running, prefer the `/t3` skill:
 
 ```text
 /t3 start

@@ -12,10 +12,16 @@ Codex is designed for autonomous operation. Give it a task and it works through 
 
 ## Install
 
-Codex is installed by default during sandbox provisioning. The package is `@openai/codex`, installed globally via pnpm:
+Codex enters the sandbox only through the door:
 
 ```bash
-pnpm add -g @openai/codex
+oh harness install codex
+```
+
+The verb installs the `@openai/codex` package into the persistent home volume as the `sandbox` user:
+
+```bash
+npm --prefix /home/sandbox/.local install -g @openai/codex
 ```
 
 Verify the install:

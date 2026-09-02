@@ -4,11 +4,13 @@ slug: pattern-spec-self-staling-reuse-record
 kind: pattern
 tags: [spec, evals, caching, provenance, freshness, build-cycle]
 created: 2026-09-01
-updated: 2026-09-01
+updated: 2026-09-02
 sources:
   - .oh/skills/spec/references/execute.md@fcbeedea
   - .oh/evals/probes/eval-runs-once-per-cycle.sh@fcbeedea
   - .oh/tasks/repo-knowledge-loop/eval-result.json@fcbeedea
+  - .oh/tasks/one-door/eval-result.json@c20ea4b8
+  - .oh/tasks/one-door/evidence.md@c20ea4b8
 confidence: provisional
 ---
 
@@ -56,6 +58,15 @@ inputs, or the probe-set digest — rather than on the commit that contains the
 record, so writing the record does not invalidate it. Do not answer this by
 relaxing the equality check to "recent enough": that reintroduces the age
 heuristic the freshness rule replaced.
+
+Corroborated in task `one-door` (#948): the record committed at `5b08c004` was
+two commits stale when `/audit implementation` read it at `0fe00420`, and the
+audit driver could not re-run the suite itself, so gate 2 reported the floor as
+unobtainable. Workaround, appended 2026-09-02: re-run the suite at the audited
+HEAD and rewrite `eval-result.json` **on disk without committing it** before the
+audit; the reader then finds `commit == HEAD` and reuses the record honestly, and
+the file is committed afterwards together with `evidence.md`. The reuse path is
+reachable only for readers that run before the record's own commit.
 
 ## See Also
 - [[plan-vs-built-reconciliation]]

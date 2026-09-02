@@ -436,15 +436,31 @@ behavior for a dirty audit root.
 **The clean-root re-run, and why its scoreboard was not adopted wholesale.** A
 detached worktree of `a6b8d18c` with no dirty files runs 139 probes with **zero**
 non-PASS rows — that is the evidence behind the committed `PASS` row for
-`compose-config-path-parity`. But its `RESULTS.md` is not simply better: a bare
+`compose-config-path-parity`. But its `RESULTS.md` was not simply better: a bare
 worktree has no installed dependencies, so `drift-check-cron-staleness-glob`,
 `oh-compose-env-wiring`, `oh-destroy-guard`, and `oh-init-headless-config` each
-degrade `PASS → SKIPPED` there. Adopting it would hide four exercised oracles to
-correct one row — the failure mode `[[pattern-evals-unexercised-oracle]]` names,
-where a SKIPPED that fires in the environment which normally runs the probe leaves
-the subject unexercised while the suite stays green. The committed scoreboard is
-therefore the authoring-checkout run with the one environment-caused row corrected,
-and `eval-result.json` records both runs and this tradeoff.
+degraded `PASS → SKIPPED` there. Adopting it would have hidden four exercised
+oracles to correct one row — the failure mode `[[pattern-evals-unexercised-oracle]]`
+names. The scoreboard was therefore hand-corrected for one row.
+
+**That was the wrong answer, and `/audit implementation` said so.** Run
+`audit-20260902T010922Z-2893973` returned AUDIT-FAIL and named it directly: "a
+hand-corrected scoreboard is not a run record… Suppressing the row by hand is the
+failure mode gate 2 exists to catch." Correct, and the dilemma was false. The
+degradations were not a property of clean worktrees; they were a property of an
+*uninstalled* one. `pnpm install` at the root plus `npm install && node build.mjs`
+in `.oh/cli` makes all four run, and the suite then reports **140 probes, exit 0,
+zero REGRESSION rows and zero degradations** — the only SKIPPEDs being the same
+four that skip in the authoring checkout. `RESULTS.md` is now that run verbatim.
+Every status matches the hand-corrected version, so nothing was being hidden; but
+it is now a record of something that happened rather than an edit.
+
+`compose-config-path-parity` still reports red in the authoring checkout, and
+still should: an untracked root `.env` makes `docker-compose.sh:62-63` prefer it,
+while VS Code's path B auto-loads only `.devcontainer/.env`, so the two paths
+really do diverge there. That is a true report about this machine, not a defect in
+the branch, and the probe was left alone — teaching it to skip when a root `.env`
+exists would trade a truthful red for a silent oracle.
 
 ## 6. Closing the `--local` gap, and the two defects that surfaced
 

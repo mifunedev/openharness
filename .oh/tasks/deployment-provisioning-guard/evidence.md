@@ -445,3 +445,136 @@ where a SKIPPED that fires in the environment which normally runs the probe leav
 the subject unexercised while the suite stays green. The committed scoreboard is
 therefore the authoring-checkout run with the one environment-caused row corrected,
 and `eval-result.json` records both runs and this tradeoff.
+
+## 6. Closing the `--local` gap, and the two defects that surfaced
+
+The guard shipped with a documented gap: it pulled unconditionally, so the one
+image an operator most wants to check — the one they just built — was the one it
+could not check. `bash .oh/scripts/deployment-guard.sh oh-pnpmfix:test` failed at
+`FAIL: could not pull oh-pnpmfix:test`.
+
+### What `--local` does, and what it deliberately does not do
+
+`--local` (or `OH_DEPLOY_LOCAL=1`) takes an image already on the daemon:
+
+```text
+ok: --local: oh-local:test is already on this daemon (3a0484a57f64 built 2026-09-02T00:54:18Z); not pulling
+```
+
+An absent ref fails with a message naming the ref. It does **not** fall through
+to a pull, and the default path does **not** fall back to a local image when a
+pull fails. That asymmetry is the point: an automatic fallback would validate
+whatever stale object happens to be on the daemon and report it as the published
+image, which is worse than failing. `--local` is how an operator says "the object
+I built is the one I mean", and the guard prints the id and build time so a
+months-old object is visible rather than assumed fresh.
+
+The probe covers all four halves — the flag, the presence assertion, the retained
+default pull, and the absence of a pull-failure fallback — and each was driven red
+before being trusted:
+
+| Injection | Result |
+|---|---|
+| delete the `--local` case arm | REGRESSION |
+| rename the arm's variable (`LOCAL=1` → `L=1`) | REGRESSION |
+| break the presence check | REGRESSION |
+| add `docker pull ... \|\| true` fallback | REGRESSION |
+| break the default pull | REGRESSION |
+| strip `--local` from the skill | REGRESSION |
+
+The first spelling of the flag assertion — `has "$guard" '--local'` — passed the
+"delete the case arm" injection, because `--local` still appeared in the usage
+line, the header, and the failure message. `[[pattern-evals-unexercised-oracle]]`
+again, and caught only because the injection was actually run. Pinned to
+`--local) LOCAL=1` instead.
+
+### Defect 1 — a local build bakes the working tree, dirty files included
+
+The first live `--local` run failed:
+
+```text
+sandbox boot smoke failed: default tool 'herdr' was not provisioned into the home mount at boot
+sandbox boot smoke failed: default tool 'cloudflared' was not provisioned into the home mount at boot
+```
+
+Not a defect in the image recipe. The Dockerfile does `COPY . /opt/oh-seed/`, and
+the image-only boot seeds the child's control plane from it — so the **uncommitted**
+`oh.json` in the authoring checkout (`hermes=true`, `agentBrowser=true`, both
+`false` at HEAD) rode into the image. The child dutifully opted into hermes, whose
+installer prompts on a tty:
+
+```text
+Install ffmpeg for TTS voice messages? [Y/n] [entrypoint] WARNING: default provisioning did not complete
+```
+
+It blocked until the entrypoint's 240s `timeout` fired, and everything after it in
+the catalog — `herdr`, `cloudflared` — was never reached. `</dev/null` on the
+install (line 161) was not enough; the installer reaches past it.
+
+This is the *correct* answer to what was in that image, which is why it is
+reported rather than suppressed: the instrument discriminated instead of passing
+vacuously. It is also the caveat that belongs with `--local`, and both the skill
+and `docs/deployment-prebuilt-image.md` now carry it.
+
+### Defect 2 — a killed provision reported healthy
+
+Watching that failure produced something that is *not* an artifact. The container
+went healthy while herdr and cloudflared were absent:
+
+```text
+{"Status":"healthy",...,"Output":"sandbox healthcheck ok\n"}
+```
+
+The marker this PR added to stop exactly that was written only by `mark_failed()`
+at the **end** of `provision-defaults.sh` — lines a SIGTERM never reaches. Boot
+provisioning runs under `timeout`, so a kill part-way through an install is not an
+edge case; it is the likeliest failure. The fix inverts the default: write the
+marker before the first install, remove it only after a clean completion.
+
+`US-010`'s original criterion — "writes a marker when a requested install is
+missing and removes it on a clean run" — was satisfied by the old code and still
+too weak. The criterion is now stated in terms of the kill, and `US-010` carries
+the amendment rather than a new story pretending the first pass was complete.
+
+`.oh/evals/probes/provision-marker-fail-closed.sh` exercises the real script with
+a stub `oh` — one run that hangs and is killed, one that completes — and was
+driven red both ways:
+
+| Injection | Result |
+|---|---|
+| remove the start-of-run mark | REGRESSION (killed run left no marker) |
+| never clear on success | REGRESSION (clean run held the sandbox unhealthy) |
+
+### Not done, and why
+
+- **A per-install `timeout`.** One blocking installer starving every later catalog
+  entry is a real weakness independent of the dirty `oh.json` — any default could
+  hang the same way. Isolating each install would bound the blast radius. It
+  changes provisioning behavior for every sandbox, is not needed to close the
+  `--local` gap, and belongs to whoever decides that policy.
+- **Making the hermes installer non-interactive.** Upstream behavior reached
+  through a `curl | bash` installer; opt-in, and not this PR's subject.
+
+### The confirming run
+
+A clean detached worktree of `be948bc0` — `git status --porcelain` empty,
+`oh.json` at HEAD with every opt-in `false` — built to `oh-clean:test` and
+validated with `--local`:
+
+```text
+ok: --local: oh-clean:test is already on this daemon (...); not pulling
+ok: image contract verified (nothing baked that must be installed at boot)
+ok: image-only boot smoke passed (health, Herdr runtime, boot-provisioned harnesses and tools)
+...
+deployment guard: all checks passed for oh-clean:test
+guard rc=0
+```
+
+Same guard, same flag, same daemon, opposite verdict from the dirty-tree build —
+which is the discrimination the plan's step 5 asked for, reached without needing
+an old published tag. It also re-validates the whole branch (the `PNPM_HOME`
+move, the healthcheck marker, the fail-closed inversion) on an image built from
+the branch rather than on `:latest`.
+
+Host inventories were byte-identical before and after both runs; both test images
+were removed afterwards.

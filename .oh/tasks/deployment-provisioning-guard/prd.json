@@ -173,6 +173,7 @@
         "The build-time `pnpm setup --force` is removed, with its two jobs accounted for (rc exports already explicit; directory creation moved to the `home` stage)",
         "In a child sandbox from a locally built image, `oh tool install agent-browser --yes` exits 0, the binary resolves under PNPM_HOME, `agent-browser --version` prints a numeric version, and the catalog reports installed: true",
         "provision-defaults.sh writes a marker when a requested install is missing and removes it on a clean run",
+        "The marker is fail-closed: written before the first install and removed only after a clean completion, so a provision killed by the entrypoint's `timeout` leaves the sandbox unhealthy rather than healthy with defaults missing",
         "sandbox-healthcheck.sh fails while that marker exists and names the recovery command",
         "Observed live: a container with the marker reports (unhealthy), and running provision-defaults.sh clears it and returns health",
         "entrypoint.sh still downgrades the failure to a WARNING rather than aborting boot, so a transient registry outage does not kill a sandbox",
@@ -180,7 +181,25 @@
       ],
       "priority": 10,
       "passes": true,
-      "notes": "Reproduced in a child booted from :latest over the Docker socket: EACCES mkdir '/usr/local/share/pnpm'. agent-browser is the only entry using `pnpm add -g`, which honours PNPM_HOME, not NPM_USER_PREFIX. Verified fixed end to end against a locally built image."
+      "notes": "Reproduced in a child booted from :latest over the Docker socket: EACCES mkdir '/usr/local/share/pnpm'. agent-browser is the only entry using `pnpm add -g`, which honours PNPM_HOME, not NPM_USER_PREFIX. Verified fixed end to end against a locally built image. A later --local run showed the first marker design was too weak: it was only written by mark_failed() at the end, which a SIGTERM never reaches, and the child logged 'sandbox healthcheck ok' with herdr and cloudflared absent. Made fail-closed and probe-covered in both directions."
+    },
+    {
+      "id": "US-011",
+      "title": "Local image validation \u2014 close the --local gap the skill documented",
+      "description": "As an operator who just changed the Dockerfile, I want to validate the image I built rather than only a published one, so the deployment check is usable before a release rather than only after it.",
+      "acceptanceCriteria": [
+        "deployment-guard.sh accepts --local (and OH_DEPLOY_LOCAL) and takes an image already on the daemon instead of pulling",
+        "Under --local the guard asserts the ref is present and reports its id and build time; an absent ref fails with a message naming the ref, and never falls through to a pull",
+        "Without --local the default path still pulls, so a stale local object cannot be validated in place of a published tag",
+        "A failed pull never silently resolves to a local image \u2014 the fallback is explicit, not inferred",
+        "The /deploy-check skill documents --local as a working flag, resolves the default local tag, and warns that a local build bakes the working tree into /opt/oh-seed",
+        "docs/deployment-prebuilt-image.md shows the build-then---local recipe and the same caveat",
+        "The tier-A probe covers the flag, the presence assertion, the retained default pull, and the absence of a pull-failure fallback, and was driven red on each",
+        "Observed live: a guard run with --local against a freshly built image completes end to end with no pull and a clean teardown"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "The gap was documented in the skill's Known gaps section when the guard shipped. The first --local run also found a real one: an image built from a dirty checkout bakes the uncommitted oh.json, so the child opted into hermes, whose installer blocks on a tty prompt and consumed the 240s provisioning budget before herdr and cloudflared were reached. Confirmed: a clean detached worktree of be948bc0 built to oh-clean:test and validated with `--local` -- every assertion ok, rc=0, no pull, clean teardown, host container/volume/network inventories byte-identical before and after."
     }
   ]
 }

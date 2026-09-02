@@ -23,7 +23,7 @@ command -v jq >/dev/null 2>&1 || {
 }
 
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/oh-provision-marker.XXXXXX")
-trap 'rm -rf "$WORK"' EXIT
+trap 'rm -rf "${WORK:?}"' EXIT
 
 CATALOG='[{"id":"stub","kind":"default","installed":false,"enabled":true,"binary":"stub"}]'
 
@@ -40,7 +40,7 @@ STUB
 
 run_provision() {
   local timeout_secs="$1"
-  rm -rf "$WORK/home"; mkdir -p "$WORK/home/.local/bin" "$WORK/home/.local/lib" "$WORK/home/.npm"
+  rm -rf "${WORK:?}/home"; mkdir -p "$WORK/home/.local/bin" "$WORK/home/.local/lib" "$WORK/home/.npm"
   timeout "$timeout_secs" env -i \
     PATH="$WORK/bin:/usr/bin:/bin" \
     HOME="$WORK/home" \

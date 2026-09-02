@@ -77,3 +77,37 @@ Learnings.
 - The guard cannot validate a locally built image (it pulls unconditionally), which is
   precisely what is needed after a Dockerfile change. Recorded in the skill under Known
   gaps rather than left as a documented flag that fails.
+
+--- US-011: local image validation ---
+Closed the --local gap the skill documented when the guard shipped.
+
+deployment-guard.sh: --local / OH_DEPLOY_LOCAL takes an image already on the
+daemon, asserts it is present, reports its id and build time, and never falls
+through to a pull. The default path still pulls; a failed pull never falls back
+to a local object. Deduped the failure-summary printf into report_failures()
+(4 call sites).
+
+deployment-guard-ci.sh: 4 new assertions, 6 fault injections, all red then green.
+The first spelling of the --local assertion passed its own injection because the
+string appears elsewhere in the file; re-pinned to the case arm.
+
+Two defects surfaced by the first live --local run:
+1. An image built from a dirty checkout bakes the uncommitted oh.json into
+   /opt/oh-seed. The child opted into hermes, whose installer blocks on a tty
+   prompt, consumed the 240s provisioning budget, and starved herdr/cloudflared.
+   Artifact of the build, not the recipe. Documented as a --local caveat in the
+   skill and the deployment doc.
+2. Real, and a hole in this PR's own healthcheck fix: the provision-failed marker
+   was only written at the end of provision-defaults.sh, so a provision killed by
+   the entrypoint's `timeout` left no marker and the container reported healthy
+   with defaults missing. Made fail-closed (mark before the first install, clear
+   only on clean completion) and covered by a new behavioral probe driven red in
+   both directions.
+
+Not done, reported instead: a per-install timeout so one blocking installer
+cannot starve the rest, and making the hermes installer non-interactive.
+
+Verification: full eval suite (139 probes) clean apart from the known
+environment-caused compose-config-path-parity red. Live --local run against a
+clean-tree build of be948bc0: all checks passed, rc=0, no pull, clean teardown,
+host inventories byte-identical before and after.

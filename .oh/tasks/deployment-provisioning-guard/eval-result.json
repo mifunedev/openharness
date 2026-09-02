@@ -1,10 +1,10 @@
 {
-  "commit": "01b4230be4577cf0e28097bfef558bcac932e951",
+  "commit": "62fcb6133d2aa924563023e12485f3df299a352e",
   "runnerExit": 0,
-  "ranAt": "2026-09-02T01:15:21Z",
+  "ranAt": "2026-09-02T01:22:34Z",
   "probeCount": 140,
   "newRegressions": [],
   "preExistingReds": [],
-  "ranIn": "a clean detached worktree of HEAD with dependencies installed (pnpm install at the root, npm install + node build.mjs in .oh/cli)",
-  "note": "140 probes, exit 0, zero REGRESSION rows and zero degradations: the four SKIPPED rows (cc-safety-net-wiring, debugmcp-availability, next-dev-prod, registry-portability) are the same four that skip in the authoring checkout. RESULTS.md is this run verbatim -- no row was corrected by hand. The earlier bare-worktree tradeoff is gone: building the CLI in the eval worktree is what kept oh-compose-env-wiring, oh-destroy-guard and oh-init-headless-config exercised. compose-config-path-parity is red only in the authoring checkout, where an untracked root .env makes docker-compose.sh:62-63 prefer it over .devcontainer/.env; that is a true report of a local divergence, not a branch defect, and it passes here and on development."
+  "ranIn": "a clean detached worktree with dependencies installed (pnpm install at the root, npm install + node build.mjs in .oh/cli); re-run independently by /audit implementation gate 2 (audit-20260902T011610Z-2958187) with the same result",
+  "note": "140 probes, exit 0, zero REGRESSION rows and zero degradations. The four SKIPPED rows (cc-safety-net-wiring, debugmcp-availability, next-dev-prod, registry-portability) are the same four that skip in the authoring checkout. RESULTS.md is a run verbatim -- no row corrected by hand. This record self-stales the moment it is committed (pattern-spec-self-staling-reuse-record); gate 2 re-running rather than inheriting it is the expected behaviour, not a defect."
 }

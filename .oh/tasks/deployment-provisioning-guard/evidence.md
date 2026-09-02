@@ -594,3 +594,40 @@ the branch rather than on `:latest`.
 
 Host inventories were byte-identical before and after both runs; both test images
 were removed afterwards.
+
+## 7. Gate 5 residuals from `audit-20260902T011610Z-2958187`
+
+AUDIT-PASS with `SIMPLICITY-RESIDUAL: 3`. The monotone rule stopped the loop
+(netAdded rose 1711 → 2314 rather than falling), so all three were disclosed
+rather than gating. Two decisions and one fix:
+
+**Applied — the install log's fixed path.** `oh harness install` wrote its output
+to `/tmp/deployment-guard-install.out`, a constant. Two concurrent `--run` tokens
+would clobber it, so one run's failure diagnostics could be another's — in a guard
+whose entire premise is that concurrent runs never share state. The run already
+mints a scratch directory; the log now lives in it. Zero net lines.
+
+**Declined — reading the healthcheck window with `jq`.** The proposal was to
+replace the `awk` scrape plus three `grep` pipelines with
+`compose config --format json | jq`, since `jq` is already a hard prerequisite.
+Measured before deciding:
+
+```text
+jq route: interval=30s retries=3 start_period=10m0s
+awk route: interval=30  retries=3 start_period=600
+```
+
+`compose config` normalises durations to Go duration **strings**. Consuming them
+means parsing `10m0s` into 600 — an hours/minutes/seconds parser with more branch
+points than the scrape it replaces. The suggestion was sound in principle and does
+not survive contact with the output format, so the arithmetic stays on the raw
+YAML.
+
+**Declined — folding the image-only driver into `docker-compose.sh`.** The
+proposal was an `--image-only` flag on the existing wrapper instead of a second
+driver. But `US-001`'s criterion is that the deployment path reads *no* repository
+dotenv, and `docker-compose.sh:62-63` exists to prefer one — the divergence is the
+requirement, not an accident. Putting an image-only mode inside the operator's own
+lifecycle door also gives that door a second personality, which is the opposite of
+"make ownership and execution location obvious". Two small drivers with one job
+each beat one driver with a mode flag.

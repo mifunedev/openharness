@@ -24,11 +24,6 @@ BEGIN {
     envmap["sandbox.pull_policy"]   = "OH_PULL_POLICY"
     envmap["git.user_name"]         = "GIT_USER_NAME"
     envmap["git.user_email"]        = "GIT_USER_EMAIL"
-    envmap["install.opencode"]      = "INSTALL_OPENCODE"
-    envmap["install.grok_build"]    = "INSTALL_GROK_BUILD"
-    envmap["install.hermes"]        = "INSTALL_HERMES"
-    envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"
-    envmap["install.tailscale"]     = "INSTALL_TAILSCALE"
     envmap["hermes.dashboard"]      = "HERMES_DASHBOARD"
     envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
     envmap["ssh.enabled"]           = "SANDBOX_SSH"
@@ -138,11 +133,6 @@ _field_for() {
         OH_PULL_POLICY)             printf 'image.pullPolicy string\n' ;;
         GIT_USER_NAME)              printf 'git.userName string\n' ;;
         GIT_USER_EMAIL)             printf 'git.userEmail string\n' ;;
-        INSTALL_OPENCODE)           printf 'install.opencode boolean\n' ;;
-        INSTALL_GROK_BUILD)         printf 'install.grokBuild boolean\n' ;;
-        INSTALL_HERMES)             printf 'install.hermes boolean\n' ;;
-        INSTALL_AGENT_BROWSER)      printf 'install.agentBrowser boolean\n' ;;
-        INSTALL_TAILSCALE)          printf 'install.tailscale boolean\n' ;;
         HERMES_DASHBOARD)           printf 'hermesDashboard.enabled boolean\n' ;;
         HERMES_DASHBOARD_PORT)      printf 'hermesDashboard.port number\n' ;;
         SANDBOX_SSH)                printf 'access.ssh boolean\n' ;;

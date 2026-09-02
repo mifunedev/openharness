@@ -21,7 +21,7 @@ type Overrides = Partial<{
   bakedHarnesses: boolean;
   bakedTools: boolean;
   noHarnesses: boolean;
-  noDefaultTools: boolean;
+  noInstallableTools: boolean;
   noBakedInTools: boolean;
   missingBakedInTool: boolean;
   harnessCatalogFails: boolean;
@@ -46,7 +46,7 @@ function fixture(o: Overrides = {}) {
     bakedHarnesses: false,
     bakedTools: false,
     noHarnesses: false,
-    noDefaultTools: false,
+    noInstallableTools: false,
     noBakedInTools: false,
     missingBakedInTool: false,
     harnessCatalogFails: false,
@@ -75,8 +75,8 @@ ${
   v.noHarnesses
     ? "[]"
     : `[
-  { "id": "claude-code", "binary": "claude", "kind": "default", "installed": ${v.bakedHarnesses} },
-  { "id": "hermes", "binary": "hermes", "kind": "optional", "installed": false }
+  { "id": "claude-code", "binary": "claude", "kind": "installable", "installed": ${v.bakedHarnesses} },
+  { "id": "t3code", "binary": "t3", "kind": "on-demand", "installed": false }
 ]`
 }
 JSON
@@ -85,9 +85,9 @@ JSON
     cat <<'JSON'
 ${(() => {
   const rows: string[] = [];
-  if (!v.noDefaultTools) {
-    rows.push(`  { "id": "herdr", "binary": "herdr", "kind": "default", "installed": ${v.bakedTools} }`);
-    rows.push('  { "id": "cloudflared", "binary": "cloudflared", "kind": "default", "installed": false }');
+  if (!v.noInstallableTools) {
+    rows.push(`  { "id": "herdr", "binary": "herdr", "kind": "installable", "installed": ${v.bakedTools} }`);
+    rows.push('  { "id": "cloudflared", "binary": "cloudflared", "kind": "installable", "installed": false }');
   }
   if (!v.noBakedInTools) {
     rows.push(`  { "id": "gh", "binary": "gh", "kind": "baked-in", "installed": ${!v.missingBakedInTool} }`);
@@ -138,7 +138,7 @@ describe("verify-sandbox-image", () => {
     expect(result.stdout).toContain("node is major 22");
     expect(result.stdout).toContain("pnpm is exactly 10.33.0");
     expect(result.stdout).toContain("no harness is baked into the image");
-    expect(result.stdout).toContain("no default tool is baked into the image");
+    expect(result.stdout).toContain("no installable tool is baked into the image");
     expect(result.stdout).toContain("all checks passed");
   });
 
@@ -199,30 +199,27 @@ describe("verify-sandbox-image", () => {
     expect(result.status).toBe(0);
   });
 
-  // #904/#906/#908: no harness of any kind, and no kind:"default" tool, may be
-  // baked into the image. kind:"baked-in" tools are the image-level half and
-  // must be present, or the checks above pass on an image missing everything.
-  it("passes an image that bakes no harness and no default tool", () => {
+  it("passes an image that bakes no harness and no installable tool", () => {
     const result = run(fixture());
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("no harness is baked into the image");
-    expect(result.stdout).toContain("no default tool is baked into the image");
+    expect(result.stdout).toContain("no installable tool is baked into the image");
     expect(result.stdout).toContain("every baked-in tool is present");
   });
 
-  it("rejects an image that bakes a default harness", () => {
+  it("rejects an image that bakes an installable harness", () => {
     const result = run(fixture({ bakedHarnesses: true }));
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("the image ships baked harnesss: claude-code (claude)");
   });
 
-  it("rejects an image that bakes a default tool", () => {
+  it("rejects an image that bakes an installable tool", () => {
     const result = run(fixture({ bakedTools: true }));
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("the image ships baked default tools: herdr (herdr)");
+    expect(result.stderr).toContain("the image ships baked installable tools: herdr (herdr)");
   });
 
   it("rejects an image whose baked-in tool is missing", () => {
@@ -234,7 +231,7 @@ describe("verify-sandbox-image", () => {
 
   it.each<[string, Overrides]>([
     ["harness", { noHarnesses: true }],
-    ["default tool", { noDefaultTools: true }],
+    ["installable tool", { noInstallableTools: true }],
   ])("refuses to pass vacuously when the image lists no %s", (_noun, overrides) => {
     const result = run(fixture(overrides));
 

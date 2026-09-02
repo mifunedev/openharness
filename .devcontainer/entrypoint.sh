@@ -187,14 +187,6 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   fi
 fi
 
-if [ "${OH_PROVISION_DEFAULTS:-true}" = "true" ] \
-   && [ -x "$HARNESS/.oh/scripts/provision-defaults.sh" ]; then
-  if ! OH_EXECUTION_TARGET=local timeout "${OH_PROVISION_DEFAULTS_TIMEOUT:-240}" bash "$HARNESS/.oh/scripts/provision-defaults.sh"; then
-    echo "[entrypoint] WARNING: default provisioning did not complete; run: bash .oh/scripts/provision-defaults.sh" >&2
-    echo "[entrypoint] WARNING: herdr may be unavailable — 'tmux' still works as a fallback multiplexer" >&2
-  fi
-fi
-
 if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
    && [ -x "$HARNESS/.oh/scripts/provision-python.sh" ]; then
   if ! bash "$HARNESS/.oh/scripts/provision-python.sh"; then
@@ -584,7 +576,11 @@ if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo "  │  Optional Slack bridge setup:                   │"
   echo "  │    see docs/integrations/slack.md           │"
   echo "  │  First command after attaching:                 │"
-  echo "  │    herdr   # then complete setup in its panes   │"
+  if gosu sandbox bash -lc 'command -v herdr' >/dev/null 2>&1; then
+    echo "  │    herdr   # then complete setup in its panes   │"
+  else
+    echo "  │    oh tool install herdr   # then run herdr     │"
+  fi
   echo "  └─────────────────────────────────────────────────┘"
   echo ""
 fi

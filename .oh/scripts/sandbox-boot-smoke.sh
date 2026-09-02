@@ -81,74 +81,59 @@ verify_bind_ownership() {
   echo "sandbox boot smoke: sandbox user, bind mount, and sandbox-created files all resolve to $host_uid:$host_gid"
 }
 
-# Under emulation `docker exec` can prefix output with a platform warning; take
-# the first line that actually carries content.
-first_real_line() {
-  grep -vE "^WARNING: The requested image's platform" | grep -m1 -E '[^[:space:]]' || true
-}
-
-# The default harnesses (#904) and default tools (#906) are no longer baked into
-# the image; the boot path installs them into the home mount. That install runs
-# on EVERY fresh boot, and nothing else in CI exercises it — this is its only
-# oracle. Assert the outcome, not the log line: each default entry must resolve
-# to a real binary under NPM_USER_PREFIX, owned by the sandbox user, that prints
-# its own version.
-verify_default_catalog() {
+verify_nothing_installed() {
   local cid="$1" noun="$2" cmd="$3"
   local prefix="${NPM_USER_PREFIX:-/home/sandbox/.local}"
-  local states ids binary sandbox_uid out line
+  local states ids binary installed out
 
   if ! command -v jq >/dev/null 2>&1; then
-    echo "sandbox boot smoke failed: jq is required on the runner to read the harness catalog JSON" >&2
+    echo "sandbox boot smoke failed: jq is required on the runner to read the $noun catalog JSON" >&2
     return 1
   fi
 
-  if ! states=$(docker exec -u sandbox "$cid" bash -lc "oh $cmd list --defaults --json" 2>/tmp/sandbox-boot-smoke-catalog.err); then
-    echo "sandbox boot smoke failed: 'oh $cmd list --defaults --json' did not run in the booted sandbox" >&2
+  if ! states=$(docker exec -u sandbox "$cid" bash -lc "oh $cmd list --json" 2>/tmp/sandbox-boot-smoke-catalog.err); then
+    echo "sandbox boot smoke failed: 'oh $cmd list --json' did not run in the booted sandbox" >&2
     cat /tmp/sandbox-boot-smoke-catalog.err >&2 || true
     return 1
   fi
 
-  ids=$(jq -r '.[] | select(.kind == "default") | .id' <<<"$states")
+  ids=$(jq -r '.[] | select(.kind == "installable") | .id' <<<"$states")
   if [ -z "$ids" ]; then
-    echo "sandbox boot smoke failed: the $noun catalog reported no kind:\"default\" entries, so this check would pass vacuously" >&2
+    echo "sandbox boot smoke failed: the $noun catalog reported no kind:\"installable\" entries, so this check would pass vacuously" >&2
     return 1
   fi
-
-  sandbox_uid=$(docker exec "$cid" id -u sandbox)
 
   local failed=0
   while IFS= read -r id; do
     [ -n "$id" ] || continue
+    installed=$(jq -r --arg id "$id" '.[] | select(.id == $id) | .installed' <<<"$states")
+    if [ "$installed" != "false" ]; then
+      echo "sandbox boot smoke failed: installable $noun '$id' reports installed=$installed on a fresh boot — nothing may install at boot" >&2
+      failed=1
+      continue
+    fi
     binary=$(jq -r --arg id "$id" '.[] | select(.id == $id) | .binary' <<<"$states")
     if [ -z "$binary" ] || [ "$binary" = "null" ]; then
-      echo "sandbox boot smoke failed: default $noun '$id' declares no binary to check" >&2
+      echo "sandbox boot smoke failed: installable $noun '$id' declares no binary, so its absence cannot be checked" >&2
       failed=1
       continue
     fi
     if ! out=$(docker exec -u sandbox "$cid" bash -lc "
-        set -e
-        path=\$(type -P '$binary')
+        if [ -e '$prefix/bin/$binary' ]; then
+          echo \"$prefix/bin/$binary exists\" >&2
+          exit 1
+        fi
+        path=\$(type -P '$binary' || true)
         case \"\$path\" in
-          $prefix/*) ;;
-          *) echo \"is not on PATH under $prefix (type -P gave: '\$path')\" >&2; exit 1 ;;
+          $prefix/*) echo \"resolves to \$path\" >&2; exit 1 ;;
         esac
-        owner=\$(stat -Lc %u \"\$path\")
-        [ \"\$owner\" = '$sandbox_uid' ] || { echo \"binary is owned by uid \$owner, not sandbox ($sandbox_uid)\" >&2; exit 1; }
-        \"\$path\" --version
       " 2>&1); then
-      echo "sandbox boot smoke failed: default $noun '$id' was not provisioned into the home mount at boot" >&2
+      echo "sandbox boot smoke failed: installable $noun '$id' left a binary under $prefix on a fresh boot" >&2
       printf '  %s\n' "$out" >&2
       failed=1
       continue
     fi
-    line=$(first_real_line <<<"$out")
-    if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+([^[:alnum:]]|$)' <<<"$line"; then
-      echo "sandbox boot smoke failed: '$binary --version' printed no numeric version: $line" >&2
-      failed=1
-      continue
-    fi
-    echo "sandbox boot smoke: $id provisioned at boot -> $line"
+    echo "sandbox boot smoke: $id not installed at boot ($binary absent from $prefix)"
   done <<<"$ids"
 
   [ "$failed" = "0" ]
@@ -179,15 +164,15 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      if ! verify_default_catalog "$cid" harness harness; then
+      if ! verify_nothing_installed "$cid" harness harness; then
         status_diagnostics "$cid"
         exit 1
       fi
-      if ! verify_default_catalog "$cid" tool tool; then
+      if ! verify_nothing_installed "$cid" tool tool; then
         status_diagnostics "$cid"
         exit 1
       fi
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and boot-provisioned harness and tool checks"
+      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and installed no harness or tool at boot"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

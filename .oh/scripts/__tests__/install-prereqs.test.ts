@@ -54,12 +54,16 @@ describe("installer host prerequisite docs", () => {
     expect(install).toContain("OH_REPLACE");
   });
 
-  it("offers optional agent installs (Hermes etc.) as INSTALL_* toggles", () => {
+  it("installs nothing itself and closes with the harness and tool install verbs", () => {
     const install = readRepoFile(".oh", "scripts", "install.sh");
 
-    expect(install).toContain("_opt_install HERMES");
-    expect(install).toContain("_opt_install AGENT_BROWSER");
-    expect(install).toContain('prompt_yn "Install ');
-    expect(install).toContain("INSTALL_");
+    for (const id of ["claude-code", "codex", "pi"]) {
+      expect(install).toContain(`oh harness install ${id}`);
+    }
+    for (const id of ["herdr", "cloudflared"]) {
+      expect(install).toContain(`oh tool install ${id}`);
+    }
+    expect(install).not.toContain('prompt_yn "Install ');
+    expect(install).not.toMatch(/INSTALL_(HERMES|OPENCODE|GROK_BUILD|AGENT_BROWSER|TAILSCALE)/);
   });
 });

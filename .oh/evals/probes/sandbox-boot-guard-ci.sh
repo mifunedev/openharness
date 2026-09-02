@@ -4,7 +4,7 @@
 #         issue #807 (Debian Trixie base compatibility and parity CI)
 # desc: PR CI must validate sandbox compose config and locally build the devcontainer image
 #       without registry writes, run the reusable image verifier, compare fixed Debian bases,
-#       and exercise every optional INSTALL_* path with real version evidence.
+#       and install every installable harness through the CLI with real version evidence.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -78,11 +78,6 @@ else
   fi
 fi
 
-# #904: boot-time harness provisioning is exercised nowhere else. Turning it off
-# here to save CI minutes would restore it to untested dead code.
-if grep -Eq 'OH_PROVISION_DEFAULTS: *"?false' <<<"$text"; then
-  missing+=("the boot guard disables OH_PROVISION_DEFAULTS — this job is the only place the boot-time harness install runs")
-fi
 has 'Sandbox boot guard only' "comment explaining non-release intent"
 
 if grep -Eq 'docker[[:space:]]+push|--push([[:space:]]|$)|docker/login-action|docker/login|ghcr\.io|[[:alnum:]._-]+\.[[:alnum:]._-]+/.+:.+|packages:[[:space:]]*write|secrets\.' <<<"$text"; then
@@ -146,8 +141,8 @@ else
   else
     ohas() { grep -Fq -- "$1" <<<"$optional" || missing+=("compatibility optional harness job: $2"); }
     ohas 'oh harness install' "does not install through the CLI — the path #908 made the only one"
-    ohas 'select(.kind == "optional") | .id' "does not read the optional set from the catalog, so it can drift"
-    ohas 'would pass vacuously' "does not fail closed when the catalog yields no optional harness"
+    ohas 'select(.kind == "installable") | .id' "does not read the installable set from the catalog, so it can drift"
+    ohas 'would pass vacuously' "does not fail closed when the catalog yields no installable harness"
     ohas '/home/sandbox/.local/*)' "does not assert the install landed in the home mount"
     ohas 'for attempt in 1 2; do' "does not retry a transient upstream failure — four third-party endpoints can each block a merge"
     ohas 'this is not a transient upstream blip' "retries without ever failing hard, so a real break would pass"
@@ -178,5 +173,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS sandbox boot guard validates compose and boot, while compatibility CI checks fixed-image Node/pnpm parity and numeric dotted versions from every optional installer without registry writes" >&2
+echo "PASS sandbox boot guard validates compose and boot, while compatibility CI checks fixed-image Node/pnpm parity and numeric dotted versions from every installable harness install without registry writes" >&2
 exit 0

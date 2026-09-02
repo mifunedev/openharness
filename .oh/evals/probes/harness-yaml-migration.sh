@@ -60,7 +60,8 @@ else
   [[ "$(field '.name')"        == "probebox"       ]] || fails+=(".name not overwritten with the harness.yaml value (got '$(field '.name')')")
   [[ "$(field '.timezone')"    == "America/Denver" ]] || fails+=(".timezone not set from harness.yaml (got '$(field '.timezone')')")
   [[ "$(field '.git.userName')" == "Probe User"    ]] || fails+=(".git.userName lost its already-correct value (got '$(field '.git.userName')')")
-  [[ "$(field '.install.hermes')" == "true"        ]] || fails+=(".install.hermes not set (got '$(field '.install.hermes')')")
+  jq -e 'has("install")' "$work/oh.json" >/dev/null 2>&1 \
+    && fails+=("the migrator carried a retired install section into oh.json — \`oh harness install\` and \`oh tool install\` are the only install door")
   jq -e '.composeOverrides | index(".devcontainer/docker-compose.probe.yml")' "$work/oh.json" >/dev/null 2>&1 \
     || fails+=("compose.overrides path did not reach oh.json composeOverrides[]")
   jq -e 'type == "object"' "$work/oh.json" >/dev/null 2>&1 \

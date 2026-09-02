@@ -84,8 +84,8 @@ COPY --chown=sandbox:sandbox .oh/install/.tmux.conf /home/sandbox/.tmux.conf
 COPY --chown=sandbox:sandbox .oh/install/.zshrc /home/sandbox/.zshrc
 
 RUN printf '%s\n' \
-      'export NPM_USER_PREFIX="/home/sandbox/.local"' \
-      'export PNPM_HOME="/home/sandbox/.local/share/pnpm"' \
+      'export NPM_USER_PREFIX="${NPM_USER_PREFIX:-/home/sandbox/.local}"' \
+      'export PNPM_HOME="${PNPM_HOME:-/home/sandbox/.local/share/pnpm}"' \
       'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
       '[ -r "$HOME/.local/share/oh/python-env.sh" ] && . "$HOME/.local/share/oh/python-env.sh"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \

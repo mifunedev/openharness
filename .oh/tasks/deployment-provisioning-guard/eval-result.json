@@ -1,10 +1,10 @@
 {
-  "commit": "7ee9f2d17685081da23d90752101812e1eb2b1e6",
+  "commit": "ed26c4f12b9b3c49e2cdb4c047fd0db2d4e29ae9",
   "runnerExit": 0,
-  "ranAt": "2026-09-01T19:44:54Z",
-  "probeCount": 139,
+  "ranAt": "2026-09-02T01:09:03Z",
+  "probeCount": 140,
   "newRegressions": [],
-  "preExistingReds": ["compose-config-path-parity (authoring checkout only; PASS in a clean worktree and in CI)"],
-  "ranIn": "a clean detached worktree, by /audit implementation gate 2 (audit-20260901T194031Z-1733681)",
-  "note": "Gate 2 re-ran the suite rather than inheriting this record, which is pattern-spec-self-staling-reuse-record working as documented: a commit-keyed record cannot equal HEAD once it is committed. 139 probes, zero REGRESSION rows, zero reds in the clean root."
+  "preExistingReds": ["compose-config-path-parity (authoring checkout only; PASS in this clean-worktree run and in CI)"],
+  "ranIn": "a clean detached worktree of ed26c4f1",
+  "note": "140 probes (139 plus provision-marker-fail-closed), zero REGRESSION rows, zero reds. The four PASS->SKIPPED rows (drift-check-cron-staleness-glob, oh-compose-env-wiring, oh-destroy-guard, oh-init-headless-config) are the documented bare-worktree dependency degradations, not findings; the committed scoreboard therefore stays the authoring-checkout run with the one environment-caused row corrected."
 }

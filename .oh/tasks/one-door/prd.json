@@ -106,8 +106,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "before child (published image f02005e8): 5 entries provisioned at boot; after child (openharness:one-door a462096a, built from 8c898945): nothing provisioned, all installable entries INSTALLED no, healthcheck ok, oh tool install herdr -> herdr 0.7.4, oh harness install pi -> 0.84.4; verify-sandbox-image PASS; both children and volumes removed"
     },
     {
       "id": "US-007",

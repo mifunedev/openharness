@@ -1,0 +1,3 @@
+# progress
+
+2026-09-03T01:19:07Z plan: base 98e320bd134dbf11b814c4b6436e6c135f7dfba8 (stacked on task/948-one-door, #949 open); queries "cli sandbox lifecycle init update runtime compose" and "--patterns"; read oh-cli-portable-lifecycle, fresh-machine-setup, compose-env-boundary, runtime-isolation-landscape, pattern-evals-prose-literal-pinning, pattern-spec-self-staling-reuse-record, pattern-audit-driver-tool-allowlist, pattern-docs-prohibition-by-example, pattern-evals-unexercised-oracle; issue #950; 8 stories; Intent preserved: YES; conflict: oh-cli-portable-lifecycle claims a .devcontainer dotenv seed, code renders a temp compose.env (lifecycle.ts:42-75)

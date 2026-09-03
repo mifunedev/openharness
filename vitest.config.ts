@@ -1,16 +1,23 @@
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-const TEXT_ASSET = /\.(ya?ml|sh)$/;
+const ASSET_PREFIX = "oh-asset:";
+const repoRoot = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
     {
       name: "oh-bundled-text-assets",
       enforce: "pre",
+      resolveId(id: string) {
+        return id.startsWith(ASSET_PREFIX) ? id : null;
+      },
       load(id: string) {
-        const file = id.split("?")[0];
-        if (!TEXT_ASSET.test(file)) return null;
+        if (!id.startsWith(ASSET_PREFIX)) return null;
+        const assetRoot = process.env.OH_ASSET_ROOT ?? repoRoot;
+        const file = resolve(assetRoot, id.slice(ASSET_PREFIX.length));
         return `export default ${JSON.stringify(readFileSync(file, "utf8"))};`;
       },
     },

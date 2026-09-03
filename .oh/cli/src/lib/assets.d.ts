@@ -1,9 +1,4 @@
-declare module "*.yml" {
-  const content: string;
-  export default content;
-}
-
-declare module "*.sh" {
+declare module "oh-asset:*" {
   const content: string;
   export default content;
 }

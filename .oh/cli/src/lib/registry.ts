@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
-import composeRepo from "../../../../.devcontainer/docker-compose.yml";
-import composeImageOnly from "../../../../.devcontainer/docker-compose.image-only.yml";
-import composeSsh from "../../../../.devcontainer/docker-compose.ssh.yml";
-import composeDockerSock from "../../../../.devcontainer/docker-compose.docker-sock.yml";
-import composeWrapper from "../../../scripts/docker-compose.sh";
-import checkHostPort from "../../../scripts/check-host-port.sh";
+import composeRepo from "oh-asset:.devcontainer/docker-compose.yml";
+import composeImageOnly from "oh-asset:.devcontainer/docker-compose.image-only.yml";
+import composeSsh from "oh-asset:.devcontainer/docker-compose.ssh.yml";
+import composeDockerSock from "oh-asset:.devcontainer/docker-compose.docker-sock.yml";
+import composeWrapper from "oh-asset:.oh/scripts/docker-compose.sh";
+import checkHostPort from "oh-asset:.oh/scripts/check-host-port.sh";
 import { spawnRunner, type LifecycleRunner } from "./execution/runner.js";
 import { ohConfigPath, readOhConfig } from "./oh-config.js";
 

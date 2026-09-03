@@ -162,7 +162,7 @@ describe("oh tool — help", () => {
     printToolHelp();
     const text = w.mock.calls.map((c) => String(c[0])).join("");
     expect(text).toContain("oh harness");
-    expect(text).toContain("oh runtime");
+    expect(text).toContain("isolation runtime");
     expect(text).toContain("agent-browser");
     expect(text).toContain("gh");
   });

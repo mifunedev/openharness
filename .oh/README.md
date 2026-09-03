@@ -64,8 +64,8 @@ the bare root paths anymore.
 The cron definitions went the other way. They briefly lived at `.oh/crons/` and
 moved back **out** to the repo root as `crons/`, because a schedule authored per
 deployment is operator content, not machinery Open Harness ships. The runtime
-always reads `crons/`, and `oh init` / `oh update` deliver them through the
-manifest's `rootInclude` list rather than the `.oh/` payload.
+always reads `crons/`, and `oh update` delivers them through the manifest's
+`rootInclude` list rather than the `.oh/` payload.
 
 The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
 back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
@@ -104,7 +104,7 @@ root `docs/` (Markdown only — no build machinery; guarded by
 
 ## How the skill pack is wired
 
-The shared skills and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh init`/`oh update` lay the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
+The shared skills and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh update` lays the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
 
 `.pi/` remains the Pi provider surface in v1; its `.pi/skills` is one of the symlinks into `.oh/skills`.
 
@@ -120,29 +120,6 @@ The shared skills and hooks are vendored directly under `.oh/` (`.oh/skills`, `.
 | `knowledge/` | Durable repository knowledge — `source/` and `patterns/` entity pages, `raw/` immutable external snapshots, gitignored `local/` scratch, and the generated `README.md` index. The `/wiki` skill owns the procedure; this directory owns the data. |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
-
-## oh init (Phase 2)
-
-`oh init [dir]` scaffolds a fresh harness checkout (defaulting to the current
-directory) by materializing the payload under `.oh/templates/` —
-`AGENTS.md`, a `gitignore` seed, and a `.devcontainer/devcontainer.json` whose
-`workspaceFolder` is pinned to `/home/sandbox/project`. The command is
-`runInit` (exported from `cli/src/commands/init.ts`, dispatched from `cli.ts`).
-
-A `--templates <dir>` escape hatch points the command at an alternate template
-source instead of the bundled `.oh/templates/`.
-
-**Deferred slices** (Phase 2 slice 2/3, not in this slice):
-
-- **Installed-binary template bundling** — the on-PATH `oh` resolves templates
-  to `/opt/templates`, which the `.devcontainer/Dockerfile` does **not** COPY
-  yet, so the installed binary has no payload to read. Until then, run `oh init`
-  from a built checkout (where `.oh/templates/` resolves locally) or pass
-  `--templates <dir>` explicitly.
-- **Live-asset restructure** — promoting the template set from a static seed to
-  the live harness assets.
-- **Full `.oh/` vendoring** — shipping the complete `.oh/` machinery as part of
-  the scaffold.
 
 ## What belongs here vs. at root
 
@@ -198,26 +175,30 @@ honor a symlinked directory), so it is the one harness surface that intentionall
 stays outside the `.oh/` control plane. The consolidated layout is guarded by the
 `oh-devcontainer-restructure` eval probe.
 
-This is **separate** from `.oh/templates/.devcontainer/`, the downstream scaffold
-the `oh` CLI copies into *consumer* repos (which mount at `/home/sandbox/project`)
-— not this repo's own boot environment.
+The `oh` CLI bundles these compose files as text and re-materialises them into a
+sandbox's registry entry (`${OH_HOME:-~/.oh}/sandboxes/<name>/`) on every
+lifecycle call, so an installed binary needs no checkout to boot a sandbox. The
+copies in an entry are generated; this directory is their source of truth.
 
-## oh update (Phase 3)
+## oh update — vendor and upgrade the control plane
 
-`oh update` upgrades **only the `.oh/` control plane** of an OpenHarness-equipped
-repo. It is the **sibling of `oh init`**: where `oh init` seeds *project* files
-from `.oh/templates/`, `oh update` refreshes the `.oh/` **infrastructure itself**.
-Project source — anything *outside* `.oh/` — is left untouched.
+`oh update` writes **only the `.oh/` control plane and `crons/`** into the
+current directory. It is the single bootstrap *and* upgrade path: an empty
+directory is equipped from scratch (a missing target `.oh/` reads as version
+`0.0.0`), and an equipped one is upgraded. Project source — anything *outside*
+`.oh/` and `crons/` — is left untouched, and it writes no `oh.json`, `.env`,
+`AGENTS.md`, `.gitignore`, `.devcontainer/`, or provider directory. It never
+prompts.
 
 **Usage:**
 
 ```bash
-oh update --from <dir> [--dry-run] [--force]
+oh update [--from <dir> | --from-remote [--ref <ref>]] [--dry-run] [--force]
 ```
 
-- `--from <built-checkout>` — the source `.oh/` to upgrade from. This is the MVP
-  source surface; **remote-fetch is DEFERRED** (the same precedent as `oh init`'s
-  deferred bundling — a built source must be supplied via `--from` in this slice).
+- Payload precedence: `--from <built-checkout>` > `--from-remote [--ref <ref>]` >
+  the CLI's own bundled payload (found by its manifest marker) > a remote fetch
+  announced on one line.
 - `--dry-run` — report what would change without writing.
 - `--force` — override the version gate (see below).
 
@@ -235,10 +216,6 @@ is **no separate VERSION file**. `oh update` **no-ops when already current**, an
 > local `.oh/config.json`) **is replaced**. Only files **outside** `.oh/` (the
 > project source) are guaranteed untouched.
 
-**Contrast with `oh init`:** `oh init` *seeds project files* from `.oh/templates/`
-into the repo; `oh update` *refreshes the `.oh/` infrastructure* in place. Do not
-confuse the two — init populates the project, update upgrades the control plane.
-
 ## Payload manifest
 
 `oh update` does **not** overlay all of `.oh/`. It overlays a **declared
@@ -251,15 +228,16 @@ one `include` pattern and zero `exclude` patterns (exclude wins).
 manifest omits `patches/**` from `include`, so the payload never vendors those files
 into a consumer repo. The files remain in this repository. The manifest does not
 include `docs/**`. Root `docs/` is project-owned source documentation and is not
-copied or overwritten by `oh init` or `oh update`. The rendered Docusaurus docs
+copied or overwritten by `oh update`. The rendered Docusaurus docs
 *site* remains external at
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web) (#536).
 
 - **The manifest ships itself** — `manifest.json` is in `include`, so the policy
   **propagates forward**: a consumer's next `oh update` reads the *source's*
   manifest and inherits the same boundary.
-- `templates/**` is pre-declared in `include` for PR #334 (the `oh init`
-  templates); on this base it matches **nothing**, harmlessly.
+- The manifest declares no scaffold payload. The CLI writes no consumer-root
+  files at all, so the operator owns `AGENTS.md`, `.gitignore`, and every
+  provider file.
 
 **Back-compat (legacy mode):** a source with **no `.oh/manifest.json`** — or an
 empty/invalid one — falls back to overlaying **all of `.oh/`**, exactly as
@@ -278,12 +256,9 @@ patterns are relative to `.oh/`, and the existing path-escape guard (writes land
 only under `<target>/.oh/`) is **unchanged** — the manifest *narrows* the
 payload, it never widens the write surface. The vendored skill pack
 (`skills/**`, `hooks/**`, `skills.lock`) ships through this same
-manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/`.
-
-> **`oh init` seam:** both `oh init` and `oh update` honor this manifest — they
-> vendor only the manifest-shipped `.oh/` payload (via `commands/init.ts`'s
-> `copyOhPayload`) plus the `rootInclude` payload (`copyRootPayload`), so the
-> skill pack arrives in one shot with no submodule step.
+manifest, so `oh update` carries it into a target with the rest of `.oh/`. It
+vendors only the manifest-shipped `.oh/` payload plus the `rootInclude` payload,
+so the skill pack arrives in one shot with no submodule step.
 
 ## Pointers
 

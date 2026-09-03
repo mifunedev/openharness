@@ -11,7 +11,8 @@
 #   and no-clobber-of-existing-.oh/ behavior; docker-compose.image-only.yml mounts
 #   the single home volume, parameterizes image:, sets pull_policy:, and has
 #   neither build: nor a `..:` bind mount; the primary docker-compose.yml still
-#   keeps its `..:` bind mount (regression floor); the Dockerfile (if present)
+#   binds the checkout with `..` as its default (`${OH_REPO_DIR:-..}:`, regression
+#   floor); the Dockerfile (if present)
 #   stages /opt/oh-seed for the entrypoint to seed from.
 set -euo pipefail
 
@@ -117,8 +118,8 @@ fi
 if [[ ! -f "$COMPOSE_PRIMARY" ]]; then
   fails+=("primary docker-compose.yml not found at $COMPOSE_PRIMARY")
 else
-  grep -Eq '^[[:space:]]*-[[:space:]]*\.\.:' "$COMPOSE_PRIMARY" \
-    || fails+=("docker-compose.yml lost its '..:' bind mount — regression floor broken")
+  grep -Eq '^[[:space:]]*-[[:space:]]*(\$\{OH_REPO_DIR:-\.\.\}|\.\.):' "$COMPOSE_PRIMARY" \
+    || fails+=("docker-compose.yml lost its checkout bind mount with '..' as the default (\${OH_REPO_DIR:-..}: or ..:) — regression floor broken")
 fi
 
 if [[ ! -f "$DOC" ]]; then
@@ -148,5 +149,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: Flavor B (image-only) contract — entrypoint detects the flavor with mountpoint, logs the mode on both paths, seeds only in the no-bind branch, and keeps .oh/.image-seeded gitignored; behavioral sim confirms fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/; docker-compose.image-only.yml mounts \${OH_HOME_MOUNT:-workspace} at /home/sandbox, carries no OH_IMAGE_ONLY, parameterizes image:/pull_policy:, and has no build:/'..:' bind mount; primary docker-compose.yml still binds '..:' (regression floor); Dockerfile stages /opt/oh-seed" >&2
+echo "PASS: Flavor B (image-only) contract — entrypoint detects the flavor with mountpoint, logs the mode on both paths, seeds only in the no-bind branch, and keeps .oh/.image-seeded gitignored; behavioral sim confirms fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/; docker-compose.image-only.yml mounts \${OH_HOME_MOUNT:-workspace} at /home/sandbox, carries no OH_IMAGE_ONLY, parameterizes image:/pull_policy:, and has no build:/'..:' bind mount; primary docker-compose.yml still binds the checkout with '..' as the default (regression floor); Dockerfile stages /opt/oh-seed" >&2
 exit 0

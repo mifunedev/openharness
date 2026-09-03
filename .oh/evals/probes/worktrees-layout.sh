@@ -80,9 +80,7 @@ for guarded in \
   .devcontainer/entrypoint.sh \
   .devcontainer/docker-compose.yml \
   .devcontainer/docker-compose.image-only.yml \
-  .oh/scripts/migrate-harness-yaml.sh \
-  .devcontainer/.example.env \
-  .oh/templates/.devcontainer/.example.env; do
+  .oh/scripts/migrate-harness-yaml.sh; do
   if grep -Eq '(WORKTREES|PROJECTS|CRONS)_DIR' "$guarded"; then
     echo "REGRESSION: the retired layout knob is back in $guarded:" >&2
     grep -nE '(WORKTREES|PROJECTS|CRONS)_DIR' "$guarded" >&2

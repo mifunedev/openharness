@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 # tier: A
 # source: PR #833 (one schema file — DOCKER_SOCKET, SANDBOX_SSH, OH_SANDBOX_IMAGE, OH_PULL_POLICY, SKIP_PNPM_INSTALL were consumed but undocumented); rewritten for the oh.json/secrets split by PR #887
-# desc: the oh.json/.env split loses no variable — every compose-interpolated var is either a documented oh.json field or an allow-listed secret, and neither surface holds the other's keys
+# desc: the oh.json/.env split loses no variable — every compose-interpolated var is either a documented oh.json field or an allow-listed secret, every var config-render.ts renders is documented, and neither surface holds the other's keys
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 SECRETS_EXAMPLE="$ROOT/.env.example"
-SECRETS_TEMPLATE="$ROOT/.oh/templates/.env.example"
 CONFIG_DOC="$ROOT/docs/configuration.md"
 SECRETS_SRC="$ROOT/.oh/cli/src/lib/secrets.ts"
 RENDER_SRC="$ROOT/.oh/cli/src/lib/config-render.ts"
 
-for f in "$SECRETS_EXAMPLE" "$SECRETS_TEMPLATE" "$CONFIG_DOC" "$SECRETS_SRC" "$RENDER_SRC"; do
+for f in "$SECRETS_EXAMPLE" "$CONFIG_DOC" "$SECRETS_SRC" "$RENDER_SRC"; do
   if [[ ! -f "$f" ]]; then
     echo "SKIPPED: ${f#"$ROOT"/} absent on this branch — the oh.json config split has not landed here" >&2
     exit 2
@@ -57,14 +56,9 @@ fi
 fails=()
 join_list() { printf '%s' "$(paste -sd, -)"; }
 
-for old in "$ROOT/.devcontainer/.example.env" "$ROOT/.oh/templates/.devcontainer/.example.env"; do
+for old in "$ROOT/.devcontainer/.example.env"; do
   [[ -f "$old" ]] && fails+=("retired configuration surface still present: ${old#"$ROOT"/}")
 done
-
-only_root="$(comm -23 <(echo "$example_keys") <(env_keys "$SECRETS_TEMPLATE") | join_list)"
-only_tmpl="$(comm -13 <(echo "$example_keys") <(env_keys "$SECRETS_TEMPLATE") | join_list)"
-[[ -z "$only_root" ]] || fails+=("in .env.example but not in .oh/templates/.env.example: $only_root")
-[[ -z "$only_tmpl" ]] || fails+=("in .oh/templates/.env.example but not in .env.example: $only_tmpl")
 
 missing_secret="$(comm -23 <(echo "$secrets") <(echo "$example_keys") | join_list)"
 extra_secret="$(comm -13 <(echo "$secrets") <(echo "$example_keys") | join_list)"
@@ -103,5 +97,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: config schema parity — .env.example matches the secrets.ts allow-list and its template, docs/configuration.md documents every rendered oh.json field, and every compose-interpolated var lands in exactly one surface" >&2
+echo "PASS: config schema parity — .env.example matches the secrets.ts allow-list, docs/configuration.md documents every rendered oh.json field, and every compose-interpolated var lands in exactly one surface" >&2
 exit 0

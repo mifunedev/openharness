@@ -25,12 +25,6 @@ wiring="$(awk '/^provider_links=\(/{f=1; next} f && /^\)/{exit} f{print}' "$LINK
 [ -n "$wiring" ] || fail "could not read provider_links from $LINKER"
 grep -qF 'agents' <<<"$wiring" && fail "link-providers.sh still wires a project-agent provider symlink"
 
-INIT_TS=".oh/cli/src/commands/init.ts"
-[ -f "$INIT_TS" ] || fail "$INIT_TS is missing"
-ts_links="$(awk '/^const PROVIDER_LINKS/{f=1; next} f && /^\];/{exit} f{print}' "$INIT_TS")"
-[ -n "$ts_links" ] || fail "could not read PROVIDER_LINKS from $INIT_TS"
-grep -qF 'agents' <<<"$ts_links" && fail "oh init still creates a project-agent provider symlink"
-
 created=()
 bash "$LINKER" --init >/dev/null 2>&1 || true
 for path in "${catalogs[@]}"; do

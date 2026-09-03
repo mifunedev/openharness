@@ -70,8 +70,10 @@ contract text the probe is meant to guard.
 Where the condition lives in git history rather than the working tree, expose the
 comparison point as an environment override so the failing branch stays reachable
 after the fact — `.oh/evals/probes/wiki-skill-impact-append-only.sh` takes
-`WIKI_LEDGER_BASE`, and `.oh/evals/probes/wiki-pattern-persistence.sh` takes
-`WIKI_PERSISTENCE_BASE`, for exactly this reason. A one-off manual check that
+`WIKI_LEDGER_BASE`, `.oh/evals/probes/wiki-pattern-persistence.sh` takes
+`WIKI_PERSISTENCE_BASE`, and `.oh/evals/probes/sandbox-registry.sh` takes
+`SANDBOX_REGISTRY_ROOT` (a scratch copy of the tree to assert against), for
+exactly this reason. A one-off manual check that
 leaves no such handle cannot be repeated by the next author.
 
 Treat `SKIPPED` the same way. A probe whose skip guard can fire in the environment

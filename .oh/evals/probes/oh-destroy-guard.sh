@@ -3,7 +3,7 @@
 # source: issue #879 — `oh` becomes the only front door, so `make destroy` must
 #         survive as `oh destroy` without becoming one typo away from wiping
 #         the provider-auth volumes
-# desc: `oh destroy` never reaches docker-compose.sh without confirmation — it refuses
+# desc: `oh destroy` never reaches the container engine without confirmation — it refuses
 #       outright when stdin is not a TTY and --yes is absent, and it aborts on any
 #       answer that is not the sandbox name when it does prompt.
 set -euo pipefail
@@ -25,52 +25,57 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 SANDBOX_NAME=oh-destroy-guard
-MARKER="COMPOSE-SCRIPT-RAN"
+MARKER="DOCKER-ENGINE-RAN"
 
-mkdir -p "$WORK/.oh/scripts" "$WORK/.devcontainer"
-cat >"$WORK/.oh/scripts/docker-compose.sh" <<EOF
+OH_HOME="$WORK/home"
+ENTRY="$OH_HOME/sandboxes/$SANDBOX_NAME"
+mkdir -p "$ENTRY" "$WORK/bin"
+printf '{ "version": 1, "name": "%s" }\n' "$SANDBOX_NAME" >"$ENTRY/oh.json"
+cat >"$WORK/bin/docker" <<EOF
 #!/usr/bin/env bash
 echo "$MARKER \$*"
 EOF
-chmod +x "$WORK/.oh/scripts/docker-compose.sh"
-cat >"$WORK/.devcontainer/docker-compose.yml" <<'EOF'
-name: ${SANDBOX_NAME:-openharness}
+chmod +x "$WORK/bin/docker"
 
-services:
-  sandbox:
-    volumes:
-      - claude-auth:/home/sandbox/.claude
+VOLUME="$(awk '/^volumes:/ { f = 1; next } f && /^  [A-Za-z]/ { sub(/:.*$/, ""); gsub(/ /, ""); print; exit }' \
+  "$ROOT/.devcontainer/docker-compose.image-only.yml")"
+[[ -n "$VOLUME" ]] || VOLUME=workspace
 
-volumes:
-  claude-auth:
-  ssh-config:
-EOF
+oh_destroy() {
+  env -u SANDBOX_SSH PATH="$WORK/bin:$PATH" OH_HOME="$OH_HOME" SANDBOX_NAME="$SANDBOX_NAME" \
+    node "$OH" destroy "$SANDBOX_NAME" "$@"
+}
 
 fails=()
 
 code=0
-out="$(cd "$WORK" && SANDBOX_NAME="$SANDBOX_NAME" node "$OH" destroy </dev/null 2>&1)" || code=$?
+out="$(oh_destroy </dev/null 2>&1)" || code=$?
 [[ $code -eq 1 ]] || fails+=("non-interactive \`oh destroy\` exited $code, not 1 — it must refuse without --yes")
 grep -qF -- '--yes' <<<"$out" \
   || fails+=("the non-interactive refusal does not name --yes, so there is no way forward: $out")
 grep -qF "$MARKER" <<<"$out" \
-  && fails+=("non-interactive \`oh destroy\` reached docker-compose.sh — the --yes gate is gone")
+  && fails+=("non-interactive \`oh destroy\` reached the container engine — the --yes gate is gone")
 
 if command -v script >/dev/null 2>&1; then
-  pty_out="$(printf 'not-the-name\n' \
-    | (cd "$WORK" && SANDBOX_NAME="$SANDBOX_NAME" script -qec "node '$OH' destroy" /dev/null 2>&1) || true)"
+  pty() {
+    printf '%s' "$1" | env -u SANDBOX_SSH PATH="$WORK/bin:$PATH" OH_HOME="$OH_HOME" \
+      SANDBOX_NAME="$SANDBOX_NAME" \
+      script -qec "node '$OH' destroy '$SANDBOX_NAME'" /dev/null 2>&1 || true
+  }
 
+  pty_out="$(pty 'not-the-name
+')"
   grep -qF "$MARKER" <<<"$pty_out" \
-    && fails+=("a wrong answer still reached docker-compose.sh — the confirmation is not enforced")
+    && fails+=("a wrong answer still reached the container engine — the confirmation is not enforced")
   grep -qF "$SANDBOX_NAME" <<<"$pty_out" \
     || fails+=("the prompt does not name the sandbox, so there is nothing specific to type")
-  grep -qF 'claude-auth' <<<"$pty_out" \
-    || fails+=("the prompt does not name the volumes it will delete")
+  grep -qF "${SANDBOX_NAME}_${VOLUME}" <<<"$pty_out" \
+    || fails+=("the prompt does not name the volumes it will delete (expected ${SANDBOX_NAME}_${VOLUME})")
 
-  blank_out="$(printf '\n' \
-    | (cd "$WORK" && SANDBOX_NAME="$SANDBOX_NAME" script -qec "node '$OH' destroy" /dev/null 2>&1) || true)"
+  blank_out="$(pty '
+')"
   grep -qF "$MARKER" <<<"$blank_out" \
-    && fails+=("a bare Enter still reached docker-compose.sh — the confirmation defaults to yes")
+    && fails+=("a bare Enter still reached the container engine — the confirmation defaults to yes")
 
   if ((${#fails[@]})); then
     printf 'REGRESSION: %s\n' "${fails[@]}" >&2

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #880 (oh as the only front door — oh.json is the non-secret config surface)
-# desc: guards the two-file compose env wiring — `oh` renders oh.json into a 0600 temp file outside the repo and passes it as the FIRST --env-file with the root dotenv second (secrets win), the temp file does not survive the run, docker-compose.sh takes exactly one --extra-env-file flag and still runs standalone off the dotenv alone, and composeOverrides[] resolves oh.json -> .oh/config.json -> config.json without requiring jq
+# desc: guards the two-file compose env wiring — docker-compose.sh puts --extra-env-file FIRST and the root dotenv second (secrets win), still runs standalone off the dotenv alone, and resolves composeOverrides[] oh.json -> .oh/config.json -> config.json without requiring jq; `oh sandbox install --print-argv` renders oh.json into a 0600 temp file outside both the repo and the registry and leaves neither the file, its mkdtemp directory, the preview root, nor a registry entry behind
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -97,39 +97,35 @@ report() {
 
 if [[ ! -f "$DIST" ]]; then
   report
-  echo "SKIPPED: .oh/cli/dist/oh.js is not built — cannot exercise \`oh sandbox --print-argv\` end to end" >&2
+  echo "SKIPPED: .oh/cli/dist/oh.js is not built — cannot exercise \`oh sandbox install docker --print-argv\` end to end" >&2
   exit 2
 fi
 if ! command -v node >/dev/null 2>&1; then
   report
-  echo "SKIPPED: node is not on PATH — cannot exercise \`oh sandbox --print-argv\` end to end" >&2
+  echo "SKIPPED: node is not on PATH — cannot exercise \`oh sandbox install docker --print-argv\` end to end" >&2
   exit 2
 fi
 
 e2e="$tmp/e2e"
+e2ehome="$tmp/e2e-home"
 make_repo "$e2e"
+mkdir -p "$e2ehome"
 set +e
-out="$(cd "$e2e" && OH_EXECUTION_TARGET=docker-compose node "$DIST" sandbox --print-argv 2>"$tmp/e2e.err")"
+out="$(cd "$e2e" && env -u SANDBOX_NAME -u SANDBOX_SSH OH_HOME="$e2ehome" OH_EXECUTION_TARGET=docker-compose \
+  node "$DIST" sandbox install docker --yes --print-argv </dev/null 2>"$tmp/e2e.err")"
 status=$?
 set -e
-if grep -Fq 'unexpected argument "--print-argv"' "$tmp/e2e.err"; then
-  report
-  echo "SKIPPED: \`oh sandbox\` does not accept --print-argv yet — cli.ts parseSandboxArgs must wire it (issue #880 T6)" >&2
-  exit 2
-fi
 
 if (( status != 0 )); then
-  fails+=("\`oh sandbox --print-argv\` exited $status: $(tr '\n' ' ' < "$tmp/e2e.err")")
+  fails+=("\`oh sandbox install docker --print-argv\` exited $status: $(tr '\n' ' ' < "$tmp/e2e.err")")
 else
   mapfile -t e2efiles < <(env_files "$out")
-  if [[ "${#e2efiles[@]}" -ne 2 ]]; then
-    fails+=("\`oh sandbox --print-argv\` must emit exactly two --env-file flags (saw ${#e2efiles[@]})")
+  if [[ "${#e2efiles[@]}" -ne 1 ]]; then
+    fails+=("\`oh sandbox install docker --print-argv\` must emit exactly one --env-file — the rendered oh.json (saw ${#e2efiles[@]}: ${e2efiles[*]:-none})")
   else
     rendered="${e2efiles[0]}"
-    [[ "${e2efiles[1]}" == "$e2e/$DOTENV_NAME" ]] \
-      || fails+=("the SECOND --env-file must be the root dotenv so secrets win (saw ${e2efiles[1]})")
-    if [[ "$rendered" == "$e2e"/* ]]; then
-      fails+=("the rendered env file must not be written into the repository tree (saw $rendered)")
+    if [[ "$rendered" == "$e2e"/* || "$rendered" == "$e2ehome"/* ]]; then
+      fails+=("the rendered env file must live outside both the repository tree and the registry (saw $rendered)")
     fi
     if [[ -e "$rendered" ]]; then
       fails+=("the rendered env file must not survive the run (still present at $rendered)")
@@ -138,9 +134,16 @@ else
       fails+=("the mkdtemp directory holding the rendered env file must be removed (still present at $(dirname "$rendered"))")
     fi
   fi
+  preview="$(grep -A1 -Fx -- '-f' <<< "$out" | grep -v -e '^-f$' -e '^--$' | head -1)"
+  if [[ -n "$preview" && -e "$preview" ]]; then
+    fails+=("the preview compose file must not survive --print-argv (still present at $preview)")
+  fi
+  if [[ -n "$(find "$e2ehome" -mindepth 1 -print -quit)" ]]; then
+    fails+=("--print-argv registered a sandbox under OH_HOME — a preview must write nothing")
+  fi
 fi
 
 report
 
-echo "PASS: oh renders oh.json into a 0600 temp file outside the repo, passes it as the first --env-file with the root dotenv second, and removes it before exiting; docker-compose.sh takes --extra-env-file, still runs standalone off the dotenv with a note, and resolves composeOverrides[] oh.json -> .oh/config.json -> config.json" >&2
+echo "PASS: docker-compose.sh orders --extra-env-file before the root dotenv so secrets win, still runs standalone off the dotenv with a note, and resolves composeOverrides[] oh.json -> .oh/config.json -> config.json; oh renders oh.json into a 0600 temp file outside the repo and the registry and leaves no file, mkdtemp directory, preview root, or registry entry behind" >&2
 exit 0

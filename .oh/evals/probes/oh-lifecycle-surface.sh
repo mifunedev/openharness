@@ -30,7 +30,7 @@ grep -qF 'export async function run(' <<<"$CLI_CODE" \
 
 missing=()
 
-CLI_VERBS=(init sandbox shell destroy compose config secret update harness runtime tool cloud gateway)
+CLI_VERBS=(sandbox shell destroy compose config secret update harness tool cloud gateway)
 COMPOSE_TABLE_VERBS=(stop restart logs ps destroy)
 
 for verb in "${CLI_VERBS[@]}"; do

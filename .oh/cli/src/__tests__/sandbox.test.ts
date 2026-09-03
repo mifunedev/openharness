@@ -228,6 +228,42 @@ describe("oh sandbox install — the entry it writes", () => {
     expect(wrapper?.args.slice(-3)).toEqual(["up", "-d", "--no-build"]);
     expect(wrapper?.args[0].startsWith(registryPath)).toBe(false);
   });
+
+  it("persists --image=<ref> into the entry so later verbs reuse that image", async () => {
+    const registryPath = registry();
+    const { run } = makeRunner();
+
+    expect(
+      await runSandboxInstall(
+        {
+          runtime: "docker",
+          name: "x",
+          yes: true,
+          noBuild: true,
+          imageRef: "example.test/img:1",
+          run,
+        },
+        makeIo().io,
+      ),
+    ).toBe(0);
+    expect(readJson(join(registryPath, "x", "oh.json"))).toMatchObject({
+      image: { ref: "example.test/img:1", mode: "image" },
+    });
+  });
+
+  it("leaves image.ref unset for a bare --image, which resolves at run time", async () => {
+    const registryPath = registry();
+    const { run } = makeRunner();
+
+    expect(
+      await runSandboxInstall(
+        { runtime: "docker", name: "y", yes: true, noBuild: true, image: true, run },
+        makeIo().io,
+      ),
+    ).toBe(0);
+    const config = readJson(join(registryPath, "y", "oh.json"));
+    expect((config.image as Record<string, unknown>).ref).toBeUndefined();
+  });
 });
 
 describe("oh sandbox install — the wizard", () => {

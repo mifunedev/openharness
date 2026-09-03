@@ -176,6 +176,10 @@ export async function runSandboxInstall(
     await runWizard(config, io);
   }
 
+  if (opts.imageRef !== undefined) {
+    config.image = { ...config.image, ref: opts.imageRef, mode: "image" };
+  }
+
   const useNoBuild =
     opts.noBuild === true || !(config.repo !== undefined && config.image?.mode === "build");
   const sandboxOpts = {

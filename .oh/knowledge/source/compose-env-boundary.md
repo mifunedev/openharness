@@ -16,7 +16,7 @@ sources:
   - .oh/evals/probes/compose-env-boundary.sh
   - .oh/evals/probes/harness-one-door.sh
   - .oh/evals/probes/sandbox-registry.sh
-verified_at: c981612313ade54fcad912523d188c5b2337023a
+verified_at: 55a0ba14cf78e0245dbfc262b2d2adad77236866
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: confirmed
 ---

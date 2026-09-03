@@ -1,8 +1,8 @@
 {
   "name": "openharness",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "Open Harness \u2014 AI Agent Sandbox Orchestrator",
+  "description": "Open Harness — AI Agent Sandbox Orchestrator",
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",

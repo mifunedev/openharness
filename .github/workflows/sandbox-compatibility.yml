@@ -65,7 +65,7 @@ jobs:
         run: bash .oh/scripts/link-providers.sh --init
 
       # #908 removed the INSTALL_* build args, so there is no longer an image to
-      # build with every optional installer enabled. The path that replaced it —
+      # build with every installer enabled. The path that replaced it —
       # `oh harness install <id>` into the home mount, as the sandbox user — is
       # what this job must exercise instead. Building and then INSTALLING is
       # strictly closer to what an operator does than the old build-arg matrix.
@@ -79,12 +79,11 @@ jobs:
       - name: Verify the image satisfies the default contract
         run: bash .oh/scripts/verify-sandbox-image.sh openharness-sandbox-optional:${{ github.sha }}
 
-      - name: Install each optional harness through the CLI and verify its version
+      - name: Install each installable harness through the CLI and verify its version
         run: |
           set -euo pipefail
           cid=$(docker run -d --rm \
             -e SANDBOX_NAME=openharness-optional-${{ github.run_id }} \
-            -e OH_PROVISION_DEFAULTS=false \
             --entrypoint sleep \
             openharness-sandbox-optional:${{ github.sha }} infinity)
           trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
@@ -95,9 +94,9 @@ jobs:
 
           ids=$(docker exec -u sandbox "$cid" bash -lc \
             'cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness list --json' \
-            | jq -r '.[] | select(.kind == "optional") | .id')
+            | jq -r '.[] | select(.kind == "installable") | .id')
           if [ -z "$ids" ]; then
-            echo "ERROR: the harness catalog declares no optional harnesses — this job would pass vacuously" >&2
+            echo "ERROR: the harness catalog declares no installable harnesses — this job would pass vacuously" >&2
             exit 1
           fi
 
@@ -112,7 +111,7 @@ jobs:
             for attempt in 1 2; do
               echo "--- oh harness install $id (attempt $attempt)"
               if docker exec -u sandbox "$cid" bash -lc \
-                "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness install '$id' --no-persist"; then
+                "cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness install '$id'"; then
                 break
               fi
               if [ "$attempt" = 2 ]; then

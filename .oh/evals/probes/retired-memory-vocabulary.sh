@@ -26,7 +26,7 @@ tracked="$(git ls-files -- "$RETIRED" || true)"
 #    excludes them.
 set +e
 hits="$(git grep -n -F -- "$RETIRED" -- \
-  '.oh/README.md' 'docs' 'AGENTS.md' '.oh/templates' \
+  '.oh/README.md' 'docs' 'AGENTS.md' \
   ':!docs/rfcs/**')"
 rc=$?
 set -e

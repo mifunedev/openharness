@@ -11,7 +11,7 @@ sources:
   - docs/security-considerations.md
   - docs/harnesses/overview.md
   - .devcontainer/docker-compose.yml
-verified_at: af16fc85be4468a5681ba87b0d27b371cbd54db2
+verified_at: 1b13bb1da5ce286f662accf2c501c6307e09e329
 related: [audit-architecture, runtime-isolation-landscape, recursive-language-models]
 confidence: provisional
 ---

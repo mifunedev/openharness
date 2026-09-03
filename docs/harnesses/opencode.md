@@ -4,40 +4,22 @@ title: "OpenCode"
 
 # OpenCode
 
-OpenCode is a terminal coding agent that can run interactively or execute one-shot tasks. It is an optional harness in Open Harness. Like every other harness it installs into `~/.local` rather than the image — `oh harness install opencode`.
+OpenCode is a terminal coding agent that can run interactively or execute one-shot tasks. Like every other harness it installs into `~/.local` rather than the image, and only when you run `oh harness install opencode`.
 
-## Install (optional)
+## Install
 
-The shortest path is the CLI, which sets the `.devcontainer/.env` flag **and**
-installs into the already-running sandbox without a rebuild:
+`oh harness install <id>` is the only door. It installs OpenCode into the
+already-running sandbox without a rebuild:
 
 ```bash
 oh harness install opencode
 ```
 
-See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
-`--no-persist`, and what happens when the sandbox is not running.
+Nothing installs OpenCode at boot, and no configuration key selects it. See
+[Harnesses Overview](./overview.md#installing-a-harness) for what the verb does
+and what happens when the sandbox is not running.
 
-### Manual path
-
-Enable OpenCode in `.devcontainer/.env`:
-
-```yaml
-install:
-  opencode: true
-```
-
-Or set it from the CLI:
-
-```bash
-oh config set install.opencode true
-```
-
-Either way the boot provisioner installs it on the next start — no rebuild:
-
-```bash
-oh stop && oh sandbox
-```
+### What the door runs
 
 Open Harness installs the upstream npm package into the home mount as the `sandbox` user:
 

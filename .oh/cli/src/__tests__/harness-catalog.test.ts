@@ -15,7 +15,6 @@ const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8")
 
 const DOCKERFILE = read(".devcontainer/Dockerfile");
 const COMPOSE_YML = read(".devcontainer/docker-compose.yml");
-const CONFIG_DOC = read("docs/configuration.md");
 const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
 const NPM_USER_PREFIX = "/home/sandbox/.local";
 
@@ -42,18 +41,6 @@ describe("harness catalog", () => {
     }
   });
 
-  it("gives every optional harness a flag, and no other kind one", () => {
-    for (const h of HARNESS_CATALOG) {
-      if (h.kind === "optional") expect(h.harnessKey).toBeDefined();
-      else expect(h.harnessKey).toBeUndefined();
-    }
-  });
-
-  it("excludes agent_browser — it shares the install.* namespace but is not a harness", () => {
-    expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
-    expect(CONFIG_DOC).toMatch(/^\| `install\.agentBrowser` \|/m);
-  });
-
   it("documents every harness under docs/harnesses/<id>.md", () => {
     for (const h of HARNESS_CATALOG) {
       expect(h.docsPath).toBe(`docs/harnesses/${h.id}.md`);
@@ -61,48 +48,72 @@ describe("harness catalog", () => {
     }
   });
 
-  // #908: the INSTALL_* build args are gone. The catalog no longer mirrors the
-  // Dockerfile — it replaces it, and `oh harness install` is the only path.
-  describe("owns the install, and the image no longer does", () => {
-    const optional = HARNESS_CATALOG.filter((h) => h.kind === "optional");
+  // #948: the only kinds left are `installable` (the verb installs it) and
+  // `on-demand` (the runner fetches it per invocation). Nothing is a default.
+  describe("every entry is installable or on-demand", () => {
+    const installable = HARNESS_CATALOG.filter((h) => h.kind === "installable");
 
-    it("covers all four optional harnesses", () => {
-      expect(optional.map((h) => h.id).sort()).toEqual([
+    it("classifies each entry as one of exactly two kinds", () => {
+      for (const h of HARNESS_CATALOG) {
+        expect(["installable", "on-demand"], h.id).toContain(h.kind);
+      }
+      expect(installable.length).toBeGreaterThan(0);
+    });
+
+    it("covers every harness the verb can install", () => {
+      expect(installable.map((h) => h.id).sort()).toEqual([
+        "claude-code",
+        "codex",
         "grok-build",
         "hermes",
         "opencode",
+        "pi",
       ]);
     });
 
+    it("leaves t3code the sole on-demand entry", () => {
+      expect(HARNESS_CATALOG.filter((h) => h.kind === "on-demand").map((h) => h.id)).toEqual([
+        "t3code",
+      ]);
+    });
+
+    it("carries no oh.json key on any entry — the verb is the only door", () => {
+      for (const h of HARNESS_CATALOG) {
+        expect(Object.keys(h).sort(), h.id).toEqual([
+          "binary",
+          "docsPath",
+          "id",
+          "installArgv",
+          "installUser",
+          "kind",
+          "title",
+          "verifyArgv",
+        ]);
+      }
+    });
+  });
+
+  // #908: the INSTALL_* build args are gone. The catalog no longer mirrors the
+  // Dockerfile — it replaces it, and `oh harness install` is the only path.
+  describe("owns the install, and the image no longer does", () => {
     it("declares no buildArg anywhere — the field itself is gone", () => {
       expect(read(".oh/cli/src/lib/harnesses/catalog.ts")).not.toContain("buildArg");
     });
 
-    it.each(optional.map((h) => [h.id, h] as const))(
-      "%s: its INSTALL_* build arg is absent from the Dockerfile",
-      (_id, h) => {
-        const arg = `INSTALL_${(h.harnessKey as string).toUpperCase()}`;
+    it("declares no per-harness INSTALL_* build arg or compose projection", () => {
+      for (const name of ["OPENCODE", "GROK_BUILD", "HERMES", "AGENT_BROWSER", "TAILSCALE"]) {
+        const arg = `INSTALL_${name}`;
         expect(DOCKERFILE).not.toMatch(new RegExp(`^ARG ${arg}`, "m"));
         expect(COMPOSE_YML).not.toContain(`${arg}: \${${arg}:-false}`);
-      },
-    );
+      }
+    });
 
-    it.each(optional.map((h) => [h.id, h] as const))(
+    it.each(HARNESS_CATALOG.map((h) => [h.id, h] as const))(
       "%s: installs as the sandbox user into the home mount",
       (_id, h) => {
         expect(h.installUser).toBe("sandbox");
-        expect(h.installArgv.join("\n")).toMatch(/\/home\/sandbox\/\.local|\$HOME\/\.local|uv/);
-      },
-    );
-
-    it.each(optional.map((h) => [h.id, h] as const))(
-      "%s: its oh.json key stays documented in docs/configuration.md, with no compose projection",
-      (_id, h) => {
-        const field = (h.harnessKey as string).replace(/_(.)/g, (_m, c: string) =>
-          c.toUpperCase(),
-        );
-        expect(CONFIG_DOC).toMatch(
-          new RegExp(`^\\| \`install\\.${field}\` \\|[^|]*\\|[^|]*\\| — \\|`, "m"),
+        expect(h.installArgv.join("\n")).toMatch(
+          /\/home\/sandbox\/\.local|\$HOME\/\.local|uv|npx/,
         );
       },
     );
@@ -138,18 +149,23 @@ describe("harness catalog", () => {
     }
   });
 
-  describe("default harnesses install into the home mount, not the image", () => {
-    const defaults = HARNESS_CATALOG.filter((h) => h.kind === "default");
+  describe("npm-installed harnesses land in the home mount, not the image", () => {
+    const npmHarnesses = HARNESS_CATALOG.filter((h) => h.installArgv[0] === "npm");
 
-    it("covers claude-code, codex and pi", () => {
-      expect(defaults.map((h) => h.id).sort()).toEqual(["claude-code", "codex", "pi"]);
+    it("covers claude-code, codex, opencode and pi", () => {
+      expect(npmHarnesses.map((h) => h.id).sort()).toEqual([
+        "claude-code",
+        "codex",
+        "opencode",
+        "pi",
+      ]);
     });
 
     it("declares NPM_USER_PREFIX as the prefix the catalog installs into", () => {
       expect(DOCKERFILE).toContain(`ENV NPM_USER_PREFIX="${NPM_USER_PREFIX}"`);
     });
 
-    it.each(defaults.map((h) => [h.id, h] as const))(
+    it.each(npmHarnesses.map((h) => [h.id, h] as const))(
       "%s: installs as the sandbox user into NPM_USER_PREFIX",
       (_id, h) => {
         expect(h.installUser).toBe("sandbox");
@@ -161,38 +177,26 @@ describe("harness catalog", () => {
       expect(findHarness("claude-code")!.installArgv).not.toContain("--ignore-scripts");
     });
 
-    it("provisions the default harnesses at boot rather than baking them", () => {
-      expect(ENTRYPOINT).toContain("OH_PROVISION_DEFAULTS");
-      expect(ENTRYPOINT).toContain(".oh/scripts/provision-defaults.sh");
-    });
-
-    it.each(defaults.map((h) => [h.id, h] as const))(
+    it.each(npmHarnesses.map((h) => [h.id, h] as const))(
       "%s: its npm package is absent from the Dockerfile",
       (id, h) => {
         const pkg = h.installArgv[h.installArgv.length - 1];
         expect(pkg, `${id} declares no install package`).toMatch(/^(@[^/]+\/)?[^-].*/);
         expect(
           DOCKERFILE_CODE,
-          `${id} is baked into the image; it belongs to provision-defaults.sh`,
+          `${id} is baked into the image; it enters only through \`oh harness install\``,
         ).not.toContain(pkg);
       },
     );
 
-    it("keeps no build arg that could re-bake the default harnesses", () => {
+    it("keeps no build arg that could bake a harness back into the image", () => {
       expect(DOCKERFILE_CODE).not.toMatch(/^ARG (BAKE_HARNESSES|AGENTS)=/m);
-    });
-
-    it("bounds the boot-path provisioner so an unreachable registry cannot stall the entrypoint", () => {
-      expect(ENTRYPOINT).toMatch(
-        /timeout "\$\{OH_PROVISION_DEFAULTS_TIMEOUT:-\d+\}" bash "\$HARNESS\/\.oh\/scripts\/provision-defaults\.sh"/,
-      );
-      expect(ENTRYPOINT).toContain("WARNING: default provisioning did not complete");
     });
   });
 
   it("findHarness resolves known ids and rejects unknown ones", () => {
-    expect(findHarness("opencode")?.harnessKey).toBe("opencode");
-    expect(findHarness("grok-build")?.harnessKey).toBe("grok_build");
+    expect(findHarness("opencode")?.id).toBe("opencode");
+    expect(findHarness("grok-build")?.title).toBe("Grok Build");
     expect(findHarness("nope")).toBeUndefined();
   });
 });

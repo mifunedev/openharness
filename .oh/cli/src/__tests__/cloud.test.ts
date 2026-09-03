@@ -121,7 +121,7 @@ describe("cloud config", () => {
     const console = io({ env: fixture.env, cwd: fixture.home });
     expect(await runCloud(["nodes", "list"], console)).toBe(1);
     expect(console.err.join("")).toBe(
-      "oh cloud: not an OpenHarness-equipped repo — run `oh init` first; " +
+      "oh cloud: not an OpenHarness-equipped repo — run `oh update` first; " +
         "pass --api-url and --provision-key to run `oh cloud` outside a repo\n",
     );
   });

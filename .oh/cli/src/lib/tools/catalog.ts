@@ -1,8 +1,5 @@
 
-export type ToolKind =
-  | "baked-in"
-  | "default"
-  | "opt-in";
+export type ToolKind = "baked-in" | "installable";
 
 export interface ToolEntry {
   readonly id: string;
@@ -11,7 +8,6 @@ export interface ToolEntry {
   readonly binary: string;
   readonly verifyArgv: readonly string[];
   readonly versionArgv?: readonly string[];
-  readonly toolKey?: string;
   readonly installArgv?: readonly string[];
   readonly installUser?: "root" | "sandbox";
   readonly downloadSize?: string;
@@ -25,10 +21,9 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
   Object.freeze({
     id: "agent-browser",
     title: "agent-browser",
-    kind: "opt-in",
+    kind: "installable",
     binary: "agent-browser",
     verifyArgv: Object.freeze(["bash", "-lc", "command -v agent-browser >/dev/null"]),
-    toolKey: "agent_browser",
     installArgv: Object.freeze([
       "bash",
       "-lc",
@@ -41,7 +36,7 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
   Object.freeze({
     id: "herdr",
     title: "Herdr",
-    kind: "default",
+    kind: "installable",
     binary: "herdr",
     verifyArgv: Object.freeze(["bash", "-lc", "command -v herdr >/dev/null"]),
     versionArgv: Object.freeze(["herdr", "--version"]),
@@ -72,7 +67,7 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
   Object.freeze({
     id: "cloudflared",
     title: "cloudflared",
-    kind: "default",
+    kind: "installable",
     binary: "cloudflared",
     verifyArgv: Object.freeze(["bash", "-lc", "command -v cloudflared >/dev/null"]),
     versionArgv: Object.freeze(["cloudflared", "--version"]),
@@ -102,6 +97,31 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     docsPath: TOOLS_DOC,
   }),
   Object.freeze({
+    id: "microsandbox",
+    title: "MicroSandbox CLI",
+    kind: "installable",
+    binary: "msb",
+    verifyArgv: Object.freeze(["bash", "-lc", "command -v msb >/dev/null"]),
+    versionArgv: Object.freeze(["msb", "--version"]),
+    installArgv: Object.freeze([
+      "bash",
+      "-lc",
+      [
+        "set -e",
+        "sha=767df6954e09fec9bf8276cc2858fc9038024b3a22fa4740572620370eb719f4",
+        'prefix="${NPM_USER_PREFIX:-$HOME/.local}"',
+        'tmp="$(mktemp -d)"',
+        "trap 'rm -rf \"$tmp\"' EXIT",
+        'curl -fsSL "https://raw.githubusercontent.com/superradcompany/microsandbox/refs/heads/main/scripts/install.sh" -o "$tmp/install-msb.sh"',
+        'echo "$sha  $tmp/install-msb.sh" | sha256sum -c -',
+        'MSB_HOME="$prefix/microsandbox" sh "$tmp/install-msb.sh"',
+        '"$prefix/bin/msb" --version >/dev/null',
+      ].join("\n"),
+    ]),
+    installUser: "sandbox",
+    docsPath: "docs/runtimes/microsandbox.md",
+  }),
+  Object.freeze({
     id: "docker-cli",
     title: "Docker CLI + Compose",
     kind: "baked-in",
@@ -109,7 +129,7 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     verifyArgv: Object.freeze(["bash", "-lc", "command -v docker >/dev/null"]),
     versionArgv: Object.freeze(["docker", "--version"]),
     notInstallableReason:
-      "The Docker CLI is installed in the base image. Note that the CLI being present says nothing about whether a daemon is reachable — `oh runtime status docker` answers that.",
+      "The Docker CLI is installed in the base image. Note that the CLI being present says nothing about whether a daemon is reachable — `oh ps <name>` answers that.",
     docsPath: TOOLS_DOC,
   }),
   Object.freeze({
@@ -126,11 +146,10 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
   Object.freeze({
     id: "tailscale",
     title: "Tailscale",
-    kind: "opt-in",
+    kind: "installable",
     binary: "tailscale",
     verifyArgv: Object.freeze(["bash", "-lc", "command -v tailscale >/dev/null"]),
     versionArgv: Object.freeze(["tailscale", "--version"]),
-    toolKey: "tailscale",
     installArgv: Object.freeze([
       "bash",
       "-lc",
@@ -147,10 +166,6 @@ export function findTool(id: string): ToolEntry | undefined {
 
 export function toolIds(): string[] {
   return TOOL_CATALOG.map((t) => t.id);
-}
-
-export function defaultTools(): readonly ToolEntry[] {
-  return TOOL_CATALOG.filter((t) => t.kind === "default");
 }
 
 export function installableToolIds(): string[] {

@@ -44,22 +44,16 @@ Run each check sequentially. If any check fails, **stop immediately** and report
 command -v agent-browser && agent-browser --version 2>&1 || echo "FAIL: agent-browser not found in PATH"
 ```
 
-If not found, install it — **use npm (not pnpm)** and **pin to 0.8.5**:
+If not found, install it through the CLI — the catalog entry pins the
+version, fixes the binary's mode, and runs `agent-browser install --with-deps`
+for you:
 
 ```bash
-sudo npm install -g agent-browser@0.8.5
+oh tool install agent-browser --yes
 ```
 
-Then install Chromium + system deps. `agent-browser install --with-deps`
-shells out to a `playwright` binary that isn't bundled with this package,
-so on a fresh image you'll also need the playwright CLI available:
-
-```bash
-agent-browser install --with-deps    # installs system libs (apt)
-# If it ends with "sh: 1: playwright: not found":
-sudo npm install -g playwright@latest
-npx playwright install chromium
-```
+`--yes` is required whenever stdin is not a TTY: the entry declares a
+`~1 GB` download, and the confirmation gate refuses rather than prompting.
 
 Verify:
 
@@ -68,14 +62,16 @@ agent-browser --version     # → agent-browser 0.8.5
 agent-browser open about:blank && agent-browser close
 ```
 
-Rationale for the pins:
-- **npm, not pnpm** — `PNPM_HOME` is `/usr/local/share/pnpm`, owned by
-  root; `pnpm add -g` as the sandbox user fails with `EACCES`.
+Notes:
 - **0.8.5** — later majors have breaking CLI changes; the rest of this
-  skill targets 0.8.5's flags.
-
-Or rebuild the image with `INSTALL_AGENT_BROWSER=true` in
-`.devcontainer/.env` to bake this in.
+  skill targets 0.8.5's flags. The catalog owns the pin.
+- **Do not reach for `sudo npm install -g`.** It lands under
+  `/usr/lib/node_modules`, which no running sandbox can upgrade in place.
+  Use `oh tool install agent-browser`: the catalog installs into `$PNPM_HOME`
+  under the sandbox user's own home.
+- If `agent-browser install --with-deps` ever ends with
+  `sh: 1: playwright: not found`, the playwright CLI is missing:
+  `npx playwright install chromium` after `pnpm add -g playwright@latest`.
 
 After installing, resume the health check from step 2b — **do not stop**.
 

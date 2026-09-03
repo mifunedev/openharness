@@ -343,15 +343,35 @@ describe("runUpdate — preconditions", () => {
     expect(err.join("")).toContain("update source not found");
   });
 
-  it("8b. target has no .oh/ → rc 1, 'not an OpenHarness-equipped repo'", async () => {
+  it("8b. BOOTSTRAP: an empty target is equipped from 0.0.0, and writes only the payload", async () => {
     const from = mkTmp();
     const target = mkTmp();
-    buildEquippedRepo(from, { version: "0.1.0" });
+    buildEquippedRepo(from, { version: "0.6.0" });
+    fs.writeFileSync(path.join(from, "AGENTS.md"), "# not payload\n");
 
-    const { err, io } = mkIo();
+    const { out, err, io } = mkIo();
     const rc = await runUpdate({ targetDir: target, fromDir: from }, io);
-    expect(rc).toBe(1);
-    expect(err.join("")).toContain("not an OpenHarness-equipped repo");
+
+    expect(rc).toBe(0);
+    expect(err.join("")).toBe("");
+    expect(out.join("")).toContain("updating .oh: 0.0.0 -> 0.6.0");
+    expect(readFile(target, ".oh/scripts/foo.sh")).toBe("#!/bin/sh\necho foo\n");
+    expect(fs.readdirSync(target).sort()).toEqual([".oh"]);
+  });
+
+  it("8b2. BOOTSTRAP is idempotent: the second run reports up to date and writes nothing", async () => {
+    const from = mkTmp();
+    const target = mkTmp();
+    buildEquippedRepo(from, { version: "0.6.0" });
+
+    expect(await runUpdate({ targetDir: target, fromDir: from }, mkIo().io)).toBe(0);
+    const before = fs.readFileSync(path.join(target, ".oh/scripts/foo.sh"), "utf8");
+
+    const second = mkIo();
+    expect(await runUpdate({ targetDir: target, fromDir: from }, second.io)).toBe(0);
+    expect(second.out.join("")).toContain("already up to date (v0.6.0)");
+    expect(second.out.join("")).not.toContain("create ");
+    expect(fs.readFileSync(path.join(target, ".oh/scripts/foo.sh"), "utf8")).toBe(before);
   });
 
   it("8c. source and target are the same .oh → rc 1, 'same .oh'", async () => {

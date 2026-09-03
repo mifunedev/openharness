@@ -22,41 +22,13 @@ function stripQuotes(s: string): string {
   return s;
 }
 
-export const INSTALL_FIELDS: Record<string, string> = {
-  opencode: "install.opencode",
-  grok_build: "install.grokBuild",
-  hermes: "install.hermes",
-  agent_browser: "install.agentBrowser",
-  tailscale: "install.tailscale",
-};
-
 export const CONFIG_FIELD_BY_ENV_KEY: Record<string, string> = {
   DOCKER_SOCKET: "access.dockerSocket",
-  INSTALL_OPENCODE: INSTALL_FIELDS.opencode,
-  INSTALL_GROK_BUILD: INSTALL_FIELDS.grok_build,
-  INSTALL_HERMES: INSTALL_FIELDS.hermes,
-  INSTALL_AGENT_BROWSER: INSTALL_FIELDS.agent_browser,
-  INSTALL_TAILSCALE: INSTALL_FIELDS.tailscale,
 };
 
-export function installFieldPath(key: string): string {
-  const path = INSTALL_FIELDS[key];
-  if (path === undefined) throw new Error(`no oh.json install field for "${key}"`);
-  return path;
-}
+export type ConfigFieldOutcome = "already-set" | "updated" | "added";
 
-export function isInstallFlagEnabled(root: string, key: string): boolean {
-  const config = readOhConfig(ohConfigPath(root));
-  return getOhConfigValue(config, installFieldPath(key)) === true;
-}
-
-export type InstallFlagOutcome = "already-set" | "updated" | "added";
-
-export function setInstallFlag(root: string, key: string): InstallFlagOutcome {
-  return setConfigField(root, installFieldPath(key), "true");
-}
-
-export function setEnvValue(root: string, key: string, value: string): InstallFlagOutcome {
+export function setEnvValue(root: string, key: string, value: string): ConfigFieldOutcome {
   const path = CONFIG_FIELD_BY_ENV_KEY[key];
   if (path === undefined) {
     throw new Error(
@@ -67,7 +39,7 @@ export function setEnvValue(root: string, key: string, value: string): InstallFl
   return setConfigField(root, path, value);
 }
 
-export function setConfigField(root: string, path: string, value: string): InstallFlagOutcome {
+export function setConfigField(root: string, path: string, value: string): ConfigFieldOutcome {
   const file = ohConfigPath(root);
   assertInRoot(file, resolve(root));
   const config = readOhConfig(file);

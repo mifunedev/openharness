@@ -4,12 +4,15 @@ slug: pattern-evals-prose-literal-pinning
 kind: pattern
 tags: [evals, probes, contract-text, grep, false-failure, documentation]
 created: 2026-08-31
-updated: 2026-09-01
+updated: 2026-09-02
 sources:
   - .oh/evals/probes/wiki-kind-schema-contract.sh@bfe22487
   - .oh/evals/probes/spec-plan-knowledge-context.sh@fcbeedea
   - .oh/tasks/repo-knowledge-loop/evidence.md@fcbeedea
   - .oh/skills/wiki/references/schema.md@c841e567
+  - .oh/scripts/__tests__/herdr-default.test.ts@a6a00674
+  - .oh/scripts/__tests__/herdr-default.test.ts@8c898945
+  - .oh/evals/probes/context-tier-size-budget.sh@5b08c004
 confidence: provisional
 ---
 
@@ -61,6 +64,19 @@ heading, a template block, a table row — assert it with `grep -qxF` so a menti
 cannot satisfy an assertion about the thing itself
 (`.oh/evals/probes/spec-plan-knowledge-context.sh:29-32`). Fault injection is what
 surfaced it; neither probe had ever been run against a broken input.
+
+A third instance, from task `one-door` (#948): a documentation sweep that rewrote
+onboarding sentences to put `oh tool install herdr` before `herdr` broke two
+whole-sentence pins in `.oh/scripts/__tests__/herdr-default.test.ts:62-63`
+("then run `herdr` first") and pushed `AGENTS.md` 13 bytes over the 9500-byte
+always-on budget that `.oh/evals/probes/context-tier-size-budget.sh` enforces. The
+contract the test protects — Herdr is the first interactive action — still held;
+only the pinned bytes had moved. Workaround, appended 2026-09-02: when a wave
+rewrites prose, run the suites that pin that prose in the same wave and repin to
+the shortest fragment that carries the claim (here `run \`oh tool install herdr\`
+and \`herdr\` first`), and treat any always-on byte budget as one of those pins;
+the fix is mechanical, but a later wave that does not know the pins exist pays a
+full gate cycle to find them.
 
 ## See Also
 - [[pattern-evals-unexercised-oracle]]

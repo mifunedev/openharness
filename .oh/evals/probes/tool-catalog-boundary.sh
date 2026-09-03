@@ -33,7 +33,7 @@ strip_comments() {
 }
 
 if grep -qF 'INSTALL_AGENT_BROWSER' "$ENTRY"; then
-  missing+=("entrypoint.sh: INSTALL_AGENT_BROWSER guard returned — the install belongs to the tool catalog, reached through provision-defaults.sh from oh.json")
+  missing+=("entrypoint.sh: INSTALL_AGENT_BROWSER guard returned — the install belongs to the tool catalog, reached through \`oh tool install agent-browser\`")
 fi
 if grep -qF 'INSTALL_AGENT_BROWSER' "$DOCKERFILE"; then
   missing+=("Dockerfile: INSTALL_AGENT_BROWSER appeared — an image-layer install is discarded on every container recreate")
@@ -53,8 +53,8 @@ if grep -qE 'agent-browser@[0-9]+\.[0-9]+\.[0-9]+' "$ENTRY"; then
   missing+=("entrypoint.sh: pins an agent-browser version — a second copy of the pin drifts from tools/catalog.ts")
 fi
 
-if grep -qE 'harnessKey: *"agent_browser"' "$HARNESSES"; then
-  missing+=("harnesses/catalog.ts: agent_browser moved into the harness catalog — it is a browser, not an agent CLI")
+if grep -qE 'id: *"agent-browser"' "$HARNESSES"; then
+  missing+=("harnesses/catalog.ts: agent-browser moved into the harness catalog — it is a browser, not an agent CLI")
 fi
 if grep -qE 'id: *"docker"' <<<"$(strip_comments "$TOOLS")"; then
   missing+=("tools/catalog.ts: declares id \"docker\" — that id belongs to the runtime catalog; the CLI binary is \"docker-cli\"")

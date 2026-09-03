@@ -8,12 +8,6 @@ import { sourceDocsUrl } from "../lib/docs.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import { confirm } from "../lib/prompt.js";
 import {
-  installFieldPath,
-  isInstallFlagEnabled,
-  setInstallFlag,
-} from "../lib/env-file.js";
-import {
-  defaultTools,
   findTool,
   installableToolIds,
   toolIds,
@@ -33,13 +27,10 @@ export interface ToolOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
-  defaultsOnly?: boolean;
   env?: NodeJS.ProcessEnv;
 }
 
 export interface ToolInstallOptions extends ToolOptions {
-  persistOnly?: boolean;
-  noPersist?: boolean;
   yes?: boolean;
 }
 
@@ -48,7 +39,6 @@ interface ToolRow {
   title: string;
   binary: string;
   kind: string;
-  enabled: boolean | null;
   installed: boolean | null;
   version: string | null;
   installable: boolean;
@@ -130,8 +120,6 @@ async function collectRows(
       title: entry.title,
       binary: entry.binary,
       kind: entry.kind,
-      enabled:
-        entry.toolKey === undefined ? null : isInstallFlagEnabled(root, entry.toolKey),
       installed,
       version: reachable && installed === true ? await probeVersion(target, entry) : null,
       installable: entry.installArgv !== undefined,
@@ -147,13 +135,8 @@ function cell(value: boolean | null, absent: string): string {
 }
 
 function renderTable(rows: ToolRow[], io: ToolIO): void {
-  const header = ["TOOL", "KIND", "ENABLED", "INSTALLED"];
-  const body = rows.map((r) => [
-    r.id,
-    r.kind,
-    cell(r.enabled, "n/a"),
-    cell(r.installed, "?"),
-  ]);
+  const header = ["TOOL", "KIND", "INSTALLED"];
+  const body = rows.map((r) => [r.id, r.kind, cell(r.installed, "?")]);
   const widths = header.map((h, i) =>
     Math.max(h.length, ...body.map((b) => b[i].length)),
   );
@@ -179,12 +162,7 @@ function renderDetail(rows: ToolRow[], io: ToolIO): void {
 export async function runToolList(opts: ToolOptions, io: ToolIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const rows = await collectRows(
-    root,
-    run,
-    opts.env,
-    opts.defaultsOnly === true ? defaultTools() : undefined,
-  );
+  const rows = await collectRows(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(rows, null, 2)}\n`);
   } else {
@@ -236,8 +214,7 @@ async function confirmDownload(
 
   io.stderr(
     `${entry.id} downloads ${entry.downloadSize} and this is not an interactive terminal.\n` +
-      "Re-run with --yes to accept the download, or --persist-only to set the flag\n" +
-      "and let the next container start install it.\n",
+      "Re-run with --yes to accept the download.\n",
   );
   return false;
 }
@@ -260,18 +237,6 @@ export async function runToolInstall(
     return 1;
   }
 
-  if (!opts.noPersist && entry.toolKey !== undefined) {
-    const field = installFieldPath(entry.toolKey);
-    const outcome = setInstallFlag(root, entry.toolKey);
-    io.stdout(
-      outcome === "already-set"
-        ? `oh.json: ${field} already true\n`
-        : `oh.json: set ${field}=true (${outcome})\n`,
-    );
-  }
-
-  if (opts.persistOnly) return 0;
-
   const target = targetFor(root, run, opts.env);
   let status: string;
   try {
@@ -285,11 +250,11 @@ export async function runToolInstall(
   }
 
   if (!isReachable(status)) {
-    io.stdout(
-      `sandbox not running (${status}) — skipping the live install.\n` +
-        "Start it with `oh sandbox`, then re-run this command; or the next container start picks it up.\n",
+    io.stderr(
+      `oh tool: the sandbox is not running (${status}).\n` +
+        "Start it with `oh sandbox`, then re-run this command.\n",
     );
-    return 0;
+    return 1;
   }
 
   const already = await probeInstalled(target, entry);
@@ -302,14 +267,7 @@ export async function runToolInstall(
     return 1;
   }
 
-  if (!(await confirmDownload(entry, opts, io))) {
-    if (!opts.noPersist && entry.toolKey !== undefined) {
-      io.stdout(
-        `oh.json keeps ${installFieldPath(entry.toolKey)}=true — the next container start will install it.\n`,
-      );
-    }
-    return 1;
-  }
+  if (!(await confirmDownload(entry, opts, io))) return 1;
 
   io.stdout(`installing ${entry.title} into the sandbox…\n`);
   const r = await target.exec({
@@ -318,12 +276,7 @@ export async function runToolInstall(
     stdio: "inherit",
   });
   if (r.exitCode !== 0) {
-    io.stderr(
-      `oh tool: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
-        (entry.toolKey !== undefined && !opts.noPersist
-          ? `oh.json keeps ${installFieldPath(entry.toolKey)}=true — the next container start will retry it.\n`
-          : ""),
-    );
+    io.stderr(`oh tool: installing ${entry.id} failed (exit ${r.exitCode}).\n`);
     return r.exitCode;
   }
 

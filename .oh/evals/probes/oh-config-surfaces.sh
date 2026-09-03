@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: PR #887 (config split across two authored surfaces — a tracked oh.json and a secrets-only root dotenv — with nothing left under $HOME)
-# desc: the two authored config surfaces stay honest — tracked oh.json holds no allow-listed secret, the root dotenv is gitignored/0600 and holds nothing but allow-listed secrets, .devcontainer/.env is a symlink to ../.env, no live file still depends on the retired .devcontainer/.example.env, and no CLI source relocates config into $HOME
+# desc: the two authored config surfaces stay honest — tracked oh.json holds no allow-listed secret, the root dotenv is gitignored/0600 and holds nothing but allow-listed secrets, .devcontainer/.env is a symlink to ../.env, no live file still depends on the retired .devcontainer/.example.env, and no CLI source but the sandbox registry (which owns ${OH_HOME:-~/.oh}) resolves config out of $HOME
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -92,9 +92,15 @@ while read -r hit; do
   [[ -n "$hit" ]] || continue
   home_config+=("$hit")
 done < <(grep -rlE 'XDG_CONFIG_HOME|OH_CONFIG_DIR|OH_CLOUD_CONFIG|homedir\(\)' "$CLI_SRC" 2>/dev/null \
-  | sed "s#^$ROOT/##" | sort || true)
+  | sed "s#^$ROOT/##" | grep -vx '.oh/cli/src/lib/registry.ts' | sort || true)
 (( ${#home_config[@]} == 0 )) \
-  || fails+=("CLI sources still resolve config out of \$HOME (XDG_CONFIG_HOME/OH_CONFIG_DIR/OH_CLOUD_CONFIG/homedir()) — every authored setting lives at the repository root: ${home_config[*]}")
+  || fails+=("CLI sources still resolve config out of \$HOME (XDG_CONFIG_HOME/OH_CONFIG_DIR/OH_CLOUD_CONFIG/homedir()) — every authored setting lives at the repository root or in the sandbox registry: ${home_config[*]}")
+
+REGISTRY_SRC="$CLI_SRC/lib/registry.ts"
+if [[ -f "$REGISTRY_SRC" ]]; then
+  grep -Fq 'process.env.OH_HOME' "$REGISTRY_SRC" \
+    || fails+=("lib/registry.ts reads \$HOME without honouring OH_HOME — the one user-level surface must stay relocatable")
+fi
 
 if (( ${#fails[@]} > 0 )); then
   echo "REGRESSION: the oh.json/root-dotenv config surfaces are not honest:" >&2
@@ -102,5 +108,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: config surfaces — tracked oh.json is secret-free, the root dotenv is gitignored/0600 and allow-listed-only, .devcontainer/.env symlinks to ../.env, nothing live references .devcontainer/.example.env, and no CLI source relocates config into \$HOME" >&2
+echo "PASS: config surfaces — tracked oh.json is secret-free, the root dotenv is gitignored/0600 and allow-listed-only, .devcontainer/.env symlinks to ../.env, nothing live references .devcontainer/.example.env, and only the OH_HOME-relocatable sandbox registry resolves config out of \$HOME" >&2
 exit 0

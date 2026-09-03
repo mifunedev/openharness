@@ -11,11 +11,12 @@
 #         interactive `sudo` and /etc/sudoers.d/sandbox has no NOPASSWD.
 #         #920 removed the duplicate boot-path installer: the tool catalog is now the
 #         only place the version and both checksums may appear.
-# desc: the Tailscale optional tool stays a zero-privilege, zero-exposure install —
-#       tools/catalog.ts is the sole owner of the version and both sha256 pins, the
-#       entrypoint holds neither a guard nor a pin, no cap_add/devices/privileged/3773
-#       in any compose file, no tailscaled or `tailscale up` on boot, no Funnel, no
-#       committed auth key.
+#         #948 made `oh tool install tailscale` the only door: nothing installs at boot.
+# desc: the Tailscale tool stays a zero-privilege, zero-exposure install reached only
+#       through `oh tool install` — tools/catalog.ts is the sole owner of the version
+#       and both sha256 pins, the entrypoint holds neither a guard nor a pin, no
+#       cap_add/devices/privileged/3773 in any compose file, no tailscaled or
+#       `tailscale up` on boot, no Funnel, no committed auth key.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
@@ -37,7 +38,7 @@ fi
 missing=()
 
 grep -qF 'INSTALL_TAILSCALE' "$ENTRY" \
-  && missing+=("$ENTRY: INSTALL_TAILSCALE guard returned — the install belongs to the tool catalog, reached through provision-defaults.sh from oh.json")
+  && missing+=("$ENTRY: INSTALL_TAILSCALE guard returned — the install belongs to the tool catalog, reached through \`oh tool install tailscale\`")
 grep -qF 'INSTALL_TAILSCALE' "$DOCKERFILE" \
   && missing+=("$DOCKERFILE: INSTALL_TAILSCALE appeared — an image-layer install is discarded on every container recreate")
 
@@ -99,10 +100,8 @@ if ! grep -qE 'id:[[:space:]]*"tailscale"' "$CATALOG"; then
   missing+=("$CATALOG: no tool entry with id \"tailscale\"")
 else
   entry_block=$(awk '/id:[[:space:]]*"tailscale"/{found=1} found{print; if (/\}\)/) exit}' "$CATALOG")
-  grep -qE 'kind:[[:space:]]*"opt-in"' <<<"$entry_block" \
-    || missing+=("$CATALOG: the tailscale entry is not kind \"opt-in\" — it must never install by default")
-  grep -qE 'toolKey:[[:space:]]*"tailscale"' <<<"$entry_block" \
-    || missing+=("$CATALOG: the tailscale entry has no toolKey \"tailscale\" — the oh.json opt-in is not wired")
+  grep -qE 'kind:[[:space:]]*"installable"' <<<"$entry_block" \
+    || missing+=("$CATALOG: the tailscale entry is not kind \"installable\" — it enters the sandbox only through \`oh tool install\`, never at boot and never from the image")
   grep -qF 'entrypointGuard' <<<"$entry_block" \
     && missing+=("$CATALOG: the tailscale entry declares an entrypointGuard — it records a second installer that must not exist")
   # tailscaled runs fine unprivileged with --tun=userspace-networking, so nothing
@@ -120,7 +119,6 @@ else
     && missing+=("$CATALOG: the tailscale entry writes to /usr/local/bin — that needs root and is discarded on container recreate")
 fi
 
-# The boot path must agree with the catalog: same destination, same user.
 grep -qE 'install -m 0755 [^ ]+ /usr/local/bin/tailscaled?' "$ENTRY" \
   && missing+=("$ENTRY: installs Tailscale into /usr/local/bin — the catalog installs it into the home mount, and an image-layer copy is lost on every recreate")
 

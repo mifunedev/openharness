@@ -15,40 +15,56 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".."
 const read = (p: string): string => readFileSync(join(REPO_ROOT, p), "utf8");
 
 describe("tool catalog shape", () => {
-  it("lists the six known tools", () => {
+  it("lists the seven known tools", () => {
     expect(toolIds()).toEqual([
       "agent-browser",
       "herdr",
       "cloudflared",
+      "microsandbox",
       "docker-cli",
       "gh",
       "tailscale",
     ]);
   });
 
-  it("makes exactly the default and opt-in tools installable", () => {
+  it("makes exactly the installable tools installable", () => {
     expect(installableToolIds()).toEqual([
       "agent-browser",
       "herdr",
       "cloudflared",
+      "microsandbox",
       "tailscale",
     ]);
     for (const t of TOOL_CATALOG) {
-      // A kind:"default" tool is provisioned at boot through `oh tool install`,
-      // so it MUST be installable; a baked-in one must not be.
-      if (t.kind === "default") expect(t.installArgv, t.id).toBeDefined();
+      expect(["baked-in", "installable"], t.id).toContain(t.kind);
+      if (t.kind === "installable") expect(t.installArgv, t.id).toBeDefined();
       if (t.kind === "baked-in") expect(t.installArgv, t.id).toBeUndefined();
     }
   });
 
   // #906: commands/tool.ts installs with stdio:"inherit", so local-target.ts
   // picks plain `sudo --` for a root install — and /etc/sudoers.d/sandbox has
-  // no NOPASSWD. A root-installed default would hang an agent on a password
-  // prompt, and could not be upgraded by the running sandbox afterwards.
-  it("installs every default tool as the sandbox user into the home mount", () => {
-    for (const t of TOOL_CATALOG) {
-      if (t.kind !== "default") continue;
+  // no NOPASSWD. A root install would hang an agent on a password prompt, and
+  // could not be upgraded by the running sandbox afterwards.
+  it("installs every installable tool as the sandbox user", () => {
+    const installable = TOOL_CATALOG.filter((t) => t.kind === "installable");
+    expect(installable.length).toBeGreaterThan(0);
+    for (const t of installable) {
       expect(t.installUser, t.id).toBe("sandbox");
+    }
+  });
+
+  it("lands every downloaded binary in NPM_USER_PREFIX behind a sha256 check", () => {
+    const downloaders = TOOL_CATALOG.filter((t) =>
+      (t.installArgv ?? []).join("\n").includes("curl -fsSL"),
+    );
+    expect(downloaders.map((t) => t.id)).toEqual([
+      "herdr",
+      "cloudflared",
+      "microsandbox",
+      "tailscale",
+    ]);
+    for (const t of downloaders) {
       expect(t.installArgv!.join("\n"), t.id).toContain("NPM_USER_PREFIX");
       expect(t.installArgv!.join("\n"), t.id).toContain("sha256sum -c -");
     }
@@ -77,6 +93,7 @@ describe("tool catalog shape", () => {
     expect(withVersion).toEqual([
       "herdr",
       "cloudflared",
+      "microsandbox",
       "docker-cli",
       "gh",
       "tailscale",
@@ -105,14 +122,20 @@ describe("tool catalog shape", () => {
   });
 });
 
-describe("the three catalogs are disjoint", () => {
-  it("shares no id with the harness or runtime catalog", () => {
+describe("the catalogs stay separate", () => {
+  it("shares no id with the harness catalog", () => {
     const harness = new Set(HARNESS_CATALOG.map((h) => h.id));
-    const runtime = new Set(RUNTIME_CATALOG.map((r) => r.id));
     for (const t of TOOL_CATALOG) {
       expect(harness.has(t.id), `${t.id} is also a harness`).toBe(false);
-      expect(runtime.has(t.id), `${t.id} is also a runtime`).toBe(false);
     }
+  });
+
+  it("shares exactly one id with the runtime catalog: the planned microsandbox substrate", () => {
+    const runtime = new Set(RUNTIME_CATALOG.map((r) => r.id));
+    const shared = toolIds().filter((id) => runtime.has(id));
+    expect(shared).toEqual(["microsandbox"]);
+    expect(RUNTIME_CATALOG.find((r) => r.id === "microsandbox")?.provisionable).toBe(false);
+    expect(findTool("microsandbox")?.kind).toBe("installable");
   });
 
   it("has unique ids within itself", () => {
@@ -125,8 +148,8 @@ describe("the three catalogs are disjoint", () => {
     expect(RUNTIME_CATALOG.some((r) => r.id === "docker")).toBe(true);
   });
 
-  it("leaves agent_browser excluded from the harness catalog", () => {
-    expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
+  it("leaves agent-browser excluded from the harness catalog", () => {
+    expect(HARNESS_CATALOG.some((h) => h.id === "agent-browser")).toBe(false);
   });
 });
 
@@ -134,10 +157,10 @@ describe("agent-browser is installed from the catalog, not the boot path", () =>
   const ab = findTool("agent-browser")!;
   const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
 
-  it("declares the oh.json opt-in and neither a build arg nor an entrypoint guard", () => {
+  it("declares neither a build arg, an entrypoint guard, nor an oh.json key", () => {
     expect(Object.keys(ab)).not.toContain("buildArg");
     expect(Object.keys(ab)).not.toContain("entrypointGuard");
-    expect(ab.toolKey).toBe("agent_browser");
+    expect(ab.kind).toBe("installable");
   });
 
   it("is absent from the boot path and the Dockerfile", () => {
@@ -167,15 +190,14 @@ describe("agent-browser is installed from the catalog, not the boot path", () =>
     expect(argv).not.toContain("[entrypoint]");
   });
 
-  it("arms the download gate with the size the wizard also quotes", () => {
+  it("arms the download gate with the size the install verb quotes", () => {
     expect(ab.downloadSize).toBe("~1 GB");
-    expect(read(".oh/cli/src/commands/init.ts")).toContain("~1 GB");
+    expect(read(".oh/cli/src/commands/tool.ts")).toContain("downloads ${entry.downloadSize}");
   });
 
-  it("is reachable only through oh.json — never through compose", () => {
+  it("is reachable only through `oh tool install` — never through compose", () => {
     expect(read(".devcontainer/docker-compose.yml")).not.toContain("INSTALL_AGENT_BROWSER");
     expect(read(".oh/cli/src/lib/config-render.ts")).toContain('"INSTALL_AGENT_BROWSER"');
-    expect(read("docs/configuration.md")).toMatch(/^\| `install\.agentBrowser` \|/m);
   });
 });
 
@@ -186,11 +208,10 @@ describe("tailscale is installed from the catalog, not the boot path", () => {
   const SHA_AMD64 = "36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5";
   const SHA_ARM64 = "a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25";
 
-  it("declares the oh.json opt-in and neither a build arg nor an entrypoint guard", () => {
+  it("declares neither a build arg, an entrypoint guard, nor an oh.json key", () => {
     expect(Object.keys(ts)).not.toContain("buildArg");
     expect(Object.keys(ts)).not.toContain("entrypointGuard");
-    expect(ts.toolKey).toBe("tailscale");
-    expect(ts.kind).toBe("opt-in");
+    expect(ts.kind).toBe("installable");
   });
 
   it("is absent from the boot path and the Dockerfile", () => {
@@ -242,19 +263,18 @@ describe("tailscale is installed from the catalog, not the boot path", () => {
     expect(ts.downloadSize).toBeUndefined();
   });
 
-  it("is reachable only through oh.json — never through compose", () => {
+  it("is reachable only through `oh tool install` — never through compose", () => {
     expect(read(".devcontainer/docker-compose.yml")).not.toContain("INSTALL_TAILSCALE");
     expect(read(".oh/cli/src/lib/config-render.ts")).toContain('"INSTALL_TAILSCALE"');
-    expect(read("docs/configuration.md")).toMatch(/^\| `install\.tailscale` \|/m);
   });
 });
 
 describe("baked-in tools", () => {
-  it("declare no install key — the installer must not invent one", () => {
+  it("declare no install argv — the installer must not invent one", () => {
     for (const t of TOOL_CATALOG) {
       if (t.kind !== "baked-in") continue;
-      expect(t.toolKey, t.id).toBeUndefined();
       expect(t.installArgv, t.id).toBeUndefined();
+      expect(t.notInstallableReason, t.id).toBeTruthy();
     }
   });
 
@@ -267,13 +287,13 @@ describe("baked-in tools", () => {
     }
   });
 
-  // #906: herdr and cloudflared moved to kind:"default". The inverse of the
-  // check above — a default tool must NOT be in the Dockerfile — lives in
-  // .oh/evals/probes/default-provisioning.sh, which matches on the pinned
-  // project URL rather than the bare binary name.
+  // #948: herdr and cloudflared enter only through `oh tool install`. The
+  // inverse of the check above — an installable tool must NOT be in the
+  // Dockerfile — lives in .oh/evals/probes/harness-one-door.sh, which matches
+  // on the pinned project URL rather than the bare binary name.
   it("no longer claims herdr or cloudflared", () => {
     for (const id of ["herdr", "cloudflared"]) {
-      expect(findTool(id)!.kind, id).toBe("default");
+      expect(findTool(id)!.kind, id).toBe("installable");
     }
   });
 });

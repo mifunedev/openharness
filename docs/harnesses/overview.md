@@ -4,27 +4,24 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness provisions three agent CLIs into `~/.local` on first boot: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **Hermes**, and **Grok Build** are optional — install one with `oh harness install <id>`, which also sets its `install.*` key so a fresh home mount reinstalls it at boot. No harness is baked into the image. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773, and has no `install.*` key, because it is never baked into the image. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
+Open Harness installs no agent CLI at boot. A harness enters the sandbox only when you run `oh harness install <id>`. **Claude Code**, **Codex**, **Pi**, **OpenCode**, **Hermes**, and **Grok Build** install this way. The install lands in `~/.local` inside the persistent home volume, so it survives a container recreate. No harness is baked into the image. **T3 Code** is on demand: the `/t3` skill (or `npx t3`) fetches it and serves a browser UI on port 3773. Inside the sandbox, run `oh tool install herdr`, then run `herdr`, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
 
-Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
+Open Harness is the harness; the **agent** is your call. To go beyond the catalog, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
 ## Installing a harness
 
-`oh harness` is the only path, and it does both halves in one command: it sets
-the `install.*` key in `oh.json` so a fresh home mount reinstalls the harness at
-boot, **and** installs the CLI into the already-running container so it is usable
-now. It never rebuilds or restarts the sandbox.
+`oh harness install <id>` is the only door. It probes the running sandbox,
+installs the CLI into `~/.local` in the persistent home volume, and reports. It
+reads and writes no `oh.json` field. It never rebuilds or restarts the sandbox.
 
 ```bash
-oh harness list                 # what exists, what is enabled, what is installed
-oh harness list --defaults      # only the kind:"default" harnesses, and only their probes
-oh harness install opencode     # persist the flag + install into the running sandbox
+oh harness list                 # what exists, and what is installed
+oh harness install opencode     # install into the running sandbox
 oh harness status hermes        # one harness
 ```
 
-If the sandbox is not running, the command persists the flag, prints a hint, and
-exits 0 — start the sandbox with `oh sandbox` and re-run it, or let the next
-build pick the harness up.
+The command needs a running sandbox. If the sandbox is not running, it says so
+and exits non-zero. Start the sandbox with `oh sandbox install docker`, then re-run it.
 
 `oh harness` works from inside the sandbox too. There it installs into the
 environment you are already in, and `list`/`status` report the CLIs actually
@@ -35,43 +32,45 @@ Flags:
 
 | Flag | Effect |
 |---|---|
-| `--persist-only` | Only set the `.devcontainer/.env` flag; do no container work |
-| `--no-persist` | Live-install only; leave `.devcontainer/.env` unchanged (ephemeral — a container recreate loses it) |
-| `--defaults` | `list` only: restrict the listing, and the verify probes it runs, to `kind:"default"` harnesses |
+| `--json` | `list` and `status` only: machine-readable output |
 
-The manual path still works: set the field directly with
-`oh config set install.<key> true` and run `oh stop && oh sandbox`.
+Each catalog entry has a `kind`. `installable` harnesses install through the
+verb. `on-demand` harnesses (T3 Code) are fetched by `npx` at each run and are
+never installed. There is no other install path, and no configuration key
+selects one.
+
+An install persists because the home volume persists. `oh destroy` removes that
+volume, and the install with it.
 
 ## Supported agents
 
 | Agent | Role | Start command | Source |
 |---|---|---|---|
-| [Claude Code](./claude-code.md) | Anthropic's terminal coding agent (default) | `claude` | preinstalled |
-| [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | preinstalled |
-| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | optional: `oh harness install opencode` |
-| [Pi](./pi.md) | Lightweight, customizable agent | `pi` | default |
-| [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | optional: `oh harness install hermes` |
-| [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | optional: `oh harness install grok-build` |
-| [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `/t3` or `npx t3` | on-demand |
+| [Claude Code](./claude-code.md) | Anthropic's terminal coding agent | `claude` | `oh harness install claude-code` |
+| [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | `oh harness install codex` |
+| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | `oh harness install opencode` |
+| [Pi](./pi.md) | Lightweight, customizable agent | `pi` | `oh harness install pi` |
+| [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | `oh harness install hermes` |
+| [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | `oh harness install grok-build` |
+| [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `/t3` or `npx t3` | on demand, no install |
 
 ## Verifying installation
 
 ```bash
+# Each CLI is present only after `oh harness install <id>`:
 claude --version
 codex --version
 pi --version
+opencode --version
+hermes --version
+grok --version
 
-# Optional CLIs, present only after `oh harness install <id>` (or its install.* key):
-opencode --version      # install.opencode: true
-hermes --version        # install.hermes: true
-grok --version          # install.grok_build: true
-
-npx t3 --version        # T3 Code (not preinstalled — fetched on demand)
+npx t3 --version        # T3 Code — on demand, fetched by npx
 ```
 
 ## Authentication
 
-Open Harness provisions Claude Code, Codex, and Pi into `~/.local` on first boot rather than baking them into the image. Authenticate at least one default harness before use; authenticate optional harnesses after enabling their install flags:
+Install a harness with `oh harness install <id>`, then authenticate it. Authenticate at least one harness before use:
 
 - **Claude Code**: run `claude` and follow the OAuth prompt (see [Claude Code](./claude-code.md)).
 - **Codex**: run `codex login` (see [Codex](./codex.md)).

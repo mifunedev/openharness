@@ -111,9 +111,6 @@ cross the sandbox boundary or make persistent work depend on an attached termina
 - **Do not treat the closest context file as the only context.** Context is
   cumulative. Read every applicable file and resolve conflicts by target-path
   specificity.
-- **Do not use `.oh/templates/AGENTS.md` as root authority.** The template gives
-  application ownership to agents in initialized projects. This file defines the
-  root orchestrator role.
 - **Do not explain code with comments.** Improve the code or add a test or probe that
   proves the invariant.
 
@@ -146,13 +143,13 @@ produced apart from it. Every other directory uses a `README.md`.
 
 Use the lifecycle in this order:
 
-1. Run `oh sandbox` on the host.
-2. Run `oh shell`.
-3. Run `herdr` inside the sandbox.
+1. Run `oh sandbox install docker` on the host.
+2. Run `oh shell <name>`.
+3. Run `oh tool install herdr`, then `herdr`.
 4. Run `gh auth login && gh auth setup-git` once from the first Herdr pane.
-5. Run `oh ps` on the host to verify the container.
+5. Run `oh ps <name>` on the host to verify the container.
 
-Run `oh destroy` only for operator-authorized teardown.
+Run `oh destroy <name>` only for operator-authorized teardown.
 
 `oh` is the only lifecycle door, on the host and in the sandbox, and it calls
 `.oh/scripts/docker-compose.sh`. Host prerequisites are Docker, Git, and Node 20 or

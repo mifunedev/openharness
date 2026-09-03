@@ -8,6 +8,30 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-03
+
+### Added
+
+- Add `oh sandbox install docker`: a wizard writes a sandbox registry entry under `${OH_HOME:-~/.oh}/sandboxes/<name>/` and boots it from any directory, with no project checkout. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- Add `oh sandbox list [--json]`, reporting each registry entry's name, runtime, container status, and bound repo. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- Add `--sandbox <name>` to `oh config show|set` and `oh secret set|list`, which read and write a registry entry instead of the project root. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- Add `microsandbox` to the tool catalog: `oh tool install microsandbox` installs `msb` under `${NPM_USER_PREFIX:-$HOME/.local}` from a pinned installer. ([#950](https://github.com/mifunedev/openharness/issues/950))
+
+### Changed
+
+- **BREAKING:** `oh update` is the bootstrap: it equips an empty checkout with `.oh/` and `crons/`, writes nothing else, and never prompts. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- **BREAKING:** `oh shell|stop|restart|logs|ps|destroy` take an optional sandbox name, resolving name, then the single entry, then the entry containing the cwd. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- `oh destroy <name>` removes the registry entry after `down -v`, so the sandbox name becomes free again. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- `docs/deployment-prebuilt-image.md` becomes the `oh sandbox install docker` page: running the published image is now the default, and `--repo` is the bind-mounted-checkout case. ([#950](https://github.com/mifunedev/openharness/issues/950))
+
+### Removed
+
+- Remove boot provisioning and every install switch: `oh harness install <id>` and `oh tool install <id>` are the only door. A fresh sandbox has no harness and no `herdr`. ([#948](https://github.com/mifunedev/openharness/issues/948))
+- **BREAKING:** Remove `oh init`. `oh sandbox install docker` owns sandbox configuration and `oh update` owns the control-plane payload. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- **BREAKING:** Remove `oh runtime`. The runtime catalog lives under `oh sandbox`, and `msb` is installed with `oh tool install microsandbox`. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- **BREAKING:** Remove the `.oh/templates/` scaffold payload. The CLI writes no `AGENTS.md`, provider config, or `.gitignore` line beyond `.env`. ([#950](https://github.com/mifunedev/openharness/issues/950))
+- Remove `gvisor` from the runtime catalog; the isolation-tier landscape lives in `docs/rfcs/rfc-runtime-support.md`. ([#950](https://github.com/mifunedev/openharness/issues/950))
+
 ## [0.6.0] - 2026-08-31
 
 ### Added

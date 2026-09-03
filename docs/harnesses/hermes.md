@@ -10,7 +10,7 @@ skills from experience, scheduled task automation, sub-agent delegation,
 container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
-Hermes is an **optional harness** in Open Harness. Install it with `oh harness install hermes` (or set `install.hermes` in `oh.json`, which the boot provisioner honours); it then sits alongside `claude`, `codex`,
+Install Hermes with `oh harness install hermes`. It then sits alongside `claude`, `codex`,
 `pi`, and `opencode` as a sandbox CLI primitive. See the
 upstream documentation below for canonical facts about Hermes.
 
@@ -27,40 +27,27 @@ upstream documentation below for canonical facts about Hermes.
   unless you have a specific reason to enable a bridge.
 - MIT-licensed; current upstream release is v0.14.0.
 
-## Install (optional)
+## Install
 
-The shortest path is the CLI, which sets the `.devcontainer/.env` flag **and**
-installs into the already-running sandbox without a rebuild:
+`oh harness install <id>` is the only door. It installs Hermes into the
+already-running sandbox without a rebuild:
 
 ```bash
 oh harness install hermes
 ```
 
-See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
-`--no-persist`, and what happens when the sandbox is not running.
+Nothing installs Hermes at boot, and no configuration key selects it. See
+[Harnesses Overview](./overview.md#installing-a-harness) for what the verb does
+and what happens when the sandbox is not running.
 
-### Manual path
-
-Hermes is disabled by default. To have boot provisioning install it, set the
-field in the tracked `oh.json`:
-
-```bash
-oh config set install.hermes true
-```
-
-Then restart the sandbox:
-
-```bash
-oh stop && oh sandbox
-```
-
-The executable is installed by `oh harness install hermes`, or at boot on a
-fresh home mount when `install.hermes` is true. Once installed it persists in
-the home mount, so later boots find it on PATH immediately:
+The install lands in the persistent home volume, so later boots find it on PATH
+immediately:
 
 ```bash
 hermes --version
 ```
+
+### What the door runs
 
 Open Harness runs the official installer as the `sandbox` user with setup and
 browser installation disabled, directing it into the home mount:
@@ -80,7 +67,7 @@ bash hermes-install.sh --skip-setup --skip-browser
 
 If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
-That keeps `oh sandbox` non-interactive. User setup remains explicit
+That keeps `oh sandbox install docker` non-interactive. User setup remains explicit
 inside the running sandbox.
 
 ## Authentication
@@ -95,8 +82,8 @@ hermes doctor           # health check
 
 Config, memory, runtime skills, and sessions write to `~/harness/.hermes/`,
 which the entrypoint sets as `HERMES_HOME`. On every boot where the `hermes`
-binary is present — the wiring keys off the binary, not off a flag, so it runs
-identically in both sandbox flavors — the entrypoint links
+binary is present — the wiring keys off the binary, so it runs identically in
+both sandbox flavors — the entrypoint links
 `.hermes/skills/openharness` to the tracked shared skills directory
 (`.oh/skills/`), making the same harness skills used by Claude, Codex, and Pi
 visible to Hermes by default.
@@ -125,12 +112,11 @@ secrets from this directory.
 the bind-mounted `.hermes/` directory from the checkout. Remove that
 directory manually if you want a full Hermes project-state reset.
 
-The Hermes binary is installed into the home mount by `oh harness install hermes`
-— at `~/.local/lib/hermes-agent` with a `~/.local/bin/hermes` launcher — and the
-boot provisioner reinstalls it on a fresh home mount whenever `install.hermes` is
-true. Nothing about it lives in the image. Disabling the flag stops the
-reinstall but leaves an existing install in place; project-local
-state remains in `.hermes/` until removed.
+`oh harness install hermes` installs the binary into the home volume, at
+`~/.local/lib/hermes-agent` with a `~/.local/bin/hermes` launcher. Nothing about
+it lives in the image, and nothing reinstalls it at boot. `oh destroy` removes
+the home volume and the binary with it; project-local state remains in
+`.hermes/` until removed.
 
 ## Common usage
 

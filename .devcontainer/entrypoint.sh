@@ -14,6 +14,23 @@ sandbox_ownership() {
   printf '%s:%s' "$(id -u sandbox)" "$(id -g sandbox)"
 }
 
+reconcile_shell_env_exports() {
+  local f repaired=0
+  for f in /home/sandbox/.profile /home/sandbox/.zprofile; do
+    [ -f "$f" ] || continue
+    grep -qE '^export (NPM_USER_PREFIX|PNPM_HOME)="/' "$f" 2>/dev/null || continue
+    sed -i \
+      -e 's|^export NPM_USER_PREFIX=.*|export NPM_USER_PREFIX="${NPM_USER_PREFIX:-/home/sandbox/.local}"|' \
+      -e 's|^export PNPM_HOME=.*|export PNPM_HOME="${PNPM_HOME:-/home/sandbox/.local/share/pnpm}"|' \
+      "$f" 2>/dev/null || continue
+    chown "$(sandbox_ownership)" "$f" 2>/dev/null || true
+    repaired=1
+  done
+  if [ "$repaired" = "1" ]; then
+    echo "[entrypoint] replaced hardcoded NPM_USER_PREFIX/PNPM_HOME exports in the home mount's shell profile; the image environment now wins"
+  fi
+}
+
 repair_home_mount_ownership() {
   local owner
   owner="$(sandbox_ownership)"
@@ -159,6 +176,7 @@ echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set san
 unset PW
 
 repair_home_mount_ownership
+reconcile_shell_env_exports
 
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
@@ -166,14 +184,6 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   if ! gosu sandbox bash "$HARNESS/.oh/scripts/link-providers.sh" --init; then
     echo "[entrypoint] failed to link provider skills; run: bash .oh/scripts/link-providers.sh --init"
     exit 1
-  fi
-fi
-
-if [ "${OH_PROVISION_DEFAULTS:-true}" = "true" ] \
-   && [ -x "$HARNESS/.oh/scripts/provision-defaults.sh" ]; then
-  if ! OH_EXECUTION_TARGET=local timeout "${OH_PROVISION_DEFAULTS_TIMEOUT:-240}" bash "$HARNESS/.oh/scripts/provision-defaults.sh"; then
-    echo "[entrypoint] WARNING: default provisioning did not complete; run: bash .oh/scripts/provision-defaults.sh" >&2
-    echo "[entrypoint] WARNING: herdr may be unavailable — 'tmux' still works as a fallback multiplexer" >&2
   fi
 fi
 
@@ -566,7 +576,11 @@ if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo "  │  Optional Slack bridge setup:                   │"
   echo "  │    see docs/integrations/slack.md           │"
   echo "  │  First command after attaching:                 │"
-  echo "  │    herdr   # then complete setup in its panes   │"
+  if gosu sandbox bash -lc 'command -v herdr' >/dev/null 2>&1; then
+    echo "  │    herdr   # then complete setup in its panes   │"
+  else
+    echo "  │    oh tool install herdr   # then run herdr     │"
+  fi
   echo "  └─────────────────────────────────────────────────┘"
   echo ""
 fi

@@ -61,12 +61,18 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+const ENTRY_NAME = "oh-lifecycle-box";
+
 function makeRepo(): string {
-  const d = mkdtempSync(join(tmpdir(), "oh-lifecycle-"));
-  cleanups.push(d);
+  const home = mkdtempSync(join(tmpdir(), "oh-lifecycle-"));
+  cleanups.push(home);
+  vi.stubEnv("OH_HOME", home);
+  const d = join(home, "sandboxes", ENTRY_NAME);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
   return d;
 }
+
+const entry = { name: ENTRY_NAME };
 
 function writeOhJson(root: string, body: Record<string, unknown>): void {
   writeFileSync(ohConfigPath(root), `${JSON.stringify({ version: 1, ...body })}\n`);
@@ -183,7 +189,7 @@ describe("oh.json -> compose env wiring (issue #880)", () => {
     ohJson(root);
     const { calls, run } = makeRunner();
 
-    expect(runComposeVerb("ps", { cwd: root, run })).toBe(0);
+    expect(runComposeVerb("ps", { ...entry, run })).toBe(0);
     expect(calls[0].args.slice(0, 2)).toEqual([script, "--extra-env-file"]);
     expect(calls[0].args.slice(3)).toEqual(["ps"]);
     expect(existsSync(calls[0].args[2])).toBe(false);
@@ -254,7 +260,7 @@ describe("runSandbox", () => {
     const bare = mkdtempSync(join(tmpdir(), "oh-lifecycle-bare-"));
     cleanups.push(bare);
     await expect(runSandbox({ cwd: bare, run: makeRunner().run }, makeIo().io)).rejects.toThrow(
-      "not an OpenHarness-equipped repo — run `oh init` first",
+      "not an OpenHarness-equipped repo — run `oh update` first",
     );
   });
 
@@ -499,34 +505,49 @@ describe("runSandbox", () => {
 
 
 describe("runShell", () => {
-  it("positional container wins — the configured value is not consulted", () => {
+  it("resolves the entry by name and execs into its container", () => {
     vi.stubEnv("SANDBOX_NAME", "");
     const root = makeRepo();
     writeOhJson(root, { name: "configured" });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
-    expect(runShell({ cwd: root, run, container: "custom-box" }, makeIo().io)).toBe(0);
+    expect(runShell({ ...entry, run }, makeIo().io)).toBe(0);
     expect(calls).toEqual([
       {
         cmd: "docker",
-        args: ["exec", "-it", "-u", "sandbox", "custom-box", "zsh"],
+        args: ["exec", "-it", "-u", "sandbox", "configured", "zsh"],
         opts: { stdio: "inherit" },
       },
     ]);
   });
 
-  it("reads the name from <root>/oh.json, from a nested cwd", () => {
+  it("resolves the only registered sandbox when no name is given", () => {
     vi.stubEnv("SANDBOX_NAME", "");
     const root = makeRepo();
     writeOhJson(root, { name: "my-sandbox" });
-    const nested = join(root, "pkg", "web");
-    mkdirSync(nested, { recursive: true });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
-    expect(runShell({ cwd: nested, run }, makeIo().io)).toBe(0);
+    expect(runShell({ run }, makeIo().io)).toBe(0);
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toBe("docker");
     expect(calls[0].args).toEqual(["exec", "-it", "-u", "sandbox", "my-sandbox", "zsh"]);
+  });
+
+  it("resolves the entry whose repo contains the cwd", () => {
+    vi.stubEnv("SANDBOX_NAME", "");
+    const root = makeRepo();
+    const checkout = mkdtempSync(join(tmpdir(), "oh-lifecycle-repo-"));
+    cleanups.push(checkout);
+    writeOhJson(root, { name: "repo-box", repo: checkout });
+    mkdirSync(join(root, "..", "oh-lifecycle-other"), { recursive: true });
+    writeFileSync(
+      join(root, "..", "oh-lifecycle-other", "oh.json"),
+      `${JSON.stringify({ version: 1, name: "other" })}\n`,
+    );
+    const { calls, run } = makeRunner([{ status: 0 }]);
+
+    expect(runShell({ cwd: join(checkout, "src"), run }, makeIo().io)).toBe(0);
+    expect(calls[0].args[4]).toBe("repo-box");
   });
 
   it(`falls back to "${DEFAULT_CONTAINER_NAME}" when oh.json carries no name`, () => {
@@ -535,7 +556,7 @@ describe("runShell", () => {
     writeOhJson(root, { git: { userName: "someone" } });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
-    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(runShell({ ...entry, run }, makeIo().io)).toBe(0);
     expect(calls[0].args[4]).toBe(DEFAULT_CONTAINER_NAME);
   });
 
@@ -545,7 +566,7 @@ describe("runShell", () => {
     writeOhJson(root, { name: "from-json" });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
-    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(runShell({ ...entry, run }, makeIo().io)).toBe(0);
     expect(calls[0].args[4]).toBe("from-env");
   });
 
@@ -554,41 +575,59 @@ describe("runShell", () => {
     const root = makeRepo();
     const { calls, run } = makeRunner([{ status: 0 }]);
 
-    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(runShell({ ...entry, run }, makeIo().io)).toBe(0);
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toBe("docker");
     expect(calls[0].args[4]).toBe(DEFAULT_CONTAINER_NAME);
   });
 
-  it("prints the `oh sandbox` hint (after docker's own error) and propagates a non-zero exit", () => {
-    const root = makeRepo();
+  it("prints the install hint (after docker's own error) and propagates a non-zero exit", () => {
+    vi.stubEnv("SANDBOX_NAME", "");
+    makeRepo();
     const { run } = makeRunner([{ status: 126 }]);
     const { err, io } = makeIo();
 
-    expect(runShell({ cwd: root, run, container: "openharness" }, io)).toBe(126);
-    expect(err).toEqual(["container `openharness` not running? start it with `oh sandbox`\n"]);
+    expect(runShell({ ...entry, run }, io)).toBe(126);
+    expect(err).toEqual([
+      "container `openharness` not running? start it with `oh sandbox install docker`\n",
+    ]);
   });
 
   it("no hint on a clean exit", () => {
-    const root = makeRepo();
+    makeRepo();
     const { err, io } = makeIo();
-    expect(runShell({ cwd: root, run: makeRunner([{ status: 0 }]).run, container: "x" }, io)).toBe(0);
+    expect(runShell({ ...entry, run: makeRunner([{ status: 0 }]).run }, io)).toBe(0);
     expect(err).toEqual([]);
   });
 
   it("throws a clean error when docker is not on PATH (ENOENT)", () => {
-    const root = makeRepo();
+    makeRepo();
     const { run } = makeRunner([{ status: null, error: { code: "ENOENT" } }]);
-    expect(() => runShell({ cwd: root, run, container: "x" }, makeIo().io)).toThrow(
+    expect(() => runShell({ ...entry, run }, makeIo().io)).toThrow(
       "docker is required for `oh shell` but was not found on PATH",
     );
   });
 
-  it("errors when not inside an equipped repo", () => {
+  it("errors listing the registered names when no sandbox matches", () => {
+    const root = makeRepo();
+    writeOhJson(root, { name: "one" });
+    mkdirSync(join(root, "..", "oh-lifecycle-two"), { recursive: true });
+    writeFileSync(
+      join(root, "..", "oh-lifecycle-two", "oh.json"),
+      `${JSON.stringify({ version: 1, name: "two" })}\n`,
+    );
     const bare = mkdtempSync(join(tmpdir(), "oh-lifecycle-bare-"));
     cleanups.push(bare);
+
     expect(() => runShell({ cwd: bare, run: makeRunner().run }, makeIo().io)).toThrow(
-      "not an OpenHarness-equipped repo",
+      /several sandboxes are registered .*oh-lifecycle-box, oh-lifecycle-two/,
+    );
+  });
+
+  it("errors naming the missing sandbox when a name does not resolve", () => {
+    makeRepo();
+    expect(() => runShell({ name: "absent", run: makeRunner().run }, makeIo().io)).toThrow(
+      "no sandbox named `absent`",
     );
   });
 });
@@ -648,64 +687,91 @@ describe("runGateway", () => {
 
 
 describe("parseSandboxArgs", () => {
-  it("accepts no arguments and recognizes the help flags", () => {
-    expect(parseSandboxArgs([])).toEqual({
-      ok: true,
-      args: { help: false, image: false, noBuild: false },
-    });
+  const base = {
+    help: false,
+    yes: false,
+    image: false,
+    noBuild: false,
+    printArgv: false,
+    json: false,
+  };
+
+  it("shows help for a bare `oh sandbox` and for the help flags", () => {
+    expect(parseSandboxArgs([])).toEqual({ ok: true, args: { ...base, help: true } });
     for (const h of ["--help", "-h", "help"]) {
-      expect(parseSandboxArgs([h])).toEqual({
-        ok: true,
-        args: { help: true, image: false, noBuild: false },
-      });
+      expect(parseSandboxArgs([h])).toEqual({ ok: true, args: { ...base, help: true } });
     }
   });
 
-  it("accepts --image (bare), --image=<ref>, and --no-build (alone or combined)", () => {
-    expect(parseSandboxArgs(["--image"])).toEqual({
-      ok: true,
-      args: { help: false, image: true, noBuild: false },
-    });
-    expect(parseSandboxArgs(["--image=ghcr.io/mifunedev/openharness:2026.7.5"])).toEqual({
+  it("parses `install <runtime>` with every flag", () => {
+    expect(
+      parseSandboxArgs([
+        "install",
+        "docker",
+        "--name",
+        "box",
+        "--repo",
+        "/src/app",
+        "--yes",
+        "--image=ghcr.io/x/y:1",
+        "--no-build",
+        "--print-argv",
+      ]),
+    ).toEqual({
       ok: true,
       args: {
-        help: false,
+        ...base,
+        subcommand: "install",
+        runtime: "docker",
+        name: "box",
+        repo: "/src/app",
+        yes: true,
         image: true,
-        imageRef: "ghcr.io/mifunedev/openharness:2026.7.5",
-        noBuild: false,
+        imageRef: "ghcr.io/x/y:1",
+        noBuild: true,
+        printArgv: true,
       },
     });
-    expect(parseSandboxArgs(["--no-build"])).toEqual({
+  });
+
+  it("parses `list --json`", () => {
+    expect(parseSandboxArgs(["list", "--json"])).toEqual({
       ok: true,
-      args: { help: false, image: false, noBuild: true },
-    });
-    expect(parseSandboxArgs(["--image", "--no-build"])).toEqual({
-      ok: true,
-      args: { help: false, image: true, noBuild: true },
+      args: { ...base, subcommand: "list", json: true },
     });
   });
 
-  it("rejects an empty --image= ref", () => {
-    const r = parseSandboxArgs(["--image="]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toContain("--image=<ref> requires a non-empty image ref");
+  it("requires a runtime for install and rejects a second positional", () => {
+    const missing = parseSandboxArgs(["install"]);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error).toContain("a runtime is required");
+
+    const extra = parseSandboxArgs(["install", "docker", "extra"]);
+    expect(extra.ok).toBe(false);
+    if (!extra.ok) expect(extra.error).toContain('unexpected argument "extra"');
   });
 
-  it("rejects unknown flags and stray positionals", () => {
-    for (const bad of ["--force", "--dry-run", "extra"]) {
-      const r = parseSandboxArgs([bad]);
-      expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error).toContain(`oh sandbox: unexpected argument "${bad}"`);
-    }
+  it("rejects an unknown subcommand, an empty --image= ref and a valueless --name", () => {
+    const sub = parseSandboxArgs(["up"]);
+    expect(sub.ok).toBe(false);
+    if (!sub.ok) expect(sub.error).toContain('unknown subcommand "up"');
+
+    const ref = parseSandboxArgs(["install", "docker", "--image="]);
+    expect(ref.ok).toBe(false);
+    if (!ref.ok) expect(ref.error).toContain("--image=<ref> requires a non-empty image ref");
+
+    const name = parseSandboxArgs(["install", "docker", "--name"]);
+    expect(name.ok).toBe(false);
+    if (!name.ok) expect(name.error).toContain("--name requires a value");
   });
 });
 
 describe("parseShellArgs", () => {
-  it("takes one optional positional container name", () => {
+  it("takes one optional positional sandbox name", () => {
     expect(parseShellArgs([])).toEqual({ ok: true, args: { help: false } });
     expect(parseShellArgs(["my-box"])).toEqual({
       ok: true,
-      args: { help: false, container: "my-box" },
+      args: { help: false, name: "my-box" },
     });
   });
 
@@ -748,18 +814,19 @@ describe("help surfaces", () => {
   it("oh --help lists all three lifecycle verbs", () => {
     const text = captureStdout(printOhHelp);
     expect(text).toContain("oh sandbox");
-    expect(text).toContain("oh shell [container]");
+    expect(text).toContain("oh shell [name]");
     expect(text).toContain("oh gateway");
     expect(text).toContain("oh cloud <args...>");
   });
 
   it("per-verb --help output documents each verb's contract", () => {
     const sandbox = captureStdout(printSandboxHelp);
-    expect(sandbox).toContain("oh sandbox");
-    expect(sandbox).toContain("docker-compose.sh --repo-dir <root> up -d --build");
+    expect(sandbox).toContain("oh sandbox install <runtime>");
+    expect(sandbox).toContain("oh sandbox list");
+    expect(sandbox).toContain("Next: oh shell <name>");
 
     const shell = captureStdout(printShellHelp);
-    expect(shell).toContain("oh shell [container]");
+    expect(shell).toContain("oh shell [name]");
     expect(shell).toContain("docker exec -it -u sandbox");
     expect(shell).toContain(DEFAULT_CONTAINER_NAME);
 
@@ -786,7 +853,7 @@ describe("lifecycle inside the sandbox", () => {
     vi.stubEnv("OH_EXECUTION_TARGET", "local");
     const root = makeRepo();
     const { calls, run } = makeRunner();
-    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(runShell({ ...entry, run }, makeIo().io)).toBe(0);
     expect(calls[0].cmd).toBe("zsh");
   });
 });

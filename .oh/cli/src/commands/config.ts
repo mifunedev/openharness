@@ -8,6 +8,7 @@ import {
 } from "../lib/oh-config.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import * as prompt from "../lib/prompt.js";
+import { resolveSandboxRoot } from "../lib/registry.js";
 import { isSecretKey } from "../lib/secrets.js";
 
 export interface ConfigIO {
@@ -17,6 +18,13 @@ export interface ConfigIO {
 
 export interface ConfigOptions {
   cwd?: string;
+  sandbox?: string;
+}
+
+function configRoot(opts: ConfigOptions): string {
+  return opts.sandbox === undefined
+    ? resolveProjectRoot(opts.cwd)
+    : resolveSandboxRoot({ name: opts.sandbox });
 }
 
 export function configFieldList(): string {
@@ -26,7 +34,7 @@ export function configFieldList(): string {
 }
 
 export async function runConfigShow(opts: ConfigOptions, io: ConfigIO): Promise<number> {
-  const root = resolveProjectRoot(opts.cwd);
+  const root = configRoot(opts);
   const config = readOhConfig(ohConfigPath(root));
   io.stdout(`${JSON.stringify(config, null, 2)}\n`);
   return 0;
@@ -51,7 +59,7 @@ export async function runConfigSet(
     return 1;
   }
 
-  const root = resolveProjectRoot(opts.cwd);
+  const root = configRoot(opts);
   let outcome: string;
   try {
     outcome = setConfigField(root, key, value);

@@ -10,7 +10,6 @@ CONNECTING="$ROOT/docs/connecting.md"
 PI_DOC="$ROOT/docs/harnesses/pi.md"
 T3_PROCESSES="$ROOT/.oh/skills/t3/references/sandbox-processes.md"
 MANIFEST="$ROOT/.pi/install/slack-manifest.json"
-TEMPLATE_MANIFEST="$ROOT/.oh/templates/full/.pi/install/slack-manifest.json"
 
 fail() {
   echo "REGRESSION: $*" >&2
@@ -54,7 +53,6 @@ need_literal "$MANIFEST" "DM event subscription" '"message.im"'
 for command in /help /trusted /revoke /channels /enable /disable /toggletools; do
   need_literal "$MANIFEST" "manifest admin command $command" "\"command\": \"$command\""
 done
-cmp -s "$MANIFEST" "$TEMPLATE_MANIFEST" || fail "root and full-template Slack manifests differ"
 
 trusted_line=$(grep -nF '| `/trusted` |' "$DOC" | cut -d: -f1 | head -1 || true)
 heading_line=$(grep -nF '## 6. Admin Slack commands' "$DOC" | cut -d: -f1 | head -1 || true)

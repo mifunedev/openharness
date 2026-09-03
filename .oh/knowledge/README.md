@@ -50,30 +50,35 @@ else. Promotion out of `local/` is an explicit `/wiki ingest --from-draft` call.
 
 Schema, frontmatter spec, provenance kinds, and every authoring rule:
 [`.oh/skills/wiki/references/schema.md`](../skills/wiki/references/schema.md).
-
 ## Index
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| pattern-spec-stubbed-runner-state-gap | Unit tests with a stubbed runner cannot see state a verb fails to persist | [spec, cli, testing, evidence, rehearsal, persistence] | 2026-09-03 |
+| pattern-spec-simplify-round-seeded-non-reducing | A simplify round seeded with the audit's own measurement is non-reducing by construction | [spec, audit, simplify, netAdded, bookkeeping, monotone-stop] | 2026-09-03 |
+| pattern-evals-probe-brief-under-enumeration | A probe brief derived from a name grep misses the probes that pin behaviour | [evals, probes, spec, delegate, blast-radius, briefing] | 2026-09-03 |
+| pattern-cli-bundled-asset-relative-import | Bundling repository files by relative import breaks the build site that stages the package alone | [cli, esbuild, dockerfile, ci, bundling, build-context] | 2026-09-03 |
+| pattern-audit-remote-head-verdict | The implementation audit's promotable gate classifies the pushed head, not the audited tree | [audit, spec, promotable, head-mismatch, ci, gh] | 2026-09-03 |
+| oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, registry, sandbox, remote-fetch, execution-target, update] | 2026-09-03 |
+| fresh-machine-setup | Fresh-Machine Setup Flow | [setup, onboarding, installation, registry, gateway, ssh, github, slack] | 2026-09-03 |
+| compose-env-boundary | Compose Environment Boundary | [compose, devcontainer, oh-json, cli, entrypoint, boundary, installs, sandbox, registry] | 2026-09-03 |
+| pattern-spec-self-staling-reuse-record | A commit-keyed reuse record goes stale the moment it is committed | [spec, evals, caching, provenance, freshness, build-cycle] | 2026-09-02 |
+| pattern-evals-prose-literal-pinning | Contract probes that pin multi-word prose break on reflow, not on drift | [evals, probes, contract-text, grep, false-failure, documentation] | 2026-09-02 |
+| pattern-audit-driver-tool-allowlist | A non-interactive audit driver without a tool allowlist reports every gate as unobtainable | [audit, spec, claude-p, permissions, allowlist, false-failure, verification-environment] | 2026-09-02 |
 | wikiskill-experience-compilation | WikiSkill: Compiling Agent Experience into Persistent Knowledge (arXiv 2608.27454) | [skill-evolution, persistent-knowledge, continual-learning, harness-evolution, self-improvement, wiki, ablation, skill-transfer] | 2026-09-01 |
 | plan-vs-built-reconciliation | Plan-vs-Built Reconciliation | [spec-execute, evidence, merge-gate, comprehension, audit, task-folder, review] | 2026-09-01 |
 | pattern-wiki-ungated-check-drift | Report-only checks nothing gates on stop being run | [wiki, lint, evals, probes, report-only, drift, gating] | 2026-09-01 |
 | pattern-wiki-external-model-over-mapping | Mapping an external model onto the harness reimports a tier it deleted | [wiki, ingest, architecture, external-sources, scope-creep, design-review] | 2026-09-01 |
-| pattern-spec-self-staling-reuse-record | A commit-keyed reuse record goes stale the moment it is committed | [spec, evals, caching, provenance, freshness, build-cycle] | 2026-09-01 |
-| pattern-evals-prose-literal-pinning | Contract probes that pin multi-word prose break on reflow, not on drift | [evals, probes, contract-text, grep, false-failure, documentation] | 2026-09-01 |
 | pattern-evals-pipefail-early-exit | A short-circuiting reader turns a successful match into a failed pipeline | [evals, probes, bash, pipefail, sigpipe, false-failure, shell] | 2026-09-01 |
 | pattern-docs-prohibition-by-example | Documenting a forbidden literal by quoting it violates the rule | [docs, evals, probes, vocabulary, guards, self-reference] | 2026-09-01 |
-| oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-09-01 |
 | document-ingestion | Local Document Ingestion | [wiki, ingestion, markitdown, documents, provenance, security] | 2026-09-01 |
 | sandbox-dependency-installs | Sandbox Dependency Installs | [sandbox, devcontainer, pnpm, dependencies, boot] | 2026-08-31 |
 | recursive-self-improvement-survey | Recursive Self-Improvement in AI (survey, arXiv 2607.07663) | [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark] | 2026-08-31 |
 | recursive-language-models | Recursive Language Models | [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency] | 2026-08-31 |
 | pattern-evals-unexercised-oracle | A probe that has never failed has an unverified oracle | [evals, probes, oracles, skipped, fault-injection, continual-learning] | 2026-08-31 |
-| compose-env-boundary | Compose Environment Boundary | [compose, devcontainer, oh-json, cli, entrypoint, boundary, provisioning, sandbox] | 2026-08-31 |
 | runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-08-27 |
 | molt-agentic-reinforcement-learning | Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning | [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia] | 2026-08-27 |
 | managed-agents | Scaling Managed Agents: Decoupling the brain from the hands | [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution] | 2026-08-27 |
-| fresh-machine-setup | Fresh-Machine Setup Flow | [setup, onboarding, installation, gateway, ssh, github, slack] | 2026-08-27 |
 | crabbox-remote-exec-control-plane | Crabbox — Remote-Exec Control Plane | [runtime, sandbox, remote-execution, fan-out, control-plane, crabbox, cloudflare-workers, ssh, rsync] | 2026-08-27 |
 | release-versioning | Release Versioning | [release, versioning, semver, calver, github-actions, ghcr, tags, workflow, package-json] | 2026-08-23 |
 | audit-architecture | Audit Architecture | [audit, pr, workflow, safety, observability] | 2026-08-12 |

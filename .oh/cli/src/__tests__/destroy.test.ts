@@ -48,9 +48,15 @@ volumes:
   ssh-config:
 `;
 
+const ENTRY_NAME = "oh-destroy-box";
+const entry = { name: ENTRY_NAME };
+
 function makeRepo(sandboxName?: string): string {
-  const d = mkdtempSync(join(tmpdir(), "oh-destroy-"));
-  cleanups.push(d);
+  const home = mkdtempSync(join(tmpdir(), "oh-destroy-"));
+  cleanups.push(home);
+  vi.stubEnv("OH_HOME", home);
+  const d = join(home, "sandboxes", ENTRY_NAME);
+  mkdirSync(d, { recursive: true });
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
   writeFileSync(join(d, ".oh", "scripts", "docker-compose.sh"), "#!/usr/bin/env bash\n");
   mkdirSync(join(d, ".devcontainer"), { recursive: true });
@@ -139,7 +145,7 @@ describe("oh destroy — the confirmation policy", () => {
     const { calls, run } = makeRunner();
     const { err, io } = makeIo();
 
-    expect(await runDestroy({ cwd: root, run }, io)).toBe(1);
+    expect(await runDestroy({ ...entry, run }, io)).toBe(1);
     expect(calls).toHaveLength(0);
     expect(err.join("")).toContain("refusing to destroy `acme` without a terminal");
     expect(err.join("")).toContain("--yes");
@@ -151,10 +157,12 @@ describe("oh destroy — the confirmation policy", () => {
     const { run } = makeRunner();
     const { out, asked, io } = makeIo(["acme"]);
 
-    expect(await runDestroy({ cwd: root, run }, io)).toBe(0);
+    expect(await runDestroy({ ...entry, run }, io)).toBe(0);
     const text = out.join("");
-    for (const volume of ["claude-auth", "codex-auth", "ssh-config"]) {
-      expect(text, volume).toContain(volume);
+    const volumes = namedVolumes(join(HERE, "..", "..", "..", ".."));
+    expect(volumes.length).toBeGreaterThan(0);
+    for (const volume of volumes) {
+      expect(text, volume).toContain(`acme_${volume}`);
     }
     expect(text).toContain("provider authentication");
     expect(asked.join("")).toContain("acme");
@@ -166,7 +174,7 @@ describe("oh destroy — the confirmation policy", () => {
     const { calls, run } = makeRunner();
     const { err, io } = makeIo([""]);
 
-    expect(await runDestroy({ cwd: root, run }, io)).toBe(1);
+    expect(await runDestroy({ ...entry, run }, io)).toBe(1);
     expect(calls).toHaveLength(0);
     expect(err.join("")).toContain("aborted — nothing was removed");
   });
@@ -179,7 +187,7 @@ describe("oh destroy — the confirmation policy", () => {
       const { calls, run } = makeRunner();
       const { err, io } = makeIo([answer]);
 
-      expect(await runDestroy({ cwd: root, run }, io)).toBe(1);
+      expect(await runDestroy({ ...entry, run }, io)).toBe(1);
       expect(calls).toHaveLength(0);
       expect(err.join("")).toContain("aborted");
     },
@@ -191,7 +199,7 @@ describe("oh destroy — the confirmation policy", () => {
     const { calls, run } = makeRunner();
     const { io } = makeIo(["acme"]);
 
-    expect(await runDestroy({ cwd: root, run }, io)).toBe(0);
+    expect(await runDestroy({ ...entry, run }, io)).toBe(0);
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toBe("bash");
     expect(calls[0].args[0]).toBe(join(root, ".oh", "scripts", "docker-compose.sh"));
@@ -205,9 +213,9 @@ describe("oh destroy — the confirmation policy", () => {
     const { calls, run } = makeRunner();
     const { out, asked, io } = makeIo();
 
-    expect(await runDestroy({ cwd: root, run, yes: true }, io)).toBe(0);
+    expect(await runDestroy({ ...entry, run, yes: true }, io)).toBe(0);
     expect(asked).toHaveLength(0);
-    expect(out.join("")).toBe("");
+    expect(out.join("")).toBe(`removed the sandbox entry ${root}\n`);
     expect(calls[0].args.slice(3)).toEqual(["down", "-v"]);
   });
 
@@ -216,7 +224,7 @@ describe("oh destroy — the confirmation policy", () => {
     const root = makeRepo("acme");
     const { run } = makeRunner({ status: 7 });
     const { io } = makeIo();
-    expect(await runDestroy({ cwd: root, run, yes: true }, io)).toBe(7);
+    expect(await runDestroy({ ...entry, run, yes: true }, io)).toBe(7);
   });
 });
 
@@ -233,10 +241,27 @@ describe("parseDestroyArgs", () => {
     });
   });
 
-  it.each([["-y"], ["--force"], ["acme"]])("rejects %j — only --yes confirms", (token) => {
+  it("takes one optional positional sandbox name", () => {
+    expect(parseDestroyArgs(["acme"])).toEqual({
+      ok: true,
+      args: { help: false, yes: false, name: "acme" },
+    });
+    expect(parseDestroyArgs(["acme", "--yes"])).toEqual({
+      ok: true,
+      args: { help: false, yes: true, name: "acme" },
+    });
+  });
+
+  it.each([["-y"], ["--force"]])("rejects the flag %j — only --yes confirms", (token) => {
     const parsed = parseDestroyArgs([token]);
     expect(parsed.ok).toBe(false);
     if (!parsed.ok) expect(parsed.error).toContain("--yes");
+  });
+
+  it("rejects a second positional", () => {
+    const parsed = parseDestroyArgs(["a", "b"]);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.error).toContain('unexpected argument "b"');
   });
 
   it.each([["--help"], ["-h"], ["help"]])("treats %j as help", (token) => {
@@ -282,7 +307,7 @@ describe("oh compose config", () => {
   it("runs `config` through the vendored script", () => {
     const root = makeRepo();
     const { calls, run } = makeRunner();
-    expect(runComposeConfig({ cwd: root, run })).toBe(0);
+    expect(runComposeConfig({ ...entry, run })).toBe(0);
     expect(calls[0].cmd).toBe("bash");
     expect(calls[0].args).toEqual([
       join(root, ".oh", "scripts", "docker-compose.sh"),
@@ -293,7 +318,7 @@ describe("oh compose config", () => {
   it("forwards extra args to the script", () => {
     const root = makeRepo();
     const { calls, run } = makeRunner();
-    runComposeConfig({ cwd: root, run }, ["--services"]);
+    runComposeConfig({ ...entry, run }, ["--services"]);
     expect(calls[0].args.slice(1)).toEqual(["config", "--services"]);
   });
 });

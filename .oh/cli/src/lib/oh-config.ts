@@ -33,14 +33,6 @@ export interface GitIdentity {
   userEmail?: string;
 }
 
-export interface InstallFlags {
-  opencode?: boolean;
-  grokBuild?: boolean;
-  hermes?: boolean;
-  agentBrowser?: boolean;
-  tailscale?: boolean;
-}
-
 export interface AccessSettings {
   ssh?: boolean;
   sshPort?: number;
@@ -94,13 +86,18 @@ export interface LangfuseSettings {
   privacyPreset?: LangfusePrivacyPreset;
 }
 
+export type SandboxRuntime = "docker";
+
+export const SANDBOX_RUNTIMES: readonly SandboxRuntime[] = ["docker"];
+
 export interface OhConfig {
   version: 1;
   name?: string;
+  runtime?: SandboxRuntime;
+  repo?: string;
   timezone?: string;
   git?: GitIdentity;
   storage?: StorageSettings;
-  install?: InstallFlags;
   access?: AccessSettings;
   hermesDashboard?: HermesDashboardSettings;
   cron?: CronSettings;
@@ -123,13 +120,6 @@ export function defaultOhConfig(name: string): OhConfig {
     timezone: "America/Los_Angeles",
     git: {},
     storage: {},
-    install: {
-      opencode: false,
-      grokBuild: false,
-      hermes: false,
-      agentBrowser: false,
-      tailscale: false,
-    },
     access: {
       ssh: false,
       sshPort: 2222,
@@ -194,6 +184,8 @@ export function validateOhConfig(value: unknown): OhConfig {
   }
 
   expectString(record, "name");
+  expectEnum(record, "runtime", "", SANDBOX_RUNTIMES);
+  expectString(record, "repo");
   expectString(record, "timezone");
 
   const storage = expectSection(record, "storage");
@@ -218,19 +210,6 @@ export function validateOhConfig(value: unknown): OhConfig {
   if (git) {
     expectString(git, "userName", "git.");
     expectString(git, "userEmail", "git.");
-  }
-
-  const install = expectSection(record, "install");
-  if (install) {
-    for (const key of [
-      "opencode",
-      "grokBuild",
-      "hermes",
-      "agentBrowser",
-      "tailscale",
-    ]) {
-      expectBoolean(install, key, "install.");
-    }
   }
 
   const access = expectSection(record, "access");
@@ -350,14 +329,11 @@ export interface OhConfigField {
 
 export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
   { path: "name", type: "string" },
+  { path: "runtime", type: "enum", values: SANDBOX_RUNTIMES },
+  { path: "repo", type: "string" },
   { path: "timezone", type: "string" },
   { path: "git.userName", type: "string" },
   { path: "git.userEmail", type: "string" },
-  { path: "install.opencode", type: "boolean" },
-  { path: "install.grokBuild", type: "boolean" },
-  { path: "install.hermes", type: "boolean" },
-  { path: "install.agentBrowser", type: "boolean" },
-  { path: "install.tailscale", type: "boolean" },
   { path: "access.ssh", type: "boolean" },
   { path: "access.sshPort", type: "port" },
   { path: "access.sshPasswordAuth", type: "boolean" },

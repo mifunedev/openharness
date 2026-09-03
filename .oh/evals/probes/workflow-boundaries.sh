@@ -7,7 +7,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SPEC="$ROOT/.oh/skills/spec/SKILL.md"
 AGENTS="$ROOT/AGENTS.md"
-TEMPLATE="$ROOT/.oh/templates/AGENTS.md"
 
 missing=()
 [[ -f "$SPEC" ]] || missing+=(".oh/skills/spec/SKILL.md exists")
@@ -28,12 +27,7 @@ if [[ -f "$AGENTS" ]]; then
   grep -qE '^## Skills($| )' "$AGENTS" && missing+=("AGENTS.md must not duplicate the skill catalog")
   grep -qE '`/[a-z][a-z0-9-]*' "$AGENTS" && missing+=("AGENTS.md must not name slash skills directly")
 fi
-if [[ -f "$TEMPLATE" ]]; then
-  grep -qE '^## (How work flows|Skills)$' "$TEMPLATE" && missing+=("the initialized-project AGENTS template must not duplicate workflows or skills")
-  grep -qE '`/[a-z][a-z0-9-]*' "$TEMPLATE" && missing+=("the initialized-project AGENTS template must not name slash skills directly")
-fi
 [[ -e "$ROOT/.pi/prompts/execute.md" ]] && missing+=("the provider-specific execute prompt must stay removed")
-[[ -e "$ROOT/.oh/templates/full/.pi/prompts/execute.md" ]] && missing+=("the scaffolded provider-specific execute prompt must stay removed")
 
 if (( ${#missing[@]} )); then
   printf 'REGRESSION: workflow ownership broken: %s\n' "${missing[*]}" >&2

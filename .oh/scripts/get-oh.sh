@@ -44,11 +44,11 @@ Usage:
   ./.oh/scripts/get-oh.sh
 
 Installs the single self-contained 'oh' binary to ~/.local/bin/oh (no repo
-clone). Then: cd <your-project> && oh init
+clone). Then: oh sandbox install docker
 
 Prerequisites:
   Node.js >= 20   (to RUN 'oh'; if missing, this script offers to install nvm + Node 22)
-  git             (only for the build fallback and for 'oh init' payload fetch)
+  git             (only for the build fallback and for 'oh update' payload fetch)
 
 Flags:
   -y, --yes            Accept prompts (e.g. auto-install nvm + Node 22).
@@ -218,9 +218,12 @@ if [ "${OH_SKIP_EPILOGUE:-0}" != "1" ]; then
 cat <<DONEEOF
 
 Next steps:
-  cd <your-project>
-  oh init            # equip the repo with Open Harness (fetches the payload on demand)
-  oh sandbox         # provision + start the sandbox (needs Docker + Compose)
+  oh sandbox install docker   # create and start a sandbox (needs Docker + Compose)
+  oh shell <name>             # open a shell in it
+  oh tool install herdr       # then run: herdr
+
+To equip an existing checkout with the Open Harness payload, run 'oh update'
+in it (it fetches the payload on demand).
 
 'oh' is a single file at $OH_BIN_DIR/oh — no repo clone was created.
 Upgrade later by re-running get-oh.sh.

@@ -6,11 +6,11 @@ services:
     pull_policy: ${OH_PULL_POLICY:-missing}
     container_name: ${SANDBOX_NAME:-openharness}
     build:
-      context: ..
+      context: ${OH_REPO_DIR:-..}
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ${OH_HOME_MOUNT:-workspace}:/home/sandbox
-      - ..:/home/sandbox/harness
+      - ${OH_REPO_DIR:-..}:/home/sandbox/harness
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:

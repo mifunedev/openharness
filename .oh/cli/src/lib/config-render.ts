@@ -37,6 +37,7 @@ export function renderComposeVars(config: OhConfig): RenderedVar[] {
   put("SANDBOX_NAME", config.name);
   put("TZ", config.timezone);
   put("OH_HOME_MOUNT", config.storage?.homePath);
+  put("OH_REPO_DIR", config.repo);
 
   put("GIT_USER_NAME", config.git?.userName);
   put("GIT_USER_EMAIL", config.git?.userEmail);

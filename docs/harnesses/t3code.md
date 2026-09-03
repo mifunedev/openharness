@@ -22,7 +22,7 @@ node -v
 
 ## Install
 
-T3 Code is **not preinstalled** in the sandbox image. The `/t3` skill starts it on demand via `npx --yes t3 serve` and keeps it in tmux:
+T3 Code is an **on-demand** harness: `oh harness install` does not install it, and it is not in the sandbox image. The `/t3` skill starts it on demand via `npx --yes t3 serve` and keeps it in tmux:
 
 ```text
 /t3

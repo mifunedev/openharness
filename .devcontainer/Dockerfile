@@ -34,19 +34,20 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
-ENV PNPM_HOME="/usr/local/share/pnpm"
+ENV PNPM_HOME="/home/sandbox/.local/share/pnpm"
 ENV NPM_USER_PREFIX="/home/sandbox/.local"
 ENV PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate \
- && pnpm setup --force 2>/dev/null || true
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 SHELL ["/bin/bash", "-c"]
 
 RUN npm install -g cc-safety-net@1.0.6
 
+COPY .devcontainer/docker-compose.yml .devcontainer/docker-compose.image-only.yml .devcontainer/docker-compose.ssh.yml .devcontainer/docker-compose.docker-sock.yml /opt/oh-assets/.devcontainer/
+COPY .oh/scripts/docker-compose.sh .oh/scripts/check-host-port.sh /opt/oh-assets/.oh/scripts/
 COPY .oh/cli/ /opt/oh/
-RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
+RUN cd /opt/oh && OH_ASSET_ROOT=/opt/oh-assets npm install --no-audit --no-fund && OH_ASSET_ROOT=/opt/oh-assets npm run build \
  && chmod +x /opt/oh/dist/oh.js \
  && ln -sf /opt/oh/dist/oh.js /usr/local/bin/oh
 
@@ -72,7 +73,7 @@ RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
       /home/sandbox/.herdr \
       "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"
 
-RUN install -d -o sandbox -g sandbox "$NPM_USER_PREFIX" \
+RUN install -d -o sandbox -g sandbox "$NPM_USER_PREFIX" "$PNPM_HOME" \
  && rm -rf /home/sandbox/.npm
 
 RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" --unattended" \
@@ -85,8 +86,8 @@ COPY --chown=sandbox:sandbox .oh/install/.tmux.conf /home/sandbox/.tmux.conf
 COPY --chown=sandbox:sandbox .oh/install/.zshrc /home/sandbox/.zshrc
 
 RUN printf '%s\n' \
-      'export NPM_USER_PREFIX="/home/sandbox/.local"' \
-      'export PNPM_HOME="/usr/local/share/pnpm"' \
+      'export NPM_USER_PREFIX="${NPM_USER_PREFIX:-/home/sandbox/.local}"' \
+      'export PNPM_HOME="${PNPM_HOME:-/home/sandbox/.local/share/pnpm}"' \
       'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
       '[ -r "$HOME/.local/share/oh/python-env.sh" ] && . "$HOME/.local/share/oh/python-env.sh"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \

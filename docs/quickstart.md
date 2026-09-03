@@ -57,7 +57,7 @@ one that lets you edit `oh.json` before the ~10-minute first image build:
 git clone https://github.com/mifunedev/openharness.git ~/.openharness
 cd ~/.openharness/.oh/cli && npm install && npm run build   # put dist/oh.js on PATH as `oh`
 cd ~/.openharness
-nano oh.json                              # non-secrets: name, timezone, git identity, install.*
+nano oh.json                              # non-secrets: name, timezone, git identity
 cp .env.example .env && chmod 600 .env    # secrets only; gitignored
 oh sandbox
 ```
@@ -102,11 +102,13 @@ Pass an optional container name to attach to a different running container, e.g.
 Either way you're inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.
 
-## Start Herdr first
+## Install and start Herdr first
 
-Your first command inside a fresh sandbox should be:
+A fresh sandbox has no `herdr`. Nothing installs at boot. Your first two commands
+inside a fresh sandbox should be:
 
 ```bash
+oh tool install herdr
 herdr
 ```
 
@@ -119,15 +121,19 @@ continue to run independently under tmux.
 
 ## Set up agents inside Herdr
 
-The sandbox provisions Claude Code, Codex, and Pi — plus the Herdr and cloudflared
-tools — into `~/.local` on first boot —
-they live in the home mount, not the image, so `oh harness install <id>` upgrades
-them in place without a rebuild. A first boot on a fresh home mount therefore needs
-network access and takes a minute or two longer; the sandbox still comes up as a
-usable shell if the registry is unreachable, and you can retry with
-`bash .oh/scripts/provision-defaults.sh`. OpenCode, Hermes, and Grok
-Build are optional installs via `oh harness install <id>`; T3 Code runs on demand via the `/t3` skill
-or direct `npx`. Authenticate at least one harness before use.
+No agent CLI and no tool is baked into the image, and nothing installs one at
+boot. Install what you need through the one door:
+
+```bash
+oh harness install claude-code   # or codex, pi, opencode, hermes, grok-build
+oh tool install cloudflared      # or herdr, agent-browser, tailscale
+```
+
+Each install lands in `~/.local` inside the persistent home volume, not in the
+image, so `oh harness install <id>` also upgrades in place without a rebuild. An
+install needs network access. T3 Code is on demand: it has no install, and the
+`/t3` skill (or direct `npx`) fetches it at each run. Authenticate at least one
+harness before use.
 
 > **Simplest cross-provider login — device mode via `/login`.** The most straightforward path
 > that works the same across most harnesses: launch the agent in **interactive mode**, run
@@ -185,13 +191,7 @@ lifecycle command.)
 {
   "name": "openharness",
   "timezone": "UTC",
-  "git": { "userName": "your-name", "userEmail": "you@example.com" },
-  "install": {
-    "opencode": false,
-    "hermes": false,
-    "grokBuild": false,
-    "agentBrowser": false
-  }
+  "git": { "userName": "your-name", "userEmail": "you@example.com" }
 }
 ```
 
@@ -217,10 +217,9 @@ full field reference, and `oh config set <field> <value>` to edit one field.
 | `timezone` | Container timezone |
 | `git.userName` | Commit author name (spaces OK) |
 | `git.userEmail` | Commit author email |
-| `install.agentBrowser` | Set `true` to install Chromium (~1 GB) |
-| `install.opencode` | Set `true` to include OpenCode in the sandbox image |
-| `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
-| `install.grokBuild` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
+
+`oh.json` carries no install field. Install a harness or a tool with
+`oh harness install <id>` or `oh tool install <id>` instead.
 
 Set one field with `oh config set <field> <value>` and one secret with
 `oh secret set <KEY>`, then apply with `oh stop && oh sandbox`.
@@ -250,7 +249,7 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    cd ~/.openharness
    ```
 3. **Edit `oh.json` and create `.env`** — set `name`, `timezone`, `git.userName`,
-   `git.userEmail`, and any optional `install.*` fields in the tracked `oh.json`, then
+   and `git.userEmail` in the tracked `oh.json`, then
    `cp .env.example .env && chmod 600 .env` for secrets (see
    [Configuration](#configuration) above).
 4. **Build and enter the sandbox**:
@@ -258,8 +257,9 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    oh sandbox        # build + start (~10 min cold)
    oh shell          # attach as the sandbox user
    ```
-5. **Start Herdr** — your first inside-sandbox command; all remaining setup runs in its panes:
+5. **Install and start Herdr** — a fresh sandbox has none; all remaining setup runs in its panes:
    ```bash
+   oh tool install herdr
    herdr
    ```
 6. **Authenticate GitHub over SSH** — choose SSH, generate a key, paste a token
@@ -284,22 +284,26 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    git remote add upstream git@github.com:mifunedev/openharness.git
    git push -u origin HEAD
    ```
-9. **Authenticate Claude Code** ([Claude Code](./harnesses/claude-code.md)):
+9. **Install and authenticate Claude Code** ([Claude Code](./harnesses/claude-code.md)):
    ```bash
+   oh harness install claude-code
    claude auth login && claude auth status
    ```
-10. **Authenticate Codex** ([Codex](./harnesses/codex.md)):
+10. **Install and authenticate Codex** ([Codex](./harnesses/codex.md)):
    ```bash
+   oh harness install codex
    codex login --device-auth
    ```
    > Optional: DebugMCP (cross-harness debugging over MCP) is available if you attached via
    > VS Code — see [Enter the sandbox](#enter-the-sandbox) above, not this step.
-11. **Authenticate Pi** — configure provider keys / OAuth ([Pi](./harnesses/pi.md)):
+11. **Install and authenticate Pi** — configure provider keys / OAuth ([Pi](./harnesses/pi.md)):
     ```bash
+    oh harness install pi
     pi        # first run walks provider auth
     ```
-12. **Authenticate Hermes** (optional; needs `install.hermes: true`) ([Hermes](./harnesses/hermes.md)):
+12. **Install and authenticate Hermes** ([Hermes](./harnesses/hermes.md)):
     ```bash
+    oh harness install hermes
     hermes setup
     ```
 13. **Configure Slack** for Pi (and Hermes) — create the Slack app, add tokens, set trust

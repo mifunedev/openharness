@@ -4,7 +4,7 @@ slug: fresh-machine-setup
 kind: repo
 tags: [setup, onboarding, installation, gateway, ssh, github, slack]
 created: 2026-07-02
-updated: 2026-08-27
+updated: 2026-09-02
 sources:
   - docs/quickstart.md
   - docs/installation.md
@@ -14,7 +14,7 @@ sources:
   - docs/harnesses/hermes.md
   - .devcontainer/entrypoint.sh
   - .oh/scripts/gateway.sh
-verified_at: 0b292bf8662d11179132ad034b68181a29b0fe43
+verified_at: 8c89894512eb5e248e68e55323333e2cd35bc813
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: provisional
 ---
@@ -23,7 +23,7 @@ confidence: provisional
 
 ## Relevant Source Files
 - `docs/quickstart.md` — the **canonical human walkthrough** (13 ordered steps, commands inlined). This entry is a synthesis + doc-handoff map only; keep it in sync with quickstart's step list.
-- `docs/installation.md` — host prerequisites (incl. `make`) and the clone-and-own private-origin + upstream pattern.
+- `docs/installation.md` — host prerequisites and the clone-and-own private-origin + upstream pattern.
 - `docs/integrations/github.md` — SSH auth (interactive + entrypoint auto-keygen).
 - `docs/integrations/debugmcp.md` — DebugMCP extension runbook.
 - `docs/integrations/slack.md`, `docs/harnesses/hermes.md` — Slack config + gateway run/verify.
@@ -33,18 +33,20 @@ confidence: provisional
 ## Summary
 Validated 2026-07-01 on a bare OVHcloud host: the path from a fresh Linux machine to an
 authenticated multi-agent Open Harness sandbox is 13 ordered steps. Steps 1–4 run on the
-**host** (install deps, clone, edit `.devcontainer/.env`, bring the sandbox up); steps 5–13 run
-**inside the sandbox** (GitHub SSH auth, private origin + upstream, per-harness auth, Slack,
-gateway run/verify). Each fact has one canonical doc home, and `quickstart.md` is the single
+**host** (install deps, clone, write `oh.json`, bring the sandbox up); steps 5–13 run
+**inside the sandbox** (install Herdr and each harness through the CLI, GitHub SSH auth,
+private origin + upstream, per-harness auth, Slack, gateway run/verify). Each fact has one canonical doc home, and `quickstart.md` is the single
 self-sufficient human walkthrough.
 
 ## Detail
 Host prerequisites are Docker (+ Compose), Git, and **Node.js >= 20** — `oh` is the only
 lifecycle door and needs Node to run (issue #881 retired the Makefile; `get-oh.sh`
-installs Node when it is missing). Configuration lives in `.devcontainer/.env` (`SANDBOX_NAME`, `TZ`, `GIT_USER_NAME` /
-`GIT_USER_EMAIL`, optional `INSTALL_*` keys) — since 0.4.0 the ONE config surface, read on
-every path including VS Code "Reopen in Container". Secrets live in the same gitignored
-file; nothing is committed.
+installs Node when it is missing). Non-secret configuration lives in the tracked `oh.json`
+(`name`, `timezone`, `git.userName` / `git.userEmail`, `access.*`); the CLI renders the
+host-side subset into `.devcontainer/.env`, which is read on every path including VS Code
+"Reopen in Container". Secrets live in a gitignored dotenv; nothing secret is committed.
+Nothing installs at boot: a fresh sandbox has no `herdr` and no agent CLI until
+`oh tool install herdr` / `oh harness install <id>` (#948).
 
 The recommended repo topology is **clone-and-own**: clone upstream, create a *private* repo
 as `origin`, keep `mifunedev/openharness` as `upstream`. Both remotes use SSH URLs so pushes
@@ -53,22 +55,20 @@ during login, generate a key, paste a token) or automatic (the entrypoint genera
 ed25519 key and uploads the public key when `GH_TOKEN` carries `admin:public_key`;
 idempotent).
 
-Per-harness auth, in order: Claude (verified against v2.1.198), Codex (device-auth), Pi
-(provider OAuth), and Hermes (opt-in via `install.hermes`). The **most straightforward
+Per-harness auth, in order, each after its `oh harness install <id>`: Claude (verified
+against v2.1.198), Codex (device-auth), Pi (provider OAuth), and Hermes. The **most straightforward
 cross-provider login** is `/login` → **device mode** from an agent's interactive session — a
 short code + URL that works on a headless/remote host, where browser-redirect OAuth
 typically fails; explicit `--device-auth` CLI flags (e.g. `codex login --device-auth`) are
-equivalents. **DebugMCP** is a separate,
-optional **cross-harness** debugging capability (MCP): it is enabled by the VS Code
-attach-to-container route after `oh sandbox`, and any MCP-capable harness can drive it
-(Claude Code and Codex are pre-registered) — it is not a Codex-specific step.
+equivalents. **DebugMCP** is a separate, optional cross-harness MCP debugging capability, enabled by
+the VS Code attach-to-container route after `oh sandbox`; any MCP-capable harness can
+drive it.
 
-Slack + gateways: the `pi-messenger-bridge` package bridges Slack to Pi; Hermes uses its
-native gateway. Both gateways are managed by the **same** `.oh/scripts/gateway.sh` lifecycle
-in **sibling** tmux sessions (`client-slack-pi`, `client-slack-hermes`), each holding its own
-Slack app. Run commands are **sandbox-only** (they need `pi` / `hermes` on `PATH`). Verify a
-live gateway **read-only** (`tmux attach -r`), detaching with `Ctrl-b d`, so the session is
-never accidentally killed; logs mirror to `/tmp/client-slack-{pi,hermes}.log`.
+Slack + gateways: `pi-messenger-bridge` bridges Slack to Pi; Hermes uses its native
+gateway. One `.oh/scripts/gateway.sh` lifecycle manages both in sibling tmux sessions
+(`client-slack-pi`, `client-slack-hermes`), each with its own Slack app. Run commands are
+sandbox-only (they need `pi` / `hermes` on `PATH`). Verify a live gateway read-only
+(`tmux attach -r`, detach with `Ctrl-b d`); logs mirror to `/tmp/client-slack-{pi,hermes}.log`.
 
 `confidence: provisional` — the Claude auth command and the `gateway status` / `tmux -r`
 mechanics are live-verified in the running sandbox; Pi/Hermes/Slack auth were not re-run
@@ -79,11 +79,12 @@ live for this entry. Commands themselves live in `quickstart.md`, not here.
 flowchart TD
   subgraph Host
     S1[1 install docker/git/node] --> S2[2 clone to ~/.openharness]
-    S2 --> S3[3 edit .devcontainer/.env]
+    S2 --> S3[3 oh init writes oh.json]
     S3 --> S4[4 oh sandbox / oh shell]
   end
   subgraph Sandbox
-    S4 --> S5[5 gh auth login over SSH]
+    S4 --> S4b[oh tool install herdr, then herdr]
+    S4b --> S5[5 gh auth login over SSH]
     S5 --> S6[6 gh repo create --private]
     S6 --> S7[7 origin + upstream over SSH]
     S7 --> S8[8 claude auth login]

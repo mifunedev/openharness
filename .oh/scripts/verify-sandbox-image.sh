@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify a built sandbox image: base distribution, apt suites, the sandbox
 # UID/GID contract, the Node/pnpm pins, and version output from every baked-in
-# tool; that no harness and no kind:"default" tool is baked into it; and that
+# tool; that no catalog entry the CLI can install is baked into it; and that
 # every kind:"baked-in" tool actually is.
 # Usage: verify-sandbox-image.sh <image-ref>
 
@@ -100,14 +100,13 @@ for tool in "gh --version" "docker --version" "docker compose version" \
   fi
 done
 
-# The image must ship NO harness at all (#904, #908) and no kind:"default" tool
-# (#906). Every one of them is installed into /home/sandbox/.local at boot or on
-# demand through `oh harness install` / `oh tool install`: a copy baked into a
-# system path shadows the home-mount install with one no running sandbox can
-# upgrade, and makes the install path dead code that never runs and never gets
-# tested. The catalogs inside the image are the source of truth, so this cannot
-# drift from the TypeScript. Tools that are kind:"baked-in" — the Docker CLI,
-# gh — are genuinely image-level and are exempt.
+# The image must ship no entry that carries an installArgv: every harness, and
+# every kind:"installable" tool. Each one is installed into /home/sandbox/.local
+# through `oh harness install` / `oh tool install`, and a copy baked into a
+# system path shadows that install with one no running sandbox can upgrade. The
+# catalogs inside the image are the source of truth, so this cannot drift from
+# the TypeScript. Tools that are kind:"baked-in" carry no installArgv and are
+# checked by the inverse below instead.
 check_nothing_baked() {
   local noun="$1" cmd="$2" filter="$3" json ids baked
 
@@ -131,10 +130,8 @@ check_nothing_baked() {
 }
 
 if command -v jq >/dev/null 2>&1; then
-  # Every harness, whatever its kind — none belongs in the image.
   check_nothing_baked harness harness '.[]'
-  # Tools split: kind:"default" is provisioned, kind:"baked-in" is image-level.
-  check_nothing_baked "default tool" tool '.[] | select(.kind == "default")'
+  check_nothing_baked "installable tool" tool '.[] | select(.kind == "installable")'
 else
   fail "jq is required to read the image's harness and tool catalogs"
 fi

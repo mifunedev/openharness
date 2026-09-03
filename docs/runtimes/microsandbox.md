@@ -336,9 +336,11 @@ msb exec openharness -- zsh
 Then, inside — exactly as in any Open Harness sandbox:
 
 ```bash
+oh tool install herdr           # nothing installs at boot
 herdr                           # start the terminal workspace
 gh auth login && gh auth setup-git
-claude                          # or codex, pi, hermes
+oh harness install claude-code  # or codex, pi, opencode, hermes, grok-build
+claude
 ```
 
 **`msb exec` is your only door** — see

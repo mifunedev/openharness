@@ -22,7 +22,7 @@ sources:
   - .oh/README.md
   - docs/oh-directory-layout.md
   - docs/rfcs/rfc-brain-hands-boundary.md
-verified_at: 4bea83ca793ad02c8fffb41fe49e66127a58e3d9
+verified_at: 8c89894512eb5e248e68e55323333e2cd35bc813
 related: [fresh-machine-setup]
 confidence: provisional
 ---

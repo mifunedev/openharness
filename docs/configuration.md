@@ -39,11 +39,9 @@ that default. A variable already exported in the shell that runs `oh` beats the
 value in `oh.json`.
 
 **Through the CLI.** Everything else is read inside the container at the moment
-it is needed — `.devcontainer/entrypoint.sh` calls `oh config show`,
-`.oh/scripts/provision-defaults.sh` installs from `oh harness list --json` and
-`oh tool list --json`. Adding a tool, harness, or setting therefore requires no
-Compose edit. `config-render.ts` keeps a `RETIRED_KEYS` list that throws if one
-of these is ever rendered again.
+it is needed — `.devcontainer/entrypoint.sh` calls `oh config show`. Adding a
+tool, harness, or setting therefore requires no Compose edit. `config-render.ts`
+keeps a `RETIRED_KEYS` list that throws if one of these is ever rendered again.
 
 ## Field reference
 
@@ -67,23 +65,14 @@ or consumed by the CLI itself.
 | `git.userName` | string | unset | `GIT_USER_NAME` | `user.name` for commits made inside the sandbox. Spaces are fine. |
 | `git.userEmail` | string | unset | `GIT_USER_EMAIL` | `user.email` for commits made inside the sandbox. |
 
-### Optional installs
+### Harness and tool installs
 
-All off by default and all read through the CLI, never through Compose:
-`.oh/scripts/provision-defaults.sh` installs everything the catalogs report as
-`enabled` on every boot. `oh harness install <name>` flips the matching field and
-installs into the running sandbox with no rebuild. The four harness fields map
-to `oh harness` names: `opencode`, `grok-build`, `hermes`.
-`agentBrowser` and `tailscale` are not harnesses — `oh tool install agent-browser`
-and `oh tool install tailscale` manage them.
-
-| Field | Type | Default | Compose variable | What it does |
-| --- | --- | --- | --- | --- |
-| `install.opencode` | boolean | `false` | — | Install the OpenCode CLI into `~/.local` at boot. `oh harness install opencode` sets it and installs now. |
-| `install.grokBuild` | boolean | `false` | — | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
-| `install.hermes` | boolean | `false` | — | Install the Hermes CLI into `~/.local` at boot. The runtime wiring (skill vendoring, `auth.json`) keys off the binary being present, so it also runs after `oh harness install hermes`, in both sandbox flavors. |
-| `install.agentBrowser` | boolean | `false` | — | Install agent-browser and Chromium (about 1 GB). |
-| `install.tailscale` | boolean | `false` | — | Install the Tailscale client for private remote access (userspace networking; no container capabilities). |
+`oh.json` holds no install field. A harness or tool enters the sandbox only when
+you run `oh harness install <id>` or `oh tool install <id>`. Nothing installs at
+boot. The install lands in `~/.local` inside the persistent home volume, and
+`oh destroy` removes it. See
+[Harnesses Overview](harnesses/overview.md#installing-a-harness) and
+[Installation](installation.md).
 
 ### Access
 

@@ -50,11 +50,13 @@ oh sandbox       # docker compose up -d --build
 oh shell         # open a zsh shell in the running container
 ```
 
-Add an agent harness at any point — this needs no rebuild:
+Add an agent harness or a tool at any point — this needs no rebuild. The verb is
+the only door; nothing installs at boot:
 
 ```bash
-oh harness list                 # what exists, what is enabled, what is installed
-oh harness install opencode     # persist the flag + install into the running sandbox
+oh harness list                 # what exists, and what is installed
+oh harness install opencode     # install into the running sandbox
+oh tool install herdr           # a fresh sandbox has no herdr
 ```
 
 Check the isolation runtime the sandbox is on, and what a deeper tier needs:
@@ -98,8 +100,8 @@ with `OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
 | `oh ps` | Show sandbox service status. |
 | `oh destroy [--yes]` | Remove the sandbox and wipe its named volumes (`docker compose down -v`). Names the volumes, then requires you to type the sandbox name; refuses without a TTY unless `--yes` is passed. |
 | `oh compose config` | Print the compose configuration resolved from `.devcontainer/.env` and `.oh/config.json`. |
-| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `oh.json` `install.*` field **and** installs into the running sandbox — no rebuild. |
-| `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime (agent-browser, `gh`, `herdr`, `cloudflared`, Docker CLI). A large download is confirmed first. |
+| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` is the only door: it probes the running sandbox, installs into the persistent home volume, and reports. It reads and writes no `oh.json` field, and needs no rebuild. |
+| `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime. `herdr`, `cloudflared`, `agent-browser`, and `tailscale` are `installable`; `gh` and the Docker CLI are `baked-in` and cannot be installed. Nothing installs at boot. A large download is confirmed first, and `--yes` accepts it. |
 | `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |
 | `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |

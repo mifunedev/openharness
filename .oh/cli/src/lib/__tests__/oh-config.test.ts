@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   defaultOhConfig,
+  OH_CONFIG_FIELDS,
   ohConfigPath,
   readOhConfig,
   validateOhConfig,
@@ -118,21 +119,6 @@ describe("validateOhConfig", () => {
     ["git", { git: "me" }, /^oh\.json: git must be an object$/],
     ["git.userName", { git: { userName: 7 } }, /^oh\.json: git\.userName must be a string$/],
     ["git.userEmail", { git: { userEmail: 7 } }, /^oh\.json: git\.userEmail must be a string$/],
-    [
-      "install.opencode",
-      { install: { opencode: "true" } },
-      /^oh\.json: install\.opencode must be a boolean$/,
-    ],
-    [
-      "install.agentBrowser",
-      { install: { agentBrowser: 1 } },
-      /^oh\.json: install\.agentBrowser must be a boolean$/,
-    ],
-    [
-      "install.tailscale",
-      { install: { tailscale: 1 } },
-      /^oh\.json: install\.tailscale must be a boolean$/,
-    ],
     ["access.ssh", { access: { ssh: "yes" } }, /^oh\.json: access\.ssh must be a boolean$/],
     ["access.sshPort", { access: { sshPort: "2222" } }, /^oh\.json: access\.sshPort must be a number$/],
     [
@@ -190,5 +176,23 @@ describe("validateOhConfig", () => {
 
   it("accepts the default config", () => {
     expect(() => validateOhConfig(defaultOhConfig("demo"))).not.toThrow();
+  });
+
+  // #948: the template carries no `install` section, but an oh.json written
+  // before the verb became the only door still does. An unknown key is data the
+  // validator carries through, never a reason to refuse the file.
+  it("tolerates a stale install section rather than refusing the file", () => {
+    const stale = {
+      ...defaultOhConfig("legacy"),
+      install: { opencode: true, hermes: false, tailscale: "yes" },
+    };
+    const validated = validateOhConfig(stale);
+    expect(validated.version).toBe(1);
+    expect(validated.install).toEqual({ opencode: true, hermes: false, tailscale: "yes" });
+  });
+
+  it("declares no install field in the template or the settable field list", () => {
+    expect(Object.keys(defaultOhConfig("demo"))).not.toContain("install");
+    expect(OH_CONFIG_FIELDS.some((f) => f.path.startsWith("install."))).toBe(false);
   });
 });

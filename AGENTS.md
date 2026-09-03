@@ -148,7 +148,7 @@ Use the lifecycle in this order:
 
 1. Run `oh sandbox` on the host.
 2. Run `oh shell`.
-3. Run `herdr` inside the sandbox.
+3. Run `oh tool install herdr`, then `herdr`.
 4. Run `gh auth login && gh auth setup-git` once from the first Herdr pane.
 5. Run `oh ps` on the host to verify the container.
 

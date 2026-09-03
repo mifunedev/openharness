@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "project": "openharness",
+  "branchName": "task/948-one-door",
+  "description": "One door for harness and tool installs: oh harness install and oh tool install are the only way a harness or tool enters the sandbox; boot provisioning, install.* keys, persist flags, and off-ramps are retired.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Catalogs and CLI verbs expose one door",
+      "description": "As an operator, I want oh harness and oh tool to install only when I ask, with no default set and no persist flags, so that the verb is the only way a harness or tool enters the sandbox.",
+      "acceptanceCriteria": [
+        "harnesses/catalog.ts: HarnessKind = \"installable\" | \"on-demand\"; harnessKey, defaultHarnesses, optionalHarnesses removed; installArgv, verifyArgv, pins, shas unchanged",
+        "tools/catalog.ts: ToolKind = \"baked-in\" | \"installable\"; toolKey, defaultTools removed; pins and shas unchanged",
+        "harness.ts, tool.ts, cli.ts: no --persist-only/--no-persist/--defaults; oh tool install keeps --yes; install = probe -> install -> report with no oh.json write; no ENABLED column or enabled field; no error text promises a later boot install",
+        "git grep of the switch strings under .oh/cli returns only runtime-catalog.test.ts",
+        "harness-catalog.test.ts, harness.test.ts, tool.test.ts, tool-catalog.test.ts assert the one-door shape; install-flag-persistence.test.ts deleted",
+        "Typecheck passes",
+        "npm --prefix .oh/cli run build succeeds",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "commit 56fccb4b; typecheck 0, build 0, pnpm test 960/960 with SANDBOX_SSH unset, D4 grep under .oh/cli returns only runtime-catalog.test.ts:85"
+    },
+    {
+      "id": "US-002",
+      "title": "install.* leaves the config surface",
+      "description": "As an operator, I want no install section in oh.json, the wizard, the installer, or the migrator, so that there is no second place that decides what gets installed.",
+      "acceptanceCriteria": [
+        "oh-config.ts: install removed from OhConfig, defaultOhConfig, validator, OH_CONFIG_FIELDS; unknown keys in an existing oh.json still tolerated",
+        "env-file.ts: INSTALL_FIELDS, installFieldPath, isInstallFlagEnabled, setInstallFlag and legacy INSTALL_* importers deleted; CONFIG_FIELD_BY_ENV_KEY keeps only DOCKER_SOCKET",
+        "init.ts: Optional installs step removed; steps renumbered",
+        "template oh.json carries no install section",
+        "install.sh: _opt_install block deleted; closing banner lists claude-code, codex, pi, herdr, cloudflared install lines",
+        "migrate-harness-yaml.sh: install.* mappings dropped; harness-yaml-migration.sh probe adjusted",
+        "env-file.test.ts, init.test.ts, oh-config.test.ts, install-prereqs.test.ts updated",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "commit 56fccb4b; oh-config tolerates a stale install object; init wizard renumbered 1-4"
+    },
+    {
+      "id": "US-003",
+      "title": "Boot provisions nothing",
+      "description": "As an operator, I want a fresh sandbox to boot without installing any harness or tool, so that the home volume holds only what I put there.",
+      "acceptanceCriteria": [
+        ".oh/scripts/provision-defaults.sh deleted",
+        "entrypoint.sh: provisioning block deleted; herdr hint prints oh tool install herdr when absent; no boot step assumes herdr exists",
+        "sandbox-healthcheck.sh: provision-failed marker block deleted; sandbox-healthcheck.test.ts updated",
+        "provision-python.sh and docker-compose.yml start_period untouched",
+        "git grep -nE 'OH_PROVISION|provision-defaults|provision-failed' -- .devcontainer .oh/scripts returns nothing",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "commit 55ceece1; provision-defaults.sh deleted, entrypoint block and healthcheck marker gone"
+    },
+    {
+      "id": "US-004",
+      "title": "Verifiers, probes, and CI prove the one-door state and bite",
+      "description": "As a maintainer, I want the boot smoke, the image verifier, the probe suite, and CI to fail if anything installs at boot or a switch returns, so that the refactor cannot regress silently.",
+      "acceptanceCriteria": [
+        "sandbox-boot-smoke.sh: every kind==installable entry reports installed==false after a fresh boot for both catalogs; fails when a catalog has no installable entry; sandbox-boot-smoke.test.ts updated",
+        "verify-sandbox-image.sh: check_nothing_baked covers every entry with an installArgv; its tests updated",
+        "default-provisioning.sh replaced by harness-one-door.sh with the PASS/REGRESSION/SKIPPED contract; fault injection on a scratch copy yields REGRESSION",
+        "provision-marker-fail-closed.sh deleted; tool-catalog-boundary.sh, tailscale-tool-boundary.sh, sandbox-boot-guard-ci.sh, runtime-preflight-gate.sh pass",
+        "sandbox-compatibility.yml: OH_PROVISION_DEFAULTS and --no-persist removed, jq filters select installable; sandbox-boot-guard.yml comment rewritten",
+        "bash .oh/skills/eval/run.sh exits 0 with no new REGRESSION",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "commit 55ceece1 + 8c898945; harness-one-door probe bites on 8 injected faults; eval run exit 0"
+    },
+    {
+      "id": "US-005",
+      "title": "Docs and root context describe only the door",
+      "description": "As a new operator, I want every document to tell me to run oh harness install <id> or oh tool install <id>, so that I never look for a flag, a key, or a first-boot install that no longer exists.",
+      "acceptanceCriteria": [
+        "Pattern applied across docs/, README.md, .oh/cli/README.md, .oh/install/banner.sh, docs/rfcs/rfc-brain-hands-boundary.md:113, .oh/skills/t3/references/tailscale-mobile.md:86, .oh/skills/agent-browser/SKILL.md:70",
+        "AGENTS.md lifecycle names oh tool install herdr before herdr",
+        "CHANGELOG.md Unreleased entry <=250 chars linking #948",
+        "git grep of the switch strings over docs README.md AGENTS.md .oh/cli/README.md .oh/install .oh/skills returns nothing",
+        "docs/harnesses/overview.md and docs/installation.md read as one door end to end",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "commit a6a00674; D9 greps clean; overview.md and installation.md read as one door"
+    },
+    {
+      "id": "US-006",
+      "title": "Before and after evidence from child sandboxes",
+      "description": "As the reviewer, I want observed output from a child sandbox before and after the change, so that the PR proves the boot path changed rather than asserting it.",
+      "acceptanceCriteria": [
+        "Before leg from ghcr.io/mifunedev/openharness:latest shows provisioning of claude-code, codex, pi, herdr, cloudflared and both lists installed (D1)",
+        "After leg from the PR-head image shows no provisioning lines, every installable entry INSTALLED no, healthcheck passes (D2)",
+        "Inside the after child: oh tool install herdr && herdr --version and oh harness install pi && pi --version exit 0 (D3)",
+        "verify-sandbox-image.sh PASS on the after image (D5)",
+        "Both children torn down with down -v; no oh-child-* container or volume remains",
+        "Excerpts recorded in evidence.md and the PR body",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "before child (published image f02005e8): 5 entries provisioned at boot; after child (openharness:one-door a462096a, built from 8c898945): nothing provisioned, all installable entries INSTALLED no, healthcheck ok, oh tool install herdr -> herdr 0.7.4, oh harness install pi -> 0.84.4; verify-sandbox-image PASS; both children and volumes removed"
+    },
+    {
+      "id": "US-007",
+      "title": "Knowledge pages match the one-door state",
+      "description": "As the next planner, I want the knowledge base to describe the door and nothing else, so that a future plan does not re-derive the retired provisioner.",
+      "acceptanceCriteria": [
+        "knowledge-impact.sh --changed <actual diff> run; every NEEDS-REVIEW page plus compose-env-boundary, fresh-machine-setup, sandbox-dependency-installs, oh-cli-portable-lifecycle ends in exactly one of UPDATED / REVERIFIED / NOT-AFFECTED (reason), recorded in evidence.md",
+        "compose-env-boundary and fresh-machine-setup UPDATED with updated: and verified_at: advanced; REVERIFIED pages advance verified_at: only",
+        "Source-backed body shape per schema.md section 3 kept",
+        ".oh/knowledge/README.md regenerated; wiki-readme-index.sh PASS",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "commit c6aabd11 + 45aee31f; compose-env-boundary and fresh-machine-setup UPDATED; sandbox-dependency-installs, managed-agents, oh-cli-portable-lifecycle REVERIFIED; index regenerated; knowledge probes PASS"
+    }
+  ]
+}

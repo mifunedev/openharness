@@ -340,7 +340,7 @@ export async function runInit(
   const repoStepAllowed =
     interactive && !dryRun && (io.isTTY ?? process.stdin.isTTY === true);
   if (repoStepAllowed) {
-    prompt.step(5, 5, "Your own repo (optional)");
+    prompt.step(4, 4, "Your own repo (optional)");
     await runConfigRepo(
       { cwd: t, run: opts.run },
       { stdout: io.stdout, stderr: io.stderr, ask: io.ask, isTTY: true },
@@ -644,21 +644,6 @@ const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
   GIT_USER_EMAIL: (c, v) => {
     section(c, "git").userEmail = v;
   },
-  INSTALL_OPENCODE: (c, v) => {
-    section(c, "install").opencode = asBool(v);
-  },
-  INSTALL_GROK_BUILD: (c, v) => {
-    section(c, "install").grokBuild = asBool(v);
-  },
-  INSTALL_HERMES: (c, v) => {
-    section(c, "install").hermes = asBool(v);
-  },
-  INSTALL_AGENT_BROWSER: (c, v) => {
-    section(c, "install").agentBrowser = asBool(v);
-  },
-  INSTALL_TAILSCALE: (c, v) => {
-    section(c, "install").tailscale = asBool(v);
-  },
   SANDBOX_SSH: (c, v) => {
     section(c, "access").ssh = asBool(v);
   },
@@ -744,7 +729,7 @@ async function runWizard(
 
   prompt.header("Configure your harness  (press Enter to accept the shown default)");
 
-  prompt.step(1, 5, "Project");
+  prompt.step(1, 4, "Project");
   const name = await askFn("Sandbox name [my-project]:");
   if (name) config.name = name;
 
@@ -771,24 +756,7 @@ async function runWizard(
     }
   }
 
-  prompt.step(2, 5, "Optional installs");
-  const installs: { key: string; field: string; desc: string }[] = [
-    { key: "opencode", field: "opencode", desc: "OpenCode TUI coding agent" },
-    { key: "hermes", field: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
-    { key: "grok_build", field: "grokBuild", desc: "Grok build tooling" },
-    { key: "agent_browser", field: "agentBrowser", desc: "agent-browser + Chromium (~1 GB)" },
-    {
-      key: "tailscale",
-      field: "tailscale",
-      desc: "Tailscale (userspace) — private remote access for T3 Code",
-    },
-  ];
-  for (const inst of installs) {
-    const yes = await confirmWith(askFn, `Install ${inst.key} — ${inst.desc}?`, false);
-    section(config, "install")[inst.field] = yes;
-  }
-
-  prompt.step(3, 5, "Access (off by default)");
+  prompt.step(2, 4, "Access (off by default)");
   const sshOn = await confirmWith(askFn, "Enable sshd for direct container SSH?", false);
   section(config, "access").ssh = sshOn;
   if (sshOn) {
@@ -804,7 +772,7 @@ async function runWizard(
   const sockOn = await confirmWith(askFn, "Mount host Docker socket into the sandbox?", false);
   section(config, "access").dockerSocket = sockOn;
 
-  prompt.step(4, 5, "Secrets");
+  prompt.step(3, 4, "Secrets");
   prompt.info("Stored in .env at the project root, which is gitignored — never committed:");
   for (const key of ["GH_TOKEN", "PI_SLACK_BOT_TOKEN", "PI_SLACK_APP_TOKEN"] as const) {
     const value = await askSecretFn(`${key} (blank to skip):`);

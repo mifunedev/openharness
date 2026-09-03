@@ -8,14 +8,20 @@ Claude Code is Anthropic's terminal-based AI coding agent. It reads your codebas
 
 ## Purpose
 
-Claude Code is the default general-purpose agent in Open Harness. It handles everything from one-off file edits to multi-file refactors, test generation, and debugging. It works best for tasks that benefit from a persistent conversational loop where you can steer the agent mid-task.
+Claude Code is the general-purpose agent most Open Harness operators install first. It handles everything from one-off file edits to multi-file refactors, test generation, and debugging. It works best for tasks that benefit from a persistent conversational loop where you can steer the agent mid-task.
 
 ## Install
 
-Claude Code is installed by default during sandbox provisioning. The package is `@anthropic-ai/claude-code`, installed globally via pnpm:
+Claude Code enters the sandbox only through the door:
 
 ```bash
-pnpm add -g @anthropic-ai/claude-code
+oh harness install claude-code
+```
+
+The verb installs the `@anthropic-ai/claude-code` package into the persistent home volume as the `sandbox` user:
+
+```bash
+npm --prefix /home/sandbox/.local install -g @anthropic-ai/claude-code
 ```
 
 Verify the install:

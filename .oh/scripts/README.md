@@ -10,7 +10,7 @@ Provisioning and the cron runtime live here.
 | `release-reservation.mjs` | Validates the SemVer release version and drives the reservation state machine |
 | `reserve-github-release.mjs` | Atomically reserves the `v<version>` tag and recovers its same-SHA GitHub draft |
 | `promote-release-latest.sh` | Fresh-checks canonical `main`-else-`master` and promotes its image to `latest` by digest |
-| `verify-sandbox-image.sh` | Verifies a built sandbox image: `verify-sandbox-image.sh <image-ref>` checks the Debian Trixie base, the `trixie`/`bookworm` apt suites, the built-in `sandbox` UID/GID `1000:1000`, Node 22, pnpm 10.33.0, Herdr 0.7.4 against the architecture-specific Dockerfile checksum pin, and numeric dotted version output from `gh`, Docker, Cloudflared, Bun and uv |
+| `verify-sandbox-image.sh` | Verifies a built sandbox image: `verify-sandbox-image.sh <image-ref>` checks the Debian Trixie base, the `trixie` Docker apt suite, the built-in `sandbox` UID/GID `1000:1000`, Node 22, the pinned pnpm 10.33.0 and numeric dotted version output from `gh`, Docker, Bun and uv, that no harness and no `kind:"installable"` tool is baked into the image, and that every `kind:"baked-in"` tool is present |
 | `sandbox-boot-smoke.sh` | Boots the compose sandbox, polls the healthcheck, and verifies the Herdr runtime plus the bind-mount ownership contract |
 | `node-pnpm-parity.sh` | CI base-parity check: installs Node and pnpm in fixed Bookworm and Trixie images with the exact Dockerfile commands and requires identical versions |
 | `cron-runtime.ts` | Croner runtime — scans `crons/*.md`, schedules, fires each job     |

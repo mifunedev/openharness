@@ -49,9 +49,11 @@ A first-run helper is available at `.oh/scripts/install.sh` — it prompts for t
 
 ### Onboard inside the sandbox
 
-After `oh shell`, start Herdr before any other inside-sandbox setup:
+After `oh shell`, install and start Herdr before any other inside-sandbox setup.
+A fresh sandbox has none, because nothing installs at boot:
 
 ```bash
+oh tool install herdr
 herdr
 ```
 

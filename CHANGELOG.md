@@ -8,6 +8,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Removed
+
+- Remove boot provisioning and every install switch: `oh harness install <id>` and `oh tool install <id>` are the only door. A fresh sandbox has no harness and no `herdr`. ([#948](https://github.com/mifunedev/openharness/issues/948))
+
 ## [0.6.0] - 2026-08-31
 
 ### Added

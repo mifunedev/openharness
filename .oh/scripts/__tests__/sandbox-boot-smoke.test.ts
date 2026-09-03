@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-boot-smoke.sh");
+const PREFIX = "/home/sandbox/.local";
 
 const HOST_UID = String(process.getuid?.() ?? 0);
 const HOST_GID = String(process.getgid?.() ?? 0);
@@ -16,13 +17,15 @@ function fixture(
     runtimeExecFails?: boolean;
     runtimeUid?: string;
     markerOwner?: string;
-    harnessProbeFails?: boolean;
-    noDefaultHarnesses?: boolean;
-    noDefaultTools?: boolean;
+    binaryPresent?: boolean;
+    installedAtBoot?: boolean;
+    noInstallableHarnesses?: boolean;
+    noInstallableTools?: boolean;
   } = {},
 ) {
   const runtimeUid = opts.runtimeUid ?? HOST_UID;
   const markerOwner = opts.markerOwner ?? `${HOST_UID}:${HOST_GID}`;
+  const installed = opts.installedAtBoot ? "true" : "false";
   const dir = mkdtempSync(join(tmpdir(), "sandbox-boot-smoke-"));
   const bin = join(dir, "bin");
   mkdirSync(bin, { recursive: true });
@@ -77,42 +80,43 @@ case "$1" in
         printf '%s\n' ${JSON.stringify(markerOwner)}
         exit 0
         ;;
-      *"oh harness list --defaults --json"*)
+      *"oh harness list --json"*)
         cat <<'JSON'
 ${
-  opts.noDefaultHarnesses
-    ? "[]"
+  opts.noInstallableHarnesses
+    ? `[
+  { "id": "t3code", "title": "T3 Code", "binary": "t3", "kind": "on-demand", "installed": true, "docs": "x" }
+]`
     : `[
-  { "id": "claude-code", "title": "Claude Code", "binary": "claude", "kind": "default", "enabled": null, "installed": true, "docs": "x" },
-  { "id": "pi", "title": "Pi", "binary": "pi", "kind": "default", "enabled": null, "installed": true, "docs": "x" }
+  { "id": "claude-code", "title": "Claude Code", "binary": "claude", "kind": "installable", "installed": ${installed}, "docs": "x" },
+  { "id": "pi", "title": "Pi", "binary": "pi", "kind": "installable", "installed": false, "docs": "x" },
+  { "id": "t3code", "title": "T3 Code", "binary": "t3", "kind": "on-demand", "installed": true, "docs": "x" }
 ]`
 }
 JSON
         exit 0
         ;;
-      *"oh tool list --defaults --json"*)
+      *"oh tool list --json"*)
         cat <<'JSON'
 ${
-  opts.noDefaultTools
-    ? "[]"
+  opts.noInstallableTools
+    ? `[
+  { "id": "gh", "title": "GitHub CLI", "binary": "gh", "kind": "baked-in", "installed": true, "docs": "x" }
+]`
     : `[
-  { "id": "herdr", "title": "Herdr", "binary": "herdr", "kind": "default", "enabled": null, "installed": true, "docs": "x" },
-  { "id": "cloudflared", "title": "cloudflared", "binary": "cloudflared", "kind": "default", "enabled": null, "installed": true, "docs": "x" }
+  { "id": "herdr", "title": "Herdr", "binary": "herdr", "kind": "installable", "installed": false, "docs": "x" },
+  { "id": "cloudflared", "title": "cloudflared", "binary": "cloudflared", "kind": "installable", "installed": false, "docs": "x" },
+  { "id": "gh", "title": "GitHub CLI", "binary": "gh", "kind": "baked-in", "installed": true, "docs": "x" }
 ]`
 }
 JSON
         exit 0
         ;;
       *"type -P"*)
-        if [ "${opts.harnessProbeFails ? "1" : "0"}" = "1" ]; then
-          echo 'is not on PATH under /home/sandbox/.local (type -P gave: /usr/bin/claude)' >&2
+        if [ "${opts.binaryPresent ? "1" : "0"}" = "1" ]; then
+          echo '${PREFIX}/bin/claude exists' >&2
           exit 1
         fi
-        printf '1.2.3\n'
-        exit 0
-        ;;
-      *"id -u sandbox"*)
-        printf '%s\n' ${JSON.stringify(runtimeUid)}
         exit 0
         ;;
     esac
@@ -147,6 +151,7 @@ function runSmoke(fx: ReturnType<typeof fixture>, extraEnv: Record<string, strin
       BOOT_SMOKE_TIMEOUT_SECONDS: "3",
       BOOT_SMOKE_INTERVAL_SECONDS: "1",
       SANDBOX_NAME: "openharness-test",
+      NPM_USER_PREFIX: PREFIX,
       ...extraEnv,
     },
     encoding: "utf8",
@@ -179,40 +184,58 @@ describe("sandbox boot smoke", () => {
     expect(result.stdout).toContain(
       `sandbox user, bind mount, and sandbox-created files all resolve to ${HOST_UID}:${HOST_GID}`,
     );
-    expect(dockerCalls).toContain("oh harness list --defaults --json");
-    expect(dockerCalls).toContain("oh tool list --defaults --json");
-    expect(dockerCalls).toContain("type -P");
-    expect(result.stdout).toContain("claude-code provisioned at boot -> 1.2.3");
-    expect(result.stdout).toContain("pi provisioned at boot -> 1.2.3");
-    expect(result.stdout).toContain("herdr provisioned at boot -> 1.2.3");
-    expect(result.stdout).toContain("cloudflared provisioned at boot -> 1.2.3");
+    expect(dockerCalls).toContain("oh harness list --json");
+    expect(dockerCalls).toContain("oh tool list --json");
+    expect(result.stdout).toContain(`claude-code not installed at boot (claude absent from ${PREFIX})`);
+    expect(result.stdout).toContain(`pi not installed at boot (pi absent from ${PREFIX})`);
+    expect(result.stdout).toContain(`herdr not installed at boot (herdr absent from ${PREFIX})`);
+    expect(result.stdout).toContain(`cloudflared not installed at boot (cloudflared absent from ${PREFIX})`);
+    expect(result.stdout).toContain("installed no harness or tool at boot");
   });
 
-  // #904 deleted the image bake, so this assertion is the only thing standing
-  // between a silently broken boot-time install and a green pipeline.
-  it("fails when a default harness was not provisioned into the home mount", () => {
-    const fx = fixture({ harnessProbeFails: true });
+  it("ignores on-demand harnesses and baked-in tools, which install nowhere", () => {
+    const result = runSmoke(fixture());
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("t3code");
+    expect(result.stdout).not.toContain("gh not installed at boot");
+  });
+
+  it("fails when an installable entry reports itself installed after a fresh boot", () => {
+    const fx = fixture({ installedAtBoot: true });
 
     const result = runSmoke(fx);
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "default harness 'claude-code' was not provisioned into the home mount at boot",
+      "installable harness 'claude-code' reports installed=true on a fresh boot",
     );
-    expect(result.stderr).toContain("type -P gave: /usr/bin/claude");
     expect(readFileSync(fx.composeLog, "utf8")).toContain("down -v --remove-orphans");
   });
 
-  it.each<[string, { noDefaultHarnesses?: boolean; noDefaultTools?: boolean }]>([
-    ["harness", { noDefaultHarnesses: true }],
-    ["tool", { noDefaultTools: true }],
-  ])("refuses to pass vacuously when the %s catalog reports no defaults", (noun, overrides) => {
+  it("fails when an installable binary is present under the install prefix after boot", () => {
+    const fx = fixture({ binaryPresent: true });
+
+    const result = runSmoke(fx);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      `installable harness 'claude-code' left a binary under ${PREFIX} on a fresh boot`,
+    );
+    expect(result.stderr).toContain(`${PREFIX}/bin/claude exists`);
+    expect(readFileSync(fx.composeLog, "utf8")).toContain("down -v --remove-orphans");
+  });
+
+  it.each<[string, { noInstallableHarnesses?: boolean; noInstallableTools?: boolean }]>([
+    ["harness", { noInstallableHarnesses: true }],
+    ["tool", { noInstallableTools: true }],
+  ])("refuses to pass vacuously when the %s catalog has no installable entry", (noun, overrides) => {
     const fx = fixture(overrides);
 
     const result = runSmoke(fx);
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain(`the ${noun} catalog reported no kind:"default" entries`);
+    expect(result.stderr).toContain(`the ${noun} catalog reported no kind:"installable" entries`);
   });
 
   it("fails when the runtime sandbox user does not match the checkout owner", () => {

@@ -83,7 +83,7 @@ Delete the node in the Tailscale admin console to revoke it from the other side.
 
 | Symptom | Fix |
 | --- | --- |
-| `tailscale not found in PATH` | `oh tool install tailscale`, and set `install.tailscale: true` in `oh.json` so a rebuild keeps it |
+| `tailscale not found in PATH` | `oh tool install tailscale` — the install persists in the home volume |
 | `tailscaled is not running` | start the `agent-tailscaled` session above; check `/tmp/agent-tailscaled.log` |
 | backend state is `NeedsLogin` / `Stopped` | run `tailscale up` interactively and finish the browser login |
 | Node does not satisfy the range | the T3 server needs `^22.16 \|\| ^23.11 \|\| >=24.10`; raise the Node pin in `.devcontainer/Dockerfile` and rebuild |

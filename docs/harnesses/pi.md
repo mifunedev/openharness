@@ -4,7 +4,7 @@ title: "Pi"
 
 # Pi
 
-Pi is a lightweight, customizable harness — a hackable agent framework you can shape to your project. It ships in the default sandbox image alongside Claude Code and Codex.
+Pi is a lightweight, customizable harness — a hackable agent framework you can shape to your project. Install it with `oh harness install pi`.
 
 ## Verify installation
 

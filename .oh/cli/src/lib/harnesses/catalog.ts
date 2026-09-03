@@ -1,14 +1,10 @@
 
-export type HarnessKind =
-  | "default"
-  | "optional"
-  | "on-demand";
+export type HarnessKind = "installable" | "on-demand";
 
 export interface HarnessEntry {
   readonly id: string;
   readonly title: string;
   readonly binary: string;
-  readonly harnessKey?: string;
   readonly installArgv: readonly string[];
   readonly installUser: "root" | "sandbox";
   readonly verifyArgv: readonly string[];
@@ -32,7 +28,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installUser: "sandbox",
     verifyArgv: ["claude", "--version"],
     docsPath: "docs/harnesses/claude-code.md",
-    kind: "default",
+    kind: "installable",
   },
   {
     id: "codex",
@@ -49,7 +45,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installUser: "sandbox",
     verifyArgv: ["codex", "--version"],
     docsPath: "docs/harnesses/codex.md",
-    kind: "default",
+    kind: "installable",
   },
   {
     id: "pi",
@@ -67,13 +63,12 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installUser: "sandbox",
     verifyArgv: ["pi", "--version"],
     docsPath: "docs/harnesses/pi.md",
-    kind: "default",
+    kind: "installable",
   },
   {
     id: "opencode",
     title: "OpenCode",
     binary: "opencode",
-    harnessKey: "opencode",
     installArgv: [
       "npm",
       "--prefix",
@@ -85,13 +80,12 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installUser: "sandbox",
     verifyArgv: ["opencode", "--version"],
     docsPath: "docs/harnesses/opencode.md",
-    kind: "optional",
+    kind: "installable",
   },
   {
     id: "grok-build",
     title: "Grok Build",
     binary: "grok",
-    harnessKey: "grok_build",
     installArgv: [
       "bash",
       "-lc",
@@ -100,13 +94,12 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installUser: "sandbox",
     verifyArgv: ["grok", "--version"],
     docsPath: "docs/harnesses/grok-build.md",
-    kind: "optional",
+    kind: "installable",
   },
   {
     id: "hermes",
     title: "Hermes",
     binary: "hermes",
-    harnessKey: "hermes",
     installArgv: [
       "bash",
       "-lc",
@@ -115,7 +108,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installUser: "sandbox",
     verifyArgv: ["hermes", "--version"],
     docsPath: "docs/harnesses/hermes.md",
-    kind: "optional",
+    kind: "installable",
   },
   {
     id: "t3code",
@@ -128,14 +121,6 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     kind: "on-demand",
   },
 ];
-
-export function optionalHarnesses(): readonly HarnessEntry[] {
-  return HARNESS_CATALOG.filter((h) => h.kind === "optional");
-}
-
-export function defaultHarnesses(): readonly HarnessEntry[] {
-  return HARNESS_CATALOG.filter((h) => h.kind === "default");
-}
 
 export function findHarness(id: string): HarnessEntry | undefined {
   return HARNESS_CATALOG.find((h) => h.id === id);

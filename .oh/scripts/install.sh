@@ -117,9 +117,6 @@ Env vars:
   OH_REPLACE           Set to 1 to rebuild in place even when a sandbox of the
                        same name is already running (default: refuse, so a live
                        sandbox is never overwritten)
-  INSTALL_HERMES=true  Enable an optional agent non-interactively. Also:
-                       INSTALL_OPENCODE, INSTALL_GROK_BUILD,
-                       INSTALL_AGENT_BROWSER, INSTALL_TAILSCALE
   DOCKER_SOCKET=true   Mount the host Docker socket into the sandbox
                        non-interactively. OFF by default (socket access is
                        effectively host root). Otherwise you're prompted (TTY),
@@ -419,29 +416,6 @@ if command -v gh >/dev/null 2>&1 && ! grep -qE '^GH_TOKEN=.+' "$ENV_FILE"; then
   fi
 fi
 
-banner "Optional installs (off by default)"
-_opt_install() {
-  local __k="INSTALL_$1"
-  if [ "${!__k:-}" = "true" ]; then
-    _config_set "$2" true
-    return 0
-  fi
-  if [ "$(_config_get "$2")" = "true" ]; then
-    return 0
-  fi
-  if [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
-    return 0
-  fi
-  if prompt_yn "Install $3?" n; then
-    _config_set "$2" true
-  fi
-}
-_opt_install HERMES        install.hermes      "Hermes — Nous self-improving agent CLI"
-_opt_install OPENCODE      install.opencode    "OpenCode — OpenAI-OAuth terminal agent"
-_opt_install GROK_BUILD    install.grokBuild   "Grok Build — xAI terminal agent"
-_opt_install AGENT_BROWSER install.agentBrowser "agent-browser + Chromium (~1 GB)"
-_opt_install TAILSCALE      install.tailscale   "Tailscale — private remote access for T3 Code (userspace)"
-
 banner "Host Docker socket (off by default)"
 if [ "$(_config_get access.dockerSocket)" = "true" ]; then
   ok "access.dockerSocket already true — leaving it alone"
@@ -488,14 +462,14 @@ printf "       oh destroy                       # tear it down (wipes the volume
 printf "       oh --help                        # every subcommand\n"
 printf "       docs/lifecycle-commands.md       # the verb reference\n"
 printf "\n"
-printf "  ${CYAN}Optional capabilities${NC}  (installed live — no rebuild)\n"
+printf "  ${CYAN}Harnesses and tools${NC}  (nothing installs at boot — the verb is the only door)\n"
 printf "  ──────────────────────────────────────\n"
-printf "       oh harness install hermes        — Hermes agent (then 'hermes setup'; optional dashboard)\n"
-printf "       oh harness install opencode      — OpenCode terminal agent\n"
-printf "       oh harness install grok-build    — xAI Grok Build\n"
-printf "       oh tool install agent-browser    — headless Chromium for screenshots / previews (~1 GB)\n"
-printf "       oh tool install tailscale        — private tailnet access for remote / mobile T3 Code\n"
-printf "                                          (each flips the matching install.* flag in oh.json)\n"
+printf "       oh harness install claude-code   — Claude Code\n"
+printf "       oh harness install codex         — Codex\n"
+printf "       oh harness install pi            — Pi\n"
+printf "       oh tool install herdr            — Herdr terminal workspace manager\n"
+printf "       oh tool install cloudflared      — public preview tunnels\n"
+printf "       oh harness list | oh tool list   — every id, kind, and install state\n"
 printf "\n"
 printf "  ${CYAN}Messaging gateways${NC}\n"
 printf "  ──────────────────────────────────────\n"

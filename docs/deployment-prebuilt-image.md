@@ -245,12 +245,12 @@ A healthy boot ends with `Providers OK: …` and `SEED_OK`, and the logs show
 authoritative — later boots see the `.oh/.image-seeded` marker and skip
 re-seeding, so your in-container edits persist.
 
-The same first boot also installs the default harnesses (Claude Code, Codex, Pi)
-into `/home/sandbox/.local`; they are not baked into the image. Expect the boot
-to run 60–180s longer than the `sleep 8` above and to need network — check with
-`docker exec "$NAME" bash -lc 'oh harness list --defaults'`. If the registry was
-unreachable the container still comes up; re-run
-`docker exec "$NAME" bash -lc 'bash /home/sandbox/harness/.oh/scripts/provision-defaults.sh'`.
+The boot installs no harness and no tool. The image contains none either, so the
+container comes up with no agent CLI and no `herdr`. Check the state with
+`docker exec "$NAME" bash -lc 'oh harness list'` and
+`docker exec "$NAME" bash -lc 'oh tool list'`, then install what you need
+through the one door, for example
+`docker exec "$NAME" bash -lc 'oh tool install herdr'`.
 
 ```bash
 # ── 4. Attach an interactive shell (once the container is stable) ──
@@ -260,7 +260,8 @@ until [ "$(docker inspect -f '{{.State.Health.Status}}' "$NAME" 2>/dev/null)" = 
 done
 
 docker exec -it -u sandbox "$NAME" zsh   # interactive shell (bash also available)
-# first command inside the container:
+# first commands inside the container:
+#   oh tool install herdr
 #   herdr
 # then complete gh/provider auth and launch agents from Herdr panes
 ```

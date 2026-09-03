@@ -46,7 +46,7 @@ else
       const fs = require("node:fs");
       const c = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
       if (c.version !== 1) { console.error("oh.json version is not 1"); process.exit(1); }
-      for (const k of ["name", "timezone", "install", "access", "image"]) {
+      for (const k of ["name", "timezone", "access", "image"]) {
         if (c[k] === undefined) { console.error(`oh.json is missing the ${k} section`); process.exit(1); }
       }
     ' "$work/oh.json" 2>"$work/jsonerr" \

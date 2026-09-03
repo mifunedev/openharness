@@ -6,40 +6,22 @@ title: "Grok Build"
 
 Grok Build is xAI's proprietary terminal coding agent, shipped as the `grok` CLI. Open Harness installs it with xAI's official installer from `https://x.ai/cli/install.sh`.
 
-Grok Build is **optional** in Open Harness and is **excluded from the default image**. Enable it only when you want the xAI Grok Build CLI available in the sandbox.
+Grok Build is never baked into the sandbox image. Install it only when you want the xAI Grok Build CLI available in the sandbox.
 
-## Install (optional)
+## Install
 
-The shortest path is the CLI, which sets the `.devcontainer/.env` flag **and**
-installs into the already-running sandbox without a rebuild:
+`oh harness install <id>` is the only door. It installs Grok Build into the
+already-running sandbox without a rebuild:
 
 ```bash
 oh harness install grok-build
 ```
 
-See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
-`--no-persist`, and what happens when the sandbox is not running.
+Nothing installs Grok Build at boot, and no configuration key selects it. See
+[Harnesses Overview](./overview.md#installing-a-harness) for what the verb does
+and what happens when the sandbox is not running.
 
-### Manual path
-
-Enable Grok Build in `.devcontainer/.env`:
-
-```yaml
-install:
-  grok_build: true
-```
-
-Or set it from the CLI:
-
-```bash
-oh config set install.grokBuild true
-```
-
-Either way the boot provisioner installs it on the next start — no rebuild:
-
-```bash
-oh stop && oh sandbox
-```
+### What the door runs
 
 Open Harness uses the upstream installer as the `sandbox` user, pinned to the version verified when this support was added, with the binary directed into the home mount:
 
@@ -63,7 +45,7 @@ Verify the install inside the sandbox:
 grok --version
 ```
 
-If `grok` is not found, run `oh harness install grok-build` — it installs into `~/.local/bin` and sets `install.grokBuild` so a fresh home mount reinstalls it at boot.
+If `grok` is not found, run `oh harness install grok-build`. It installs into `~/.local/bin` in the persistent home volume. A fresh home volume has no `grok` until you run the verb again.
 
 ## Authentication
 

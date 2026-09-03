@@ -144,18 +144,15 @@ jobs:
           jq '.build.skipPnpmInstall = true' oh.json > "$tmp"
           mv "$tmp" oh.json
 
-      # This step is the ONLY place the boot-time harness install runs end to end.
-      # It boots on a fresh home volume (the smoke tears down with `down -v`), so
-      # provision-defaults.sh does real npm work every run and the smoke asserts
-      # the result. Do not set OH_PROVISION_DEFAULTS=false here to speed it up —
-      # that would return the install path to being untested dead code.
-      - name: Boot sandbox and verify healthcheck (exercises boot-time harness provisioning)
+      # This step is the ONLY place a full boot on a fresh home volume runs end to
+      # end (the smoke tears down with `down -v`), and the smoke asserts that the
+      # boot installed no harness and no tool into it.
+      - name: Boot sandbox and verify healthcheck (asserts boot installs nothing)
         env:
           SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
-          # Boot now installs the default harnesses into a fresh home volume
-          # (#904) before the control plane comes up, so the smoke deadline has
-          # to clear the compose healthcheck's 600s start_period plus the
-          # 3x30s retry window (~690s), not just the old 300s one.
+          # The smoke deadline has to clear the compose healthcheck's 600s
+          # start_period plus the 3x30s retry window (~690s), not just the old
+          # 300s one.
           BOOT_SMOKE_TIMEOUT_SECONDS: "1200"
           BOOT_SMOKE_INTERVAL_SECONDS: "10"
         run: bash .oh/scripts/sandbox-boot-smoke.sh

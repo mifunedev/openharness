@@ -462,7 +462,6 @@ describe("compose helper wiring", () => {
     expect(text).toContain("_config_set timezone");
     expect(text).toContain("_config_set git.userName");
     expect(text).toContain("_config_set git.userEmail");
-    expect(text).toContain('_config_set "$2" true');
     expect(text).toContain("_config_set access.dockerSocket");
     expect(text).toContain("oh config set");
     expect(text).not.toContain("_yaml_set");

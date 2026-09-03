@@ -23,8 +23,8 @@
       ],
       "priority": 1,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commits 2070995e 0e30e5d8 (+1b13bb1d image.ref persist); typecheck 0, build 0, pnpm test 895/895; registry.test.ts + sandbox.test.ts cover D3/D4; print-argv leaves OH_HOME empty; D2 child booted from the entry (evidence.md)"
     },
     {
       "id": "US-002",
@@ -42,8 +42,8 @@
       ],
       "priority": 2,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit 0e30e5d8; oh ps/logs/stop/restart/destroy resolved oh-child-after by name in D2; destroy removed the entry; attach line byte-unchanged (execution-target-contract.sh PASS); --sandbox on config/secret tested"
     },
     {
       "id": "US-003",
@@ -60,8 +60,8 @@
       ],
       "priority": 3,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit 0e30e5d8; D5 transcript: oh update --from equips an empty dir with .oh/ + crons/ only, second run 'already up to date (v0.6.0)'; init.ts, init.test.ts, .oh/templates/ deleted; oh init exits 1 unknown command"
     },
     {
       "id": "US-004",
@@ -78,8 +78,8 @@
       ],
       "priority": 4,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit aba2de0a; runtime.ts and tests deleted; microsandbox tool entry pinned sha256 (installer curled from the raw.githubusercontent target of get.microsandbox.dev, see evidence divergence); msb 0.6.16 installed in a throwaway openharness:one-door container at ~/.local/microsandbox/bin/msb; harness-one-door.sh + tool-catalog-boundary.sh PASS"
     },
     {
       "id": "US-005",
@@ -96,8 +96,8 @@
       ],
       "priority": 5,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commits d757223f 20ecb68b 3a3b92b1; sandbox-registry.sh new-pass with both fault injections REGRESSION; oh-update-bootstrap.sh new-pass; oh-init-scaffold.sh + runtime-preflight-gate.sh deleted; 16 probes re-pointed; get-oh.sh next steps; eval rc 0 at the final head with 0 REGRESSION and 4 pre-existing SKIPPED"
     },
     {
       "id": "US-006",
@@ -114,8 +114,8 @@
       ],
       "priority": 6,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commits 324ec45c 27d6f919; AGENTS.md 9341 B (context-tier-size-budget PASS); D6 grep over docs/root/READMEs empty; CHANGELOG Added/Changed/Removed (changelog-entry-length PASS); deployment page retitled to oh sandbox install docker"
     },
     {
       "id": "US-007",
@@ -131,8 +131,8 @@
       ],
       "priority": 7,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "D1 before (98e320bd), D2 registry child oh-child-after at 1b13bb1d (healthcheck 16 s, door test herdr 0.7.4, destroy removed container+volume+entry), D5 bootstrap at fc7bb8df; no oh-child-* residue; oh-sbx-remote untouched; excerpts in evidence.md"
     },
     {
       "id": "US-008",
@@ -147,8 +147,8 @@
       ],
       "priority": 8,
       "dependsOn": null,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "commit after 1b13bb1d: oh-cli-portable-lifecycle, fresh-machine-setup, compose-env-boundary UPDATED; managed-agents REVERIFIED; 10 pages NOT-AFFECTED; index regenerated; wiki-readme-index.sh + knowledge-source-freshness.sh PASS"
     }
   ]
 }

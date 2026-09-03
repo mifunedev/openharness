@@ -105,6 +105,8 @@ describe("round trip", () => {
 describe("validateOhConfig", () => {
   const cases: Array<[string, unknown, RegExp]> = [
     ["name", { name: 1 }, /^oh\.json: name must be a string$/],
+    ["runtime", { runtime: "podman" }, /^oh\.json: runtime must be one of docker$/],
+    ["repo", { repo: 7 }, /^oh\.json: repo must be a string$/],
     ["timezone", { timezone: true }, /^oh\.json: timezone must be a string$/],
     [
       "storage.homePath",
@@ -189,6 +191,25 @@ describe("validateOhConfig", () => {
     const validated = validateOhConfig(stale);
     expect(validated.version).toBe(1);
     expect(validated.install).toEqual({ opencode: true, hermes: false, tailscale: "yes" });
+  });
+
+  it("accepts a registry entry: runtime docker with an absolute repo path", () => {
+    const entry = { ...defaultOhConfig("oh-sbx-1"), runtime: "docker", repo: "/srv/checkout" };
+    const validated = validateOhConfig(entry);
+    expect(validated.runtime).toBe("docker");
+    expect(validated.repo).toBe("/srv/checkout");
+  });
+
+  it("makes runtime and repo settable through `oh config set`", () => {
+    expect(OH_CONFIG_FIELDS.find((f) => f.path === "runtime")).toEqual({
+      path: "runtime",
+      type: "enum",
+      values: ["docker"],
+    });
+    expect(OH_CONFIG_FIELDS.find((f) => f.path === "repo")).toEqual({
+      path: "repo",
+      type: "string",
+    });
   });
 
   it("declares no install field in the template or the settable field list", () => {

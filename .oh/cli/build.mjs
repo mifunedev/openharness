@@ -16,6 +16,7 @@ await build({
   target: "node20",
   outfile,
   banner: { js: "#!/usr/bin/env node" },
+  loader: { ".yml": "text", ".sh": "text" },
   define: {
     __OH_VERSION__: JSON.stringify(pkg.version),
   },

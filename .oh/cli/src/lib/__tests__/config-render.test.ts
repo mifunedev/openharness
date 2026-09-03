@@ -34,6 +34,7 @@ const HOST_SIDE_KEYS = [
   "SANDBOX_NAME",
   "TZ",
   "OH_HOME_MOUNT",
+  "OH_REPO_DIR",
   "GIT_USER_NAME",
   "GIT_USER_EMAIL",
   "DOCKER_SOCKET",
@@ -55,6 +56,8 @@ function composeInterpolatedVars(): string[] {
 
 function fullConfig(): OhConfig {
   const config = defaultOhConfig("demo");
+  config.runtime = "docker";
+  config.repo = "/srv/checkout";
   config.git = { userName: "Ada", userEmail: "ada@example.com" };
   config.storage = { homePath: "/srv/oh-home" };
   config.access = {
@@ -85,6 +88,7 @@ describe("renderComposeEnv", () => {
     expect(text).toContain("SANDBOX_NAME=demo");
     expect(text).toContain("TZ=America/Los_Angeles");
     expect(text).toContain("OH_HOME_MOUNT=/srv/oh-home");
+    expect(text).toContain("OH_REPO_DIR=/srv/checkout");
     expect(text).toContain("GIT_USER_NAME=Ada");
     expect(text).toContain("GIT_USER_EMAIL=ada@example.com");
     expect(text).toContain("DOCKER_SOCKET=true");
@@ -132,6 +136,16 @@ describe("renderComposeEnv", () => {
   it("omits a key whose oh.json field is unset", () => {
     const config: OhConfig = { version: 1, name: "demo" };
     expect(keysOf(config)).toEqual(["SANDBOX_NAME"]);
+  });
+
+  it("renders OH_REPO_DIR only for a sandbox that binds a checkout", () => {
+    const imageOnly = defaultOhConfig("demo");
+    imageOnly.runtime = "docker";
+    expect(keysOf(imageOnly)).not.toContain("OH_REPO_DIR");
+
+    const withRepo = defaultOhConfig("demo");
+    withRepo.repo = "/srv/checkout";
+    expect(renderComposeEnv(withRepo)).toContain("OH_REPO_DIR=/srv/checkout");
   });
 
   it("leaves skipPnpmInstall to oh.json — entrypoint.sh reads it through the CLI", () => {

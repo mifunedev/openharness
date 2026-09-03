@@ -1,6 +1,6 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join, sep } from "node:path";
 import {
   ExecutionExitError,
   ExecutionSpawnError,
@@ -18,6 +18,7 @@ import {
 import { renderComposeEnv } from "../lib/config-render.js";
 import { getOhConfigValue, ohConfigPath, readOhConfig } from "../lib/oh-config.js";
 import { resolveProjectRoot } from "../lib/project.js";
+import { materialize, registryRoot, resolveSandboxRoot } from "../lib/registry.js";
 import { setEnvValue } from "../lib/env-file.js";
 import * as prompt from "../lib/prompt.js";
 
@@ -35,8 +36,8 @@ export interface LifecycleOptions {
   run?: LifecycleRunner;
 }
 
-export interface ShellOptions extends LifecycleOptions {
-  container?: string;
+export interface SandboxTargetOptions extends LifecycleOptions {
+  name?: string;
 }
 
 export const COMPOSE_ENV_DIR_PREFIX = "oh-compose-env-";
@@ -86,6 +87,15 @@ export interface SandboxOptions extends LifecycleOptions {
   noBuild?: boolean;
   /** Print the docker compose argv instead of provisioning anything. */
   printArgv?: boolean;
+}
+
+function sandboxRoot(opts: SandboxTargetOptions): string {
+  const root = resolveSandboxRoot({ name: opts.name, cwd: opts.cwd });
+  if (existsSync(ohConfigPath(root))) {
+    const repo = configuredString(root, "repo");
+    materialize(root, repo === undefined ? {} : { repo });
+  }
+  return root;
 }
 
 export const DEFAULT_CONTAINER_NAME = "openharness";
@@ -218,10 +228,10 @@ export function configuredContainerName(root: string): string | undefined {
   return fromProcessEnv("SANDBOX_NAME") ?? configuredString(root, "name");
 }
 
-export function runShell(opts: ShellOptions, io: LifecycleIO): number {
+export function runShell(opts: SandboxTargetOptions, io: LifecycleIO): number {
   const run = opts.run ?? spawnRunner;
-  const root = resolveProjectRoot(opts.cwd);
-  const name = opts.container ?? configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
+  const root = sandboxRoot(opts);
+  const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
   const target = resolveExecutionTarget({ projectRoot: root, container: name, run });
   let code: number;
   try {
@@ -233,7 +243,9 @@ export function runShell(opts: ShellOptions, io: LifecycleIO): number {
     throw err;
   }
   if (code !== 0) {
-    io.stderr(`container \`${name}\` not running? start it with \`oh sandbox\`\n`);
+    io.stderr(
+      `container \`${name}\` not running? start it with \`oh sandbox install docker\`\n`,
+    );
   }
   return code;
 }
@@ -254,11 +266,11 @@ export function composeVerbs(): ComposeVerb[] {
 
 export function runComposeVerb(
   verb: ComposeVerb,
-  opts: LifecycleOptions,
+  opts: SandboxTargetOptions,
   extra: string[] = [],
 ): number {
   const run = opts.run ?? spawnRunner;
-  const root = resolveProjectRoot(opts.cwd);
+  const root = sandboxRoot(opts);
   const script = requireLifecycleScript(root, "docker-compose.sh");
   return withComposeEnvFile(root, (extraArgs) => {
     const r = run("bash", [script, ...extraArgs, ...COMPOSE_VERBS[verb], ...extra], {
@@ -269,9 +281,9 @@ export function runComposeVerb(
   });
 }
 
-export function runComposeConfig(opts: LifecycleOptions, extra: string[] = []): number {
+export function runComposeConfig(opts: SandboxTargetOptions, extra: string[] = []): number {
   const run = opts.run ?? spawnRunner;
-  const root = resolveProjectRoot(opts.cwd);
+  const root = sandboxRoot(opts);
   const script = requireLifecycleScript(root, "docker-compose.sh");
   return withComposeEnvFile(root, (extraArgs) => {
     const r = run("bash", [script, ...extraArgs, "config", ...extra], { stdio: "inherit" });
@@ -299,7 +311,7 @@ export function namedVolumes(root: string): string[] {
   return names;
 }
 
-export interface DestroyOptions extends LifecycleOptions {
+export interface DestroyOptions extends SandboxTargetOptions {
   yes?: boolean;
 }
 
@@ -308,7 +320,7 @@ export function destroyConfirmationPhrase(root: string): string {
 }
 
 export async function runDestroy(opts: DestroyOptions, io: LifecycleIO): Promise<number> {
-  const root = resolveProjectRoot(opts.cwd);
+  const root = sandboxRoot(opts);
   const name = destroyConfirmationPhrase(root);
 
   if (opts.yes !== true) {
@@ -353,7 +365,12 @@ export async function runDestroy(opts: DestroyOptions, io: LifecycleIO): Promise
     }
   }
 
-  return runComposeVerb("destroy", opts);
+  const code = runComposeVerb("destroy", { ...opts, name: basename(root) });
+  if (code === 0 && root.startsWith(registryRoot() + sep)) {
+    rmSync(root, { recursive: true, force: true });
+    io.stdout(`removed the sandbox entry ${root}\n`);
+  }
+  return code;
 }
 
 export function runGateway(args: string[], opts: LifecycleOptions): number {

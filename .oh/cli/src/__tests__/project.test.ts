@@ -59,7 +59,7 @@ describe("resolveProjectRoot", () => {
     const nested = join(bare, "a", "b");
     mkdirSync(nested, { recursive: true });
     expect(() => resolveProjectRoot(nested)).toThrow(
-      "not an OpenHarness-equipped repo — run `oh init` first",
+      "not an OpenHarness-equipped repo — run `oh update` first",
     );
     expect(() => resolveProjectRoot(nested)).not.toThrow(/^oh:/);
   });

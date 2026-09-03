@@ -1,5 +1,9 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { appendGitignoreLines } from "../lib/gitignore.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import * as prompt from "../lib/prompt.js";
+import { resolveSandboxRoot } from "../lib/registry.js";
 import {
   isSecretKey,
   listSecretKeys,
@@ -16,6 +20,18 @@ export interface SecretIO {
 
 export interface SecretOptions {
   cwd?: string;
+  sandbox?: string;
+}
+
+function secretsRoot(opts: SecretOptions): string {
+  return opts.sandbox === undefined
+    ? resolveProjectRoot(opts.cwd)
+    : resolveSandboxRoot({ name: opts.sandbox });
+}
+
+function ignoreSecretsFile(root: string): void {
+  if (!existsSync(join(root, ".git"))) return;
+  appendGitignoreLines(root, [".env"]);
 }
 
 export function secretKeyList(): string {
@@ -35,7 +51,7 @@ export async function runSecretSet(
     return 1;
   }
 
-  const root = resolveProjectRoot(opts.cwd);
+  const root = secretsRoot(opts);
   const askSecret = io.askSecret ?? prompt.askSecret;
   const value = (await askSecret(`Value for ${prompt.bold(key)} (input hidden):`)).trim();
   if (value === "") {
@@ -45,6 +61,7 @@ export async function runSecretSet(
 
   try {
     setSecret(root, key, value);
+    ignoreSecretsFile(root);
   } catch (error) {
     io.stderr(`oh secret set: ${error instanceof Error ? error.message : String(error)}\n`);
     return 1;
@@ -55,7 +72,7 @@ export async function runSecretSet(
 }
 
 export async function runSecretList(opts: SecretOptions, io: SecretIO): Promise<number> {
-  const root = resolveProjectRoot(opts.cwd);
+  const root = secretsRoot(opts);
   const keys = listSecretKeys(root);
   if (keys.length === 0) {
     io.stdout("no secrets set — write one with `oh secret set <KEY>`\n");

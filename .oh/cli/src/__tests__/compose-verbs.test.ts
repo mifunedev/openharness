@@ -28,11 +28,17 @@ const cleanups: string[] = [];
 afterEach(() => {
   while (cleanups.length > 0) rmSync(cleanups.pop()!, { recursive: true, force: true });
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
+const ENTRY_NAME = "oh-compose-verb-box";
+const entry = { name: ENTRY_NAME };
+
 function makeRepo(): string {
-  const d = mkdtempSync(join(tmpdir(), "oh-compose-verb-"));
-  cleanups.push(d);
+  const home = mkdtempSync(join(tmpdir(), "oh-compose-verb-"));
+  cleanups.push(home);
+  vi.stubEnv("OH_HOME", home);
+  const d = join(home, "sandboxes", ENTRY_NAME);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
   writeFileSync(join(d, ".oh", "scripts", "docker-compose.sh"), "#!/usr/bin/env bash\n");
   return d;
@@ -77,7 +83,7 @@ describe("runComposeVerb", () => {
     (verb, expected) => {
       const root = makeRepo();
       const { calls, run } = makeRunner();
-      expect(runComposeVerb(verb, { cwd: root, run })).toBe(0);
+      expect(runComposeVerb(verb, { ...entry, run })).toBe(0);
       expect(calls).toHaveLength(1);
       expect(calls[0].cmd).toBe("bash");
       expect(calls[0].args[0]).toBe(join(root, ".oh", "scripts", "docker-compose.sh"));
@@ -88,7 +94,7 @@ describe("runComposeVerb", () => {
   it("never names docker — the script owns the engine argv", () => {
     const root = makeRepo();
     const { calls, run } = makeRunner();
-    for (const verb of composeVerbs()) runComposeVerb(verb, { cwd: root, run });
+    for (const verb of composeVerbs()) runComposeVerb(verb, { ...entry, run });
     for (const c of calls) {
       expect(c.cmd).not.toBe("docker");
       expect(c.args.join(" ")).not.toContain("docker compose");
@@ -98,28 +104,29 @@ describe("runComposeVerb", () => {
   it("forwards extra arguments after the verb", () => {
     const root = makeRepo();
     const { calls, run } = makeRunner();
-    runComposeVerb("logs", { cwd: root, run }, ["--tail", "50"]);
+    runComposeVerb("logs", { ...entry, run }, ["--tail", "50"]);
     expect(calls[0].args.slice(1)).toEqual(["logs", "-f", "--tail", "50"]);
   });
 
   it("propagates the child's exit code", () => {
     const root = makeRepo();
     const { run } = makeRunner({ status: 3 });
-    expect(runComposeVerb("ps", { cwd: root, run })).toBe(3);
+    expect(runComposeVerb("ps", { ...entry, run })).toBe(3);
   });
 
   it("reports a signal-killed child as failure, not success", () => {
     const root = makeRepo();
     const { run } = makeRunner({ status: null } as RunResult);
-    expect(runComposeVerb("logs", { cwd: root, run })).toBe(1);
+    expect(runComposeVerb("logs", { ...entry, run })).toBe(1);
   });
 
-  it("fails with the re-vendor hint when the script is missing", () => {
-    const d = mkdtempSync(join(tmpdir(), "oh-compose-bare-"));
-    cleanups.push(d);
-    mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
+  it("fails with the re-vendor hint when the entry carries no script", () => {
+    const home = mkdtempSync(join(tmpdir(), "oh-compose-bare-"));
+    cleanups.push(home);
+    vi.stubEnv("OH_HOME", home);
+    mkdirSync(join(home, "sandboxes", "bare", ".oh", "scripts"), { recursive: true });
     const { run } = makeRunner();
-    expect(() => runComposeVerb("ps", { cwd: d, run })).toThrow(/oh update/);
+    expect(() => runComposeVerb("ps", { name: "bare", run })).toThrow(/oh update/);
   });
 });
 

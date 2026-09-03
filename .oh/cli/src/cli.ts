@@ -2,7 +2,6 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 import { runCloud } from "./commands/cloud.js";
 import {
@@ -23,7 +22,6 @@ import {
   runComposeVerb,
   runDestroy,
   runGateway,
-  runSandbox,
   runShell,
   composeVerbs,
   DEFAULT_CONTAINER_NAME,
@@ -31,19 +29,18 @@ import {
   type LifecycleIO,
 } from "./commands/lifecycle.js";
 import {
+  runSandboxInstall,
+  runSandboxList,
+  type SandboxIO,
+} from "./commands/sandbox.js";
+import {
   runHarnessInstall,
   runHarnessList,
   runHarnessStatus,
   type HarnessIO,
 } from "./commands/harness.js";
 import { harnessIds } from "./lib/harnesses/catalog.js";
-import {
-  runRuntimeInstall,
-  runRuntimeList,
-  runRuntimeStatus,
-  type RuntimeIO,
-} from "./commands/runtime.js";
-import { DEFAULT_RUNTIME, runtimeIds } from "./lib/runtimes/catalog.js";
+import { RUNTIME_CATALOG } from "./lib/runtimes/catalog.js";
 import {
   runToolInstall,
   runToolList,
@@ -60,11 +57,6 @@ import {
 
 declare const __OH_VERSION__: string;
 const VERSION: string = typeof __OH_VERSION__ === "string" ? __OH_VERSION__ : "0.0.0-dev";
-
-const DEFAULT_TEMPLATES_DIR = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../templates",
-);
 
 const DEFAULT_SOURCE_OH_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -99,20 +91,18 @@ export function printOhHelp(): void {
   process.stdout.write(`oh — Open Harness CLI (v${VERSION})
 
 Usage:
-  oh init [dir]             Scaffold OpenHarness compat files into a repo
+  oh sandbox <args...>      Create and list sandboxes (install|list)
+  oh shell [name]           Open a zsh shell in the running sandbox container
   oh config <args...>       Read and write oh.json (show|set), or run a wizard
   oh secret <args...>       Read and write the gitignored root .env (set|list)
-  oh update                 Upgrade the .oh/ control plane from a newer source
-  oh sandbox                Provision and start the sandbox (docker compose up)
-  oh shell [container]      Open a zsh shell in the running sandbox container
-  oh stop                   Stop the sandbox, preserving volumes
-  oh restart                Restart the sandbox service
-  oh logs                   Tail sandbox logs (follows)
-  oh ps                     Show sandbox service status
-  oh destroy                Remove the sandbox and wipe its named volumes
+  oh update                 Vendor or upgrade the .oh/ control plane
+  oh stop [name]            Stop the sandbox, preserving volumes
+  oh restart [name]         Restart the sandbox service
+  oh logs [name]            Tail sandbox logs (follows)
+  oh ps [name]              Show sandbox service status
+  oh destroy [name]         Remove the sandbox and wipe its named volumes
   oh compose config         Print the resolved docker compose configuration
   oh harness <args...>      Install and inspect agent CLI harnesses
-  oh runtime <args...>      Inspect the sandbox's isolation runtime
   oh tool <args...>         Install and inspect sandbox tooling
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh cloud <args...>        Manage OpenHarness Cloud nodes
@@ -128,15 +118,16 @@ function printConfigHelp(): void {
   process.stdout.write(`oh config — Read and write oh.json, the tracked non-secret settings
 
 Usage:
-  oh config show                  Print the resolved oh.json
-  oh config set <field> <value>   Set one dotted field, e.g. access.sshPort 2222
+  oh config show [--sandbox <name>]
+  oh config set <field> <value> [--sandbox <name>]
   oh config repo                  Create your own GitHub repo and point origin at it
   oh config <integration>         Run an integration wizard
   oh config <integration> --help
 
 oh.json holds every non-secret setting and is tracked by git. Credentials live
 in the gitignored root .env — write those with \`oh secret set <KEY>\`. Apply a
-change with \`oh stop && oh sandbox\`. Field reference:
+change with \`oh stop <name> && oh sandbox install docker --name <name>\`. Field
+reference:
 ${sourceDocsUrl("docs/configuration.md")}
 
 Fields:
@@ -151,8 +142,11 @@ export function printSecretHelp(): void {
   process.stdout.write(`oh secret — Read and write the gitignored root .env
 
 Usage:
-  oh secret set <KEY>   Prompt for the value (input hidden) and write it to .env
-  oh secret list        List the keys that hold a value, with redacted values
+  oh secret set <KEY> [--sandbox <name>]   Prompt for the value (input hidden)
+  oh secret list [--sandbox <name>]        List the keys that hold a value
+
+Without --sandbox both verbs write the equipped project root; with it they write
+the registry entry \`oh sandbox list\` names.
 
 The value is never read from the command line — an argument would land in your
 shell history. \`oh secret list\` never prints a raw value. .env is mode 0600 and
@@ -164,16 +158,21 @@ ${secretKeyList()}
 }
 
 function printUpdateHelp(): void {
-  process.stdout.write(`oh update — Upgrade the .oh/ control plane
+  process.stdout.write(`oh update — Vendor or upgrade the .oh/ control plane
 
 Usage:
-  oh update (--from <dir> | --from-remote [--ref <ref>]) [--dry-run] [--force]
+  oh update [--from <dir> | --from-remote [--ref <ref>]] [--dry-run] [--force]
 
-Upgrades ONLY the .oh/ control plane (skills, scripts, CLI). Your project
-source is left untouched.
+Writes ONLY the .oh/ control plane and crons/ (skills, scripts, CLI) into the
+current directory. An empty directory is equipped from scratch; everything else
+in your project is left untouched — it writes no oh.json, .env, AGENTS.md,
+.gitignore or .devcontainer/.
+
+Payload source precedence: --from <dir> > --from-remote > the CLI's own bundled
+.oh/ payload > a remote fetch announced on one line.
 
 Flags:
-  --from <dir>    A built OpenHarness checkout to upgrade from.
+  --from <dir>    A built OpenHarness checkout to vendor from.
   --from-remote   Fetch the source checkout from the public OpenHarness repo
                   instead (shallow git clone into a temp dir, removed after
                   the run). Conflicts with --from.
@@ -184,70 +183,48 @@ Flags:
 `);
 }
 
-function printInitHelp(): void {
-  process.stdout.write(`oh init — Equip a repo with OpenHarness
-
-Usage:
-  oh init [dir] [--minimal] [--yes] [--from <dir> | --from-remote [--ref <ref>]] [--force] [--dry-run] [--templates <dir>]
-
-Scaffolds a complete, locally-buildable OpenHarness project into a target repo
-(default: cwd): vendors the .oh/ control plane (incl. crons/evals and
-the skills/agents/hooks pack), seeds an empty tasks/, copies the full
-.devcontainer/ for a local image build, writes a project AGENTS.md (+ CLAUDE.md),
-and configures the .claude/.codex/.pi/.hermes provider surfaces as symlinks into
-.oh/skills. In a TTY (without --yes) it runs a short config wizard that writes
-.devcontainer/.env.
-
-Payload source precedence: --from <dir> > --from-remote > the CLI's own bundled
-.oh/ payload. With no source flag and no bundled payload (installed binary —
-payload bundling is gated on publishing, #564), oh init prints a one-line
-notice and auto-falls back to the remote fetch.
-
-Flags:
-  --minimal          Thin scaffold only (compat files + vendored .oh/) — the old
-                     behavior; skips devcontainer/providers/seeds
-  --copy-claude      Write CLAUDE.md as a copy instead of a symlink -> AGENTS.md
-                     (for filesystems without symlink support)
-  --yes              Non-interactive: skip the wizard, keep template defaults
-  --from <dir>       Vendor the .oh/ payload from this built OpenHarness checkout.
-                     Sets ONLY the payload source — templates stay at the CLI's
-                     bundled default unless --templates is passed
-  --from-remote      Fetch the payload from the public OpenHarness repo (shallow
-                     git clone). Unlike --from, this sets BOTH the payload source
-                     and the scaffold templates from the fetched checkout.
-                     Conflicts with --from and --templates
-  --ref <ref>        Branch or tag for --from-remote (default: the clone's
-                     default branch)
-  --force            Overwrite existing files (prints the overwrite count)
-  --dry-run          Print the whole plan without writing anything
-  --verbose          List every per-file action (default summarizes vendor noise)
-  --templates <dir>  Override the scaffold template source directory
-`);
+export function runtimeLines(): string {
+  const width = Math.max(...RUNTIME_CATALOG.map((r) => r.id.length));
+  return RUNTIME_CATALOG.map(
+    (r) => `  ${r.id.padEnd(width)}  ${r.provisionable ? "provisionable" : "planned"}`,
+  ).join("\n");
 }
 
 export function printSandboxHelp(): void {
-  process.stdout.write(`oh sandbox — Provision and start the sandbox
+  process.stdout.write(`oh sandbox — Create and list sandboxes
 
 Usage:
-  oh sandbox [--image[=<ref>]] [--no-build] [--print-argv]
+  oh sandbox install <runtime> [--name <name>] [--repo <dir>] [--yes]
+                               [--image[=<ref>]] [--no-build] [--print-argv]
+  oh sandbox list [--json]
 
-Works from any subdirectory of an equipped repo (walks up to the nearest
-directory containing .oh/). Delegates to the vendored compose wrapper:
+\`install\` writes a sandbox entry under \${OH_HOME:-~/.oh}/sandboxes/<name>/,
+materialises the compose files and the compose wrapper into it, then starts the
+container. It needs no project checkout and runs from any directory. Without
+--repo the sandbox runs the prebuilt image; with --repo <dir> that checkout is
+bound at /home/sandbox/harness and can be built locally.
 
-  bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build
-
-By default it builds the image locally. Prebuilt-image mode skips that build:
+On a terminal without --yes it asks for the sandbox name, the timezone, the git
+identity, SSH (with its host port), and the host Docker socket. With --repo it
+seeds those answers from that checkout's oh.json.
 
 Flags:
-  --image[=<ref>]  Run the prebuilt image instead of building locally (implies
+  --name <name>    Registry entry name (default: the lowest free oh-sbx-<n>)
+  --repo <dir>     Bind this checkout into the sandbox and seed the defaults
+                   from its oh.json
+  --yes            Non-interactive: keep every default and ask nothing
+  --image[=<ref>]  Run the prebuilt image instead of building (implies
                    --no-build). Ref resolves last-wins: --image=<ref> >
-                   .devcontainer/.env OH_SANDBOX_IMAGE >
-                   ghcr.io/mifunedev/openharness:latest.
-  --print-argv     Print the docker compose argv that would run, then exit.
-  --no-build       Suppress the local build and reuse an existing image without
-                   pinning one (advanced; pairs with a prior build or --image).
+                   oh.json image.ref > ghcr.io/mifunedev/openharness:latest.
+  --no-build       Suppress the local build and reuse an existing image
+  --print-argv     Print the docker compose argv that would run, then exit
+                   without writing an entry
+  --json           Machine-readable output (list)
 
-Build/pull output streams live; oh sandbox exits with docker compose's exit code.
+Runtimes:
+${runtimeLines()}
+
+Next: oh shell <name>
 `);
 }
 
@@ -255,12 +232,13 @@ export function printShellHelp(): void {
   process.stdout.write(`oh shell — Open a shell in the running sandbox container
 
 Usage:
-  oh shell [container]
+  oh shell [name]
 
-Runs \`docker exec -it -u sandbox <container> zsh\`. Container-name precedence:
-the positional argument > SANDBOX_NAME in <root>/.devcontainer/.env >
-"${DEFAULT_CONTAINER_NAME}". Works from any subdirectory of an equipped repo;
-exits with docker's exit code.
+Runs \`docker exec -it -u sandbox <container> zsh\`. [name] is a sandbox entry
+from \`oh sandbox list\`; with exactly one registered sandbox, or from inside a
+checkout a sandbox was created for, it can be omitted. The container is the
+entry's own name, or "${DEFAULT_CONTAINER_NAME}" when the entry sets none. Exits with docker's
+exit code.
 `);
 }
 
@@ -315,55 +293,11 @@ export type ParseResult<T> =
   | { ok: true; args: T }
   | { ok: false; error: string; showHelp?: boolean };
 
-export interface InitArgs {
-  targetDir?: string;
-  templatesDir?: string;
-  fromDir?: string;
-  fromRemote: boolean;
-  ref?: string;
-  yes: boolean;
-  force: boolean;
-  dryRun: boolean;
-  minimal: boolean;
-  copyClaude: boolean;
-  verbose: boolean;
-}
-
-export function printRuntimeHelp(): void {
-  process.stdout.write(`oh runtime — Inspect the sandbox's isolation runtime
-
-A runtime is the isolation boundary the sandbox runs ON (a Docker container
-today). A harness is an agent CLI that runs INSIDE it — see \`oh harness\`.
-
-Usage:
-  oh runtime list                   Every known runtime, and which one is in use
-  oh runtime status [name]          The measured requirements behind each verdict
-  oh runtime install [name]         Install a runtime into the sandbox
-                                    (default: ${DEFAULT_RUNTIME})
-
-This command REPORTS, and installs a tool. It selects no runtime, writes no
-config, and changes nothing about how the sandbox boots — choosing one is
-tracked in #731 (see #806 for the open selector decision).
-
-\`install\` measures first and refuses to run an installer that cannot succeed,
-printing each unmet requirement with its remediation. \`--force\` overrides that
-judgement.
-
-Flags:
-  --force          Attempt the install even when the preflight fails
-  --json           Machine-readable output (list/status)
-
-Runtimes:
-${runtimeIds().map((r) => `  ${r}`).join("\n")}
-`);
-}
-
 export function printToolHelp(): void {
   process.stdout.write(`oh tool — Install and inspect sandbox tooling
 
-Tooling that is neither an agent CLI (see \`oh harness\`) nor an isolation
-runtime (see \`oh runtime\`) — a headless browser, a tunnel client, the
-GitHub CLI.
+Tooling that is not an agent CLI (see \`oh harness\`) — a headless browser, a
+tunnel client, the GitHub CLI, an isolation runtime's own binary.
 
 Usage:
   oh tool list                      List known tools and their state
@@ -398,11 +332,11 @@ export function printComposeVerbHelp(verb: ComposeVerb): void {
   process.stdout.write(`oh ${verb} — ${what[verb]}
 
 Usage:
-  oh ${verb} [-- <extra docker compose args>]
+  oh ${verb} [name] [-- <extra docker compose args>]
 
-Runs .oh/scripts/docker-compose.sh, the single implementation. \`oh\` is the only
-lifecycle door and works anywhere: a source checkout, an \`oh init\` repo, or
-inside the sandbox.
+Runs .oh/scripts/docker-compose.sh inside the sandbox entry, the single
+implementation. \`oh\` is the only lifecycle door. [name] is a sandbox entry from
+\`oh sandbox list\`; with exactly one registered sandbox it can be omitted.
 
 See ${sourceDocsUrl("docs/lifecycle-commands.md")} for every verb.
 `);
@@ -412,7 +346,7 @@ export function printDestroyHelp(): void {
   process.stdout.write(`oh destroy — Remove the sandbox and wipe its named volumes
 
 Usage:
-  oh destroy [--yes]
+  oh destroy [name] [--yes]
 
 Runs .oh/scripts/docker-compose.sh with \`down -v\`. This is the one destructive
 lifecycle verb: \`-v\` deletes the named
@@ -421,7 +355,7 @@ the SSH keys. Use \`oh stop\` when you only want the containers gone.
 
 Before removing anything it names the volumes it will delete and asks you to
 type the sandbox name. A blank line, or any other answer, aborts and changes
-nothing.
+nothing. Once \`down -v\` succeeds the registry entry is removed too.
 
 Flags:
   --yes   Skip the prompt. Required when stdin is not a terminal — without a
@@ -448,6 +382,32 @@ See ${sourceDocsUrl("docs/lifecycle-commands.md")} for every verb.
 `);
 }
 
+export interface SandboxFlag {
+  rest: string[];
+  sandbox?: string;
+}
+
+export function extractSandboxFlag(
+  command: string,
+  rest: string[],
+): ParseResult<SandboxFlag> {
+  const kept: string[] = [];
+  let sandbox: string | undefined;
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] !== "--sandbox") {
+      kept.push(rest[i]);
+      continue;
+    }
+    const value = rest[i + 1];
+    if (value === undefined) {
+      return { ok: false, error: `${command}: --sandbox requires a sandbox name` };
+    }
+    sandbox = value;
+    i++;
+  }
+  return { ok: true, args: sandbox === undefined ? { rest: kept } : { rest: kept, sandbox } };
+}
+
 export const CONFIG_VERBS = ["show", "set", "repo"] as const;
 
 export type ConfigVerb = (typeof CONFIG_VERBS)[number];
@@ -459,10 +419,18 @@ export interface ConfigArgs {
   integrationHelp: boolean;
   key?: string;
   value?: string;
+  sandbox?: string;
 }
 
-export function parseConfigArgs(rest: string[]): ParseResult<ConfigArgs> {
-  const args: ConfigArgs = { help: false, integrationHelp: false };
+export function parseConfigArgs(input: string[]): ParseResult<ConfigArgs> {
+  const scoped = extractSandboxFlag("oh config", input);
+  if (!scoped.ok) return scoped;
+  const rest = scoped.args.rest;
+  const args: ConfigArgs = {
+    help: false,
+    integrationHelp: false,
+    ...(scoped.args.sandbox === undefined ? {} : { sandbox: scoped.args.sandbox }),
+  };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
     return { ok: true, args: { ...args, help: true } };
   }
@@ -516,10 +484,17 @@ export interface SecretArgs {
   help: boolean;
   verb?: SecretVerb;
   key?: string;
+  sandbox?: string;
 }
 
-export function parseSecretArgs(rest: string[]): ParseResult<SecretArgs> {
-  const args: SecretArgs = { help: false };
+export function parseSecretArgs(input: string[]): ParseResult<SecretArgs> {
+  const scoped = extractSandboxFlag("oh secret", input);
+  if (!scoped.ok) return scoped;
+  const rest = scoped.args.rest;
+  const args: SecretArgs = {
+    help: false,
+    ...(scoped.args.sandbox === undefined ? {} : { sandbox: scoped.args.sandbox }),
+  };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
     return { ok: true, args: { ...args, help: true } };
   }
@@ -560,6 +535,7 @@ export function parseSecretArgs(rest: string[]): ParseResult<SecretArgs> {
 export interface DestroyArgs {
   help: boolean;
   yes: boolean;
+  name?: string;
 }
 
 export function parseDestroyArgs(rest: string[]): ParseResult<DestroyArgs> {
@@ -568,11 +544,15 @@ export function parseDestroyArgs(rest: string[]): ParseResult<DestroyArgs> {
   for (const token of rest) {
     if (token === "--yes") {
       args.yes = true;
-    } else {
+    } else if (token.startsWith("-")) {
       return {
         ok: false,
-        error: `oh destroy: unexpected argument "${token}" — accepts only --yes`,
+        error: `oh destroy: unknown flag "${token}" — accepts a sandbox name and --yes`,
       };
+    } else if (args.name === undefined) {
+      args.name = token;
+    } else {
+      return { ok: false, error: `oh destroy: unexpected argument "${token}"` };
     }
   }
   return { ok: true, args };
@@ -607,80 +587,6 @@ export function parseComposeArgs(rest: string[]): ParseResult<ComposeArgs> {
     };
   }
   if (sep !== -1) args.passthrough = tail.slice(sep + 1);
-  return { ok: true, args };
-}
-
-export function parseInitArgs(rest: string[]): ParseResult<InitArgs> {
-  const args: InitArgs = {
-    fromRemote: false,
-    yes: false,
-    force: false,
-    dryRun: false,
-    minimal: false,
-    copyClaude: false,
-    verbose: false,
-  };
-  for (let i = 0; i < rest.length; i++) {
-    const token = rest[i];
-    if (token === "--force") {
-      args.force = true;
-    } else if (token === "--dry-run") {
-      args.dryRun = true;
-    } else if (token === "--yes") {
-      args.yes = true;
-    } else if (token === "--minimal") {
-      args.minimal = true;
-    } else if (token === "--copy-claude") {
-      args.copyClaude = true;
-    } else if (token === "--verbose") {
-      args.verbose = true;
-    } else if (token === "--from-remote") {
-      args.fromRemote = true;
-    } else if (token === "--ref") {
-      const value = rest[i + 1];
-      if (value === undefined) {
-        return { ok: false, error: "oh init: --ref requires a ref argument (branch or tag)" };
-      }
-      args.ref = value;
-      i++;
-    } else if (token === "--from") {
-      const value = rest[i + 1];
-      if (value === undefined) {
-        return { ok: false, error: "oh init: --from requires a directory argument" };
-      }
-      args.fromDir = value;
-      i++;
-    } else if (token === "--templates") {
-      const value = rest[i + 1];
-      if (value === undefined) {
-        return { ok: false, error: "oh init: --templates requires a directory argument" };
-      }
-      args.templatesDir = value;
-      i++;
-    } else if (token.startsWith("-")) {
-      return { ok: false, error: `oh init: unknown flag "${token}"` };
-    } else if (args.targetDir === undefined) {
-      args.targetDir = token;
-    } else {
-      return { ok: false, error: `oh init: unexpected argument "${token}"` };
-    }
-  }
-  if (args.fromRemote && args.fromDir !== undefined) {
-    return {
-      ok: false,
-      error: "oh init: --from-remote conflicts with --from — pass exactly one payload source",
-    };
-  }
-  if (args.fromRemote && args.templatesDir !== undefined) {
-    return {
-      ok: false,
-      error:
-        "oh init: --from-remote conflicts with --templates — the remote checkout supplies its own templates",
-    };
-  }
-  if (args.ref !== undefined && !args.fromRemote) {
-    return { ok: false, error: "oh init: --ref requires --from-remote" };
-  }
   return { ok: true, args };
 }
 
@@ -742,31 +648,66 @@ export function parseUpdateArgs(rest: string[]): ParseResult<UpdateArgs> {
   if (args.ref !== undefined && !args.fromRemote) {
     return { ok: false, error: "oh update: --ref requires --from-remote" };
   }
-  if (args.fromDir === undefined && !args.fromRemote) {
-    return {
-      ok: false,
-      error:
-        "oh update: a payload source is required — pass --from <dir> or --from-remote [--ref <ref>]",
-    };
-  }
   return { ok: true, args };
 }
 
 export interface SandboxArgs {
   help: boolean;
+  subcommand?: "install" | "list";
+  runtime?: string;
+  name?: string;
+  repo?: string;
+  yes: boolean;
   image: boolean;
   imageRef?: string;
   noBuild: boolean;
-  printArgv?: boolean;
+  printArgv: boolean;
+  json: boolean;
 }
 
+const SANDBOX_VALUE_FLAGS: Record<string, "name" | "repo"> = {
+  "--name": "name",
+  "--repo": "repo",
+};
+
 export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
-  if (isHelpFlag(rest[0])) {
-    return { ok: true, args: { help: true, image: false, noBuild: false } };
+  const args: SandboxArgs = {
+    help: false,
+    yes: false,
+    image: false,
+    noBuild: false,
+    printArgv: false,
+    json: false,
+  };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
   }
-  const args: SandboxArgs = { help: false, image: false, noBuild: false };
-  for (const token of rest) {
-    if (token === "--no-build") {
+
+  const [head, ...tail] = rest;
+  if (head !== "install" && head !== "list") {
+    return {
+      ok: false,
+      error: `oh sandbox: unknown subcommand "${head}" — expected install or list`,
+      showHelp: true,
+    };
+  }
+  args.subcommand = head;
+  if (isHelpFlag(tail[0])) return { ok: true, args: { ...args, help: true } };
+
+  const positionals: string[] = [];
+  for (let i = 0; i < tail.length; i++) {
+    const token = tail[i];
+    const valueFlag = SANDBOX_VALUE_FLAGS[token];
+    if (valueFlag !== undefined) {
+      const value = tail[i + 1];
+      if (value === undefined) {
+        return { ok: false, error: `oh sandbox ${head}: ${token} requires a value` };
+      }
+      args[valueFlag] = value;
+      i++;
+    } else if (token === "--yes") {
+      args.yes = true;
+    } else if (token === "--no-build") {
       args.noBuild = true;
     } else if (token === "--print-argv") {
       args.printArgv = true;
@@ -779,19 +720,39 @@ export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
       }
       args.image = true;
       args.imageRef = ref;
+    } else if (token === "--json") {
+      args.json = true;
+    } else if (token.startsWith("-")) {
+      return { ok: false, error: `oh sandbox ${head}: unknown flag "${token}"` };
     } else {
-      return {
-        ok: false,
-        error: `oh sandbox: unexpected argument "${token}" — accepts only --image[=<ref>], --no-build and --print-argv`,
-      };
+      positionals.push(token);
     }
   }
+
+  if (head === "list") {
+    if (positionals.length > 0) {
+      return { ok: false, error: `oh sandbox list: unexpected argument "${positionals[0]}"` };
+    }
+    return { ok: true, args };
+  }
+
+  if (positionals.length === 0) {
+    return {
+      ok: false,
+      error: "oh sandbox install: a runtime is required, e.g. `oh sandbox install docker`",
+      showHelp: true,
+    };
+  }
+  if (positionals.length > 1) {
+    return { ok: false, error: `oh sandbox install: unexpected argument "${positionals[1]}"` };
+  }
+  args.runtime = positionals[0];
   return { ok: true, args };
 }
 
 export interface ShellArgs {
   help: boolean;
-  container?: string;
+  name?: string;
 }
 
 export function parseShellArgs(rest: string[]): ParseResult<ShellArgs> {
@@ -801,10 +762,10 @@ export function parseShellArgs(rest: string[]): ParseResult<ShellArgs> {
     if (token.startsWith("-")) {
       return { ok: false, error: `oh shell: unknown flag "${token}"` };
     }
-    if (args.container !== undefined) {
+    if (args.name !== undefined) {
       return { ok: false, error: `oh shell: unexpected argument "${token}"` };
     }
-    args.container = token;
+    args.name = token;
   }
   return { ok: true, args };
 }
@@ -855,54 +816,6 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   }
   args.subcommand = sub;
   if (name !== undefined) args.name = name;
-  return { ok: true, args };
-}
-
-interface RuntimeArgs {
-  help: boolean;
-  force: boolean;
-  json: boolean;
-  subcommand?: "list" | "install" | "status";
-  name?: string;
-}
-
-export function parseRuntimeArgs(rest: string[]): ParseResult<RuntimeArgs> {
-  const args: RuntimeArgs = { help: false, force: false, json: false };
-  if (rest.length === 0 || isHelpFlag(rest[0])) {
-    return { ok: true, args: { ...args, help: true } };
-  }
-
-  const positionals: string[] = [];
-  for (const token of rest) {
-    if (token === "--force") {
-      args.force = true;
-    } else if (token === "--json") {
-      args.json = true;
-    } else if (token.startsWith("-")) {
-      return { ok: false, error: `oh runtime: unknown flag "${token}"` };
-    } else {
-      positionals.push(token);
-    }
-  }
-
-  const [sub, name, ...extra] = positionals;
-  if (sub !== "list" && sub !== "install" && sub !== "status") {
-    return {
-      ok: false,
-      error: `oh runtime: unknown subcommand "${sub}" — expected list, install, or status`,
-      showHelp: true,
-    };
-  }
-  if (extra.length > 0) {
-    return { ok: false, error: `oh runtime: unexpected argument "${extra[0]}"` };
-  }
-  if (sub === "list" && name !== undefined) {
-    return { ok: false, error: `oh runtime list: unexpected argument "${name}"` };
-  }
-
-  args.subcommand = sub;
-  if (name !== undefined) args.name = name;
-  else if (sub === "install") args.name = DEFAULT_RUNTIME;
   return { ok: true, args };
 }
 
@@ -968,58 +881,39 @@ export function parseGatewayArgs(rest: string[]): ParseResult<GatewayArgs> {
 
 export interface BundledPayloadPaths {
   sourceOhDir: string;
-  templatesDir: string;
   exists?: (path: string) => boolean;
 }
 
 export function bundledPayloadExists(
-  bundled: { sourceOhDir: string; templatesDir: string },
+  bundled: { sourceOhDir: string },
   exists: (path: string) => boolean = existsSync,
 ): boolean {
-  return exists(join(bundled.sourceOhDir, "manifest.json")) && exists(bundled.templatesDir);
+  return exists(join(bundled.sourceOhDir, "manifest.json"));
 }
 
-export type InitSource =
-  | { kind: "local"; sourceOhDir: string; templatesDir: string }
-  | {
-      kind: "remote";
-      ref?: string;
-      notice?: string;
-      paths: (checkoutDir: string) => { sourceOhDir: string; templatesDir: string };
-    };
+export type UpdateSource =
+  | { kind: "local"; fromDir: string }
+  | { kind: "remote"; ref?: string; notice?: string };
 
-export function resolveInitSource(
-  args: Pick<InitArgs, "fromDir" | "fromRemote" | "ref" | "templatesDir">,
+export function resolveUpdateSource(
+  args: Pick<UpdateArgs, "fromDir" | "fromRemote" | "ref">,
   bundled: BundledPayloadPaths,
-): InitSource {
+): UpdateSource {
   const exists = bundled.exists ?? existsSync;
-  const remotePaths = (checkoutDir: string): { sourceOhDir: string; templatesDir: string } => ({
-    sourceOhDir: join(checkoutDir, ".oh"),
-    templatesDir: join(checkoutDir, ".oh", "templates"),
-  });
 
-  if (args.fromRemote) {
-    return { kind: "remote", ref: args.ref, paths: remotePaths };
-  }
   if (args.fromDir !== undefined) {
-    return {
-      kind: "local",
-      sourceOhDir: resolve(join(args.fromDir, ".oh")),
-      templatesDir: args.templatesDir ?? bundled.templatesDir,
-    };
+    return { kind: "local", fromDir: resolve(args.fromDir) };
   }
-  if (args.templatesDir !== undefined || bundledPayloadExists(bundled, exists)) {
-    return {
-      kind: "local",
-      sourceOhDir: bundled.sourceOhDir,
-      templatesDir: args.templatesDir ?? bundled.templatesDir,
-    };
+  if (args.fromRemote) {
+    return { kind: "remote", ref: args.ref };
+  }
+  if (bundledPayloadExists(bundled, exists)) {
+    return { kind: "local", fromDir: resolve(bundled.sourceOhDir, "..") };
   }
   return {
     kind: "remote",
     ref: args.ref,
-    notice: `oh init: no bundled payload found — fetching ${DEFAULT_REPO_URL} (${args.ref ?? "default branch"})\n`,
-    paths: remotePaths,
+    notice: `oh update: no bundled payload found — fetching ${DEFAULT_REPO_URL} (${args.ref ?? "default branch"})\n`,
   };
 }
 
@@ -1075,59 +969,6 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  if (first === "init") {
-    if (isHelpFlag(second)) {
-      printInitHelp();
-      return 0;
-    }
-
-    const parsed = parseInitArgs(argv.slice(1));
-    if (!parsed.ok) {
-      process.stderr.write(`${parsed.error}\n`);
-      return 1;
-    }
-    const a = parsed.args;
-
-    const source = resolveInitSource(a, {
-      sourceOhDir: DEFAULT_SOURCE_OH_DIR,
-      templatesDir: DEFAULT_TEMPLATES_DIR,
-    });
-
-    const base = {
-      targetDir: resolve(a.targetDir ?? process.cwd()),
-      yes: a.yes,
-      force: a.force,
-      dryRun: a.dryRun,
-      minimal: a.minimal,
-      copyClaude: a.copyClaude,
-      verbose: a.verbose,
-    };
-    const io: InitIO = {
-      stdout: (s) => process.stdout.write(s),
-      stderr: (s) => process.stderr.write(s),
-    };
-
-    if (source.kind === "local") {
-      const opts: InitOptions = {
-        ...base,
-        templatesDir: resolve(source.templatesDir),
-        sourceOhDir: source.sourceOhDir,
-      };
-      return await runInit(opts, io);
-    }
-
-    if (source.notice) process.stdout.write(source.notice);
-    return await runWithRemoteSource({ ref: source.ref }, (checkoutDir) => {
-      const p = source.paths(checkoutDir);
-      const opts: InitOptions = {
-        ...base,
-        templatesDir: p.templatesDir,
-        sourceOhDir: p.sourceOhDir,
-      };
-      return runInit(opts, io);
-    });
-  }
-
   if (first === "config") {
     const parsed = parseConfigArgs(argv.slice(1));
     if (!parsed.ok) {
@@ -1146,9 +987,10 @@ async function main(argv: string[]): Promise<number> {
         stdout: (s) => process.stdout.write(s),
         stderr: (s) => process.stderr.write(s),
       };
-      if (a.verb === "show") return await runConfigShow({}, io);
+      const scope = a.sandbox === undefined ? {} : { sandbox: a.sandbox };
+      if (a.verb === "show") return await runConfigShow(scope, io);
       if (a.verb === "repo") return await runConfigRepo({}, io);
-      return await runConfigSet(a.key as string, a.value as string, {}, io);
+      return await runConfigSet(a.key as string, a.value as string, scope, io);
     }
 
     const name = a.integration as string;
@@ -1181,8 +1023,9 @@ async function main(argv: string[]): Promise<number> {
       stdout: (s) => process.stdout.write(s),
       stderr: (s) => process.stderr.write(s),
     };
-    if (a.verb === "list") return await runSecretList({}, io);
-    return await runSecretSet(a.key as string, {}, io);
+    const scope = a.sandbox === undefined ? {} : { sandbox: a.sandbox };
+    if (a.verb === "list") return await runSecretList(scope, io);
+    return await runSecretSet(a.key as string, scope, io);
   }
 
   if (first === "update") {
@@ -1197,39 +1040,49 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
 
-    const { fromDir, fromRemote, ref, force, dryRun } = parsed.args;
+    const { force, dryRun } = parsed.args;
     const io = {
       stdout: (s: string) => process.stdout.write(s),
       stderr: (s: string) => process.stderr.write(s),
     };
     const targetDir = process.cwd();
+    const source = resolveUpdateSource(parsed.args, { sourceOhDir: DEFAULT_SOURCE_OH_DIR });
 
-    if (fromRemote) {
-      return await runWithRemoteSource({ ref }, (checkoutDir) =>
-        runUpdate({ targetDir, fromDir: checkoutDir, force, dryRun }, io),
-      );
+    if (source.kind === "local") {
+      return await runUpdate({ targetDir, fromDir: source.fromDir, force, dryRun }, io);
     }
-    return await runUpdate({ targetDir, fromDir: fromDir as string, force, dryRun }, io);
+    if (source.notice) process.stdout.write(source.notice);
+    return await runWithRemoteSource({ ref: source.ref }, (checkoutDir) =>
+      runUpdate({ targetDir, fromDir: checkoutDir, force, dryRun }, io),
+    );
   }
 
   if (first === "sandbox") {
     const parsed = parseSandboxArgs(argv.slice(1));
     if (!parsed.ok) {
       process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printSandboxHelp();
       return 1;
     }
-    if (parsed.args.help) {
+    const a = parsed.args;
+    if (a.help) {
       printSandboxHelp();
-      return 0;
+      return a.subcommand === undefined ? 1 : 0;
     }
-    return await runSandbox(
+    const io: SandboxIO = lifecycleIo();
+    if (a.subcommand === "list") return await runSandboxList({ json: a.json }, io);
+    return await runSandboxInstall(
       {
-        image: parsed.args.image,
-        imageRef: parsed.args.imageRef,
-        noBuild: parsed.args.noBuild,
-        printArgv: parsed.args.printArgv === true,
+        runtime: a.runtime as string,
+        ...(a.name !== undefined ? { name: a.name } : {}),
+        ...(a.repo !== undefined ? { repo: a.repo } : {}),
+        yes: a.yes,
+        image: a.image,
+        ...(a.imageRef !== undefined ? { imageRef: a.imageRef } : {}),
+        noBuild: a.noBuild,
+        printArgv: a.printArgv,
       },
-      lifecycleIo(),
+      io,
     );
   }
 
@@ -1243,7 +1096,10 @@ async function main(argv: string[]): Promise<number> {
       printShellHelp();
       return 0;
     }
-    return runShell({ container: parsed.args.container }, lifecycleIo());
+    return runShell(
+      parsed.args.name === undefined ? {} : { name: parsed.args.name },
+      lifecycleIo(),
+    );
   }
 
   if (first === "destroy") {
@@ -1256,7 +1112,13 @@ async function main(argv: string[]): Promise<number> {
       printDestroyHelp();
       return 0;
     }
-    return await runDestroy({ yes: parsed.args.yes }, lifecycleIo());
+    return await runDestroy(
+      {
+        yes: parsed.args.yes,
+        ...(parsed.args.name !== undefined ? { name: parsed.args.name } : {}),
+      },
+      lifecycleIo(),
+    );
   }
 
   if (first === "compose") {
@@ -1281,13 +1143,19 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     const sep = rest.indexOf("--");
-    if (sep === -1 && rest.length > 0) {
+    const head = sep === -1 ? rest : rest.slice(0, sep);
+    const extra = sep === -1 ? [] : rest.slice(sep + 1);
+    if (head.length > 0 && head[0].startsWith("-")) {
+      process.stderr.write(`oh ${verb}: unknown flag "${head[0]}"\n`);
+      return 1;
+    }
+    if (head.length > 1) {
       process.stderr.write(
-        `oh ${verb}: unexpected argument "${rest[0]}" — pass extra docker compose args after \`--\`\n`,
+        `oh ${verb}: unexpected argument "${head[1]}" — pass extra docker compose args after \`--\`\n`,
       );
       return 1;
     }
-    return runComposeVerb(verb, {}, sep === -1 ? [] : rest.slice(sep + 1));
+    return runComposeVerb(verb, head.length === 0 ? {} : { name: head[0] }, extra);
   }
 
   if (first === "harness") {
@@ -1313,31 +1181,6 @@ async function main(argv: string[]): Promise<number> {
       return await runHarnessStatus(a.name, { json: a.json }, io);
     }
     return await runHarnessInstall(a.name as string, {}, io);
-  }
-
-  if (first === "runtime") {
-    const parsed = parseRuntimeArgs(argv.slice(1));
-    if (!parsed.ok) {
-      process.stderr.write(`${parsed.error}\n`);
-      if (parsed.showHelp) printRuntimeHelp();
-      return 1;
-    }
-    if (parsed.args.help) {
-      printRuntimeHelp();
-      return 0;
-    }
-    const a = parsed.args;
-    const io: RuntimeIO = {
-      stdout: (s) => process.stdout.write(s),
-      stderr: (s) => process.stderr.write(s),
-    };
-    if (a.subcommand === "list") {
-      return await runRuntimeList({ json: a.json }, io);
-    }
-    if (a.subcommand === "status") {
-      return await runRuntimeStatus(a.name, { json: a.json }, io);
-    }
-    return await runRuntimeInstall(a.name as string, { force: a.force }, io);
   }
 
   if (first === "tool") {

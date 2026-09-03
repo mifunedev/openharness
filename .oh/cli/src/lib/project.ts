@@ -9,7 +9,7 @@ export function resolveProjectRoot(startDir: string = process.cwd()): string {
     if (marker?.isDirectory()) return dir;
     const parent = dirname(dir);
     if (parent === dir) {
-      throw new Error("not an OpenHarness-equipped repo — run `oh init` first");
+      throw new Error("not an OpenHarness-equipped repo — run `oh update` first");
     }
     dir = parent;
   }

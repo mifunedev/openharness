@@ -22,14 +22,13 @@ vi.mock("../cli.js", async (importOriginal) => {
 });
 
 const {
-  parseInitArgs,
   parseUpdateArgs,
-  resolveInitSource,
+  resolveUpdateSource,
   bundledPayloadExists,
   runWithRemoteSource,
 } = await import("../cli.js");
 const { DEFAULT_REPO_URL } = await import("../lib/remote.js");
-const { runInit } = await import("../commands/init.js");
+const { runUpdate } = await import("../commands/update.js");
 
 
 const cleanups: string[] = [];
@@ -65,84 +64,14 @@ function makePayloadRepo(version = "9.9.9"): string {
   git(repo, ["-c", "init.defaultBranch=main", "init"]);
   writeFile(repo, ".oh/cli/package.json", `${JSON.stringify({ name: "oh", version })}\n`);
   writeFile(repo, ".oh/README.md", "# payload\n");
-  writeFile(repo, ".oh/templates/AGENTS.md", "remote-templates-payload\n");
+  writeFile(repo, ".oh/manifest.json", `${JSON.stringify({ include: ["**"], exclude: [] })}\n`);
+  writeFile(repo, ".oh/scripts/docker-compose.sh", "remote-payload-script\n");
   git(repo, ["add", "-A"]);
   git(repo, ["commit", "-m", "payload"]);
   return repo;
 }
 
-const BUNDLED = { sourceOhDir: "/bundled/.oh", templatesDir: "/bundled/.oh/templates" };
-
-
-describe("parseInitArgs", () => {
-  it("parses --from-remote and --ref alongside the existing flags", () => {
-    const r = parseInitArgs(["--from-remote", "--ref", "v1.2.3", "--yes", "target"]);
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.args.fromRemote).toBe(true);
-      expect(r.args.ref).toBe("v1.2.3");
-      expect(r.args.yes).toBe(true);
-      expect(r.args.targetDir).toBe("target");
-    }
-  });
-
-  it("keeps the pre-existing flag behavior identical", () => {
-    const r = parseInitArgs(["--from", "/x", "--templates", "/t", "--force", "dir"]);
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.args.fromDir).toBe("/x");
-      expect(r.args.templatesDir).toBe("/t");
-      expect(r.args.force).toBe(true);
-      expect(r.args.targetDir).toBe("dir");
-      expect(r.args.fromRemote).toBe(false);
-    }
-    expect(parseInitArgs(["--bogus"])).toEqual({
-      ok: false,
-      error: 'oh init: unknown flag "--bogus"',
-    });
-    expect(parseInitArgs(["--from"])).toEqual({
-      ok: false,
-      error: "oh init: --from requires a directory argument",
-    });
-    expect(parseInitArgs(["a", "b"])).toEqual({
-      ok: false,
-      error: 'oh init: unexpected argument "b"',
-    });
-  });
-
-  it("rejects --from-remote with --from, naming both flags", () => {
-    const r = parseInitArgs(["--from-remote", "--from", "/x"]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error).toContain("--from-remote");
-      expect(r.error).toContain("--from");
-    }
-  });
-
-  it("rejects --from-remote with --templates, naming both flags", () => {
-    const r = parseInitArgs(["--templates", "/t", "--from-remote"]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error).toContain("--from-remote");
-      expect(r.error).toContain("--templates");
-    }
-  });
-
-  it("rejects --ref without --from-remote", () => {
-    const r = parseInitArgs(["--ref", "v1.2.3"]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error).toContain("--ref");
-      expect(r.error).toContain("--from-remote");
-    }
-  });
-
-  it("rejects --ref without a value", () => {
-    const r = parseInitArgs(["--from-remote", "--ref"]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toContain("--ref requires");
-  });
-});
+const BUNDLED = { sourceOhDir: "/bundled/.oh" };
 
 
 describe("parseUpdateArgs", () => {
@@ -181,13 +110,12 @@ describe("parseUpdateArgs", () => {
     }
   });
 
-  it("no source flags: still errors, naming BOTH --from and --from-remote", () => {
+  it("no source flags: accepted — the CLI's own bundled payload is the default source", () => {
     const r = parseUpdateArgs([]);
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error).toContain("--from <dir>");
-      expect(r.error).toContain("--from-remote");
-      expect(r.showHelp).toBeUndefined();
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.args.fromDir).toBeUndefined();
+      expect(r.args.fromRemote).toBe(false);
     }
   });
 
@@ -206,54 +134,19 @@ describe("parseUpdateArgs", () => {
 });
 
 
-describe("resolveInitSource", () => {
-  it("asymmetry: --from-remote sets BOTH paths from the checkout; --from sets only sourceOhDir", () => {
-    const remote = resolveInitSource(
-      { fromRemote: true },
+describe("resolveUpdateSource", () => {
+  it("--from wins over --from-remote and over the bundled payload", () => {
+    const s = resolveUpdateSource(
+      { fromRemote: true, fromDir: "/somewhere/checkout" },
       { ...BUNDLED, exists: () => true },
     );
-    expect(remote.kind).toBe("remote");
-    if (remote.kind === "remote") {
-      const p = remote.paths("/tmp/checkout");
-      expect(p.sourceOhDir).toBe(join("/tmp/checkout", ".oh"));
-      expect(p.templatesDir).toBe(join("/tmp/checkout", ".oh", "templates"));
-    }
-
-    const local = resolveInitSource(
-      { fromRemote: false, fromDir: "/somewhere/checkout" },
-      { ...BUNDLED, exists: () => true },
-    );
-    expect(local.kind).toBe("local");
-    if (local.kind === "local") {
-      expect(local.sourceOhDir).toBe(resolve(join("/somewhere/checkout", ".oh")));
-      expect(local.templatesDir).toBe(BUNDLED.templatesDir);
-    }
+    expect(s).toEqual({ kind: "local", fromDir: resolve("/somewhere/checkout") });
   });
 
-  it("no flags + bundled payload present → local bundled defaults (no notice)", () => {
-    const s = resolveInitSource({ fromRemote: false }, { ...BUNDLED, exists: () => true });
-    expect(s).toEqual({
-      kind: "local",
-      sourceOhDir: BUNDLED.sourceOhDir,
-      templatesDir: BUNDLED.templatesDir,
-    });
-  });
-
-  it("auto-fallback: no flags + bundled payload absent → remote with a one-line notice naming URL and ref", () => {
-    const s = resolveInitSource({ fromRemote: false }, { ...BUNDLED, exists: () => false });
-    expect(s.kind).toBe("remote");
-    if (s.kind === "remote") {
-      expect(s.notice).toContain(DEFAULT_REPO_URL);
-      expect(s.notice).toContain("default branch");
-      expect(s.notice?.endsWith("\n")).toBe(true);
-      expect(s.notice?.trim().split("\n")).toHaveLength(1);
-    }
-  });
-
-  it("explicit --from-remote carries no auto-fallback notice", () => {
-    const s = resolveInitSource(
+  it("--from-remote wins over the bundled payload and carries no notice", () => {
+    const s = resolveUpdateSource(
       { fromRemote: true, ref: "v1" },
-      { ...BUNDLED, exists: () => false },
+      { ...BUNDLED, exists: () => true },
     );
     expect(s.kind).toBe("remote");
     if (s.kind === "remote") {
@@ -262,18 +155,25 @@ describe("resolveInitSource", () => {
     }
   });
 
-  it("--templates alone pins the local path (never silently overridden by the fallback)", () => {
-    const s = resolveInitSource(
-      { fromRemote: false, templatesDir: "/custom" },
-      { ...BUNDLED, exists: () => false },
-    );
-    expect(s.kind).toBe("local");
-    if (s.kind === "local") expect(s.templatesDir).toBe("/custom");
+  it("no flags + bundled payload present → the CLI's own checkout, no notice", () => {
+    const s = resolveUpdateSource({ fromRemote: false }, { ...BUNDLED, exists: () => true });
+    expect(s).toEqual({ kind: "local", fromDir: resolve(BUNDLED.sourceOhDir, "..") });
+  });
+
+  it("auto-fallback: no flags + bundled payload absent → remote with a one-line notice naming URL and ref", () => {
+    const s = resolveUpdateSource({ fromRemote: false }, { ...BUNDLED, exists: () => false });
+    expect(s.kind).toBe("remote");
+    if (s.kind === "remote") {
+      expect(s.notice).toContain(DEFAULT_REPO_URL);
+      expect(s.notice).toContain("default branch");
+      expect(s.notice?.endsWith("\n")).toBe(true);
+      expect(s.notice?.trim().split("\n")).toHaveLength(1);
+    }
   });
 });
 
 describe("bundledPayloadExists", () => {
-  it("requires the manifest marker AND the templates dir (not the bare parent dir)", () => {
+  it("requires the manifest marker beside the bundled .oh/", () => {
     const probed: string[] = [];
     const allThere = (p: string): boolean => {
       probed.push(p);
@@ -281,18 +181,15 @@ describe("bundledPayloadExists", () => {
     };
     expect(bundledPayloadExists(BUNDLED, allThere)).toBe(true);
     expect(probed).toContain(join(BUNDLED.sourceOhDir, "manifest.json"));
-    expect(probed).toContain(BUNDLED.templatesDir);
 
     expect(bundledPayloadExists(BUNDLED, () => false)).toBe(false);
-    expect(
-      bundledPayloadExists(BUNDLED, (p) => !p.endsWith("manifest.json")),
-    ).toBe(false);
+    expect(bundledPayloadExists(BUNDLED, (p) => !p.endsWith("manifest.json"))).toBe(false);
   });
 });
 
 
 describe("runWithRemoteSource", () => {
-  it("happy path: a file:// fixture flows through a FULL runInit and prints the version-skew line", async () => {
+  it("happy path: a file:// fixture flows through a FULL runUpdate and prints the version-skew line", async () => {
     const repoUrl = pathToFileURL(makePayloadRepo("9.9.9")).href;
     const target = mkTmp("oh-cli-remote-target-");
     const cliOut: string[] = [];
@@ -303,22 +200,13 @@ describe("runWithRemoteSource", () => {
       { repoUrl, stdout: (s) => cliOut.push(s) },
       (checkoutDir) => {
         seenCheckout = checkoutDir;
-        return runInit(
-          {
-            targetDir: target,
-            templatesDir: join(checkoutDir, ".oh", "templates"),
-            sourceOhDir: join(checkoutDir, ".oh"),
-            yes: true,
-            minimal: true,
-          },
-          io,
-        );
+        return runUpdate({ targetDir: target, fromDir: checkoutDir }, io);
       },
     );
 
     expect(code).toBe(0);
-    expect(readFileSync(join(target, "AGENTS.md"), "utf8")).toBe(
-      "remote-templates-payload\n",
+    expect(readFileSync(join(target, ".oh/scripts/docker-compose.sh"), "utf8")).toBe(
+      "remote-payload-script\n",
     );
     expect(readFileSync(join(target, ".oh/README.md"), "utf8")).toBe("# payload\n");
     expect(cliOut.join("")).toContain("fetched payload v9.9.9 (installed CLI v");

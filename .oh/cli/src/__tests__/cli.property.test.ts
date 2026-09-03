@@ -67,7 +67,7 @@ describe("parseDestroyArgs — property tests", () => {
     );
   });
 
-  it("only ever accepts --yes and a leading help flag", () => {
+  it("only ever accepts --yes, one sandbox name and a leading help flag", () => {
     fc.assert(
       fc.property(tokens, (rest) => {
         const parsed = parseDestroyArgs(rest);
@@ -76,7 +76,7 @@ describe("parseDestroyArgs — property tests", () => {
           expect(isHelpFlag(rest[0])).toBe(true);
           return;
         }
-        expect(rest.every((t) => t === "--yes")).toBe(true);
+        expect(rest.every((t) => t === "--yes" || t === parsed.args.name)).toBe(true);
       }),
     );
   });
@@ -111,11 +111,21 @@ describe("parseComposeArgs — property tests", () => {
   });
 });
 
+const withoutSandboxFlag = (rest: string[]): string[] => {
+  const kept: string[] = [];
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === "--sandbox") i++;
+    else kept.push(rest[i]);
+  }
+  return kept;
+};
+
 describe("parseConfigArgs — property tests", () => {
   it("never reports both a verb and an integration", () => {
     fc.assert(
-      fc.property(fc.array(fc.string(), { maxLength: 4 }), (rest) => {
-        const parsed = parseConfigArgs(rest);
+      fc.property(fc.array(fc.string(), { maxLength: 4 }), (input) => {
+        const rest = withoutSandboxFlag(input);
+        const parsed = parseConfigArgs(input);
         if (!parsed.ok) return;
         const { verb, integration } = parsed.args;
         expect(verb !== undefined && integration !== undefined).toBe(false);
@@ -131,8 +141,9 @@ describe("parseConfigArgs — property tests", () => {
 describe("parseSecretArgs — property tests", () => {
   it("never carries a value alongside the key", () => {
     fc.assert(
-      fc.property(fc.array(fc.string(), { maxLength: 4 }), (rest) => {
-        const parsed = parseSecretArgs(rest);
+      fc.property(fc.array(fc.string(), { maxLength: 4 }), (input) => {
+        const rest = withoutSandboxFlag(input);
+        const parsed = parseSecretArgs(input);
         if (!parsed.ok) return;
         if (parsed.args.verb === "set") {
           expect(parsed.args.key).toBe(rest[1]);

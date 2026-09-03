@@ -4,14 +4,16 @@ title: "Installation"
 
 # Installation
 
-Open Harness is a portable harness that boots an isolated Docker sandbox for your project. The `oh` CLI is the only front door: it equips a repo (`oh init`), provisions the sandbox (`oh sandbox`), and drives the rest of the lifecycle. Two shapes exist — clone **this** repo and own it, or equip a project repo you already have — and both use the same commands. See [lifecycle commands](lifecycle-commands.md) for the verb reference.
+Open Harness is a portable harness that boots an isolated Docker sandbox. The `oh` CLI is the only front door: it creates a sandbox (`oh sandbox install docker`), equips a checkout with the control plane (`oh update`), and drives the rest of the lifecycle. Two shapes exist — a sandbox on its own, running the published image, or a sandbox with a checkout bind-mounted into it (`--repo`) — and both use the same commands. See [lifecycle commands](lifecycle-commands.md) for the verb reference.
+
+The CLI writes only what you ask it to: a registry entry under `~/.oh/sandboxes/<name>/`, and — when you run `oh update` — `.oh/` and `crons/` inside a checkout. It writes no `AGENTS.md`, no provider configuration, and no `.gitignore` line beyond the `.env` line `oh secret set` adds inside a git checkout. Those files are yours.
 
 ## Prerequisites
 
 | Dependency | Required for | Install |
 |---|---|---|
 | Docker (with Compose plugin) | Sandbox image | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
-| git | Cloning a repo, and `oh init --from-remote` | [git-scm.com](https://git-scm.com/) |
+| git | Cloning a repo, and `oh update --from-remote` | [git-scm.com](https://git-scm.com/) |
 | Node.js ≥ 20 (22 recommended) | Running the `oh` CLI itself | [nodejs.org](https://nodejs.org/) — or let [`get-oh.sh`](#standalone-cli-oh-equip-an-existing-repo) install nvm + Node 22 for you |
 
 That is the entire host requirement. Node runs `oh` and nothing else: pnpm, Python, and every AI CLI live inside the sandbox.
@@ -51,19 +53,19 @@ pull framework updates and open PRs back. Creating the private repo and setting 
 remotes happens **inside the sandbox**, after GitHub auth, so the SSH key generated
 there is the one used for pushes.
 
-1. Clone upstream, edit `oh.json` and the local `.env`, then bring the sandbox up and open a shell (`oh` from npm or `get-oh.sh` — see [Standalone CLI](#standalone-cli-oh-equip-an-existing-repo)):
+1. Clone upstream, create a sandbox against that checkout, and open a shell (`oh` from npm or `get-oh.sh` — see [Standalone CLI](#standalone-cli-oh-equip-an-existing-repo)):
    ```bash
    git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
    cd ~/.openharness
-   nano oh.json        # non-secrets: name, timezone, git identity —
-                       # see Configuration. Do this BEFORE building.
-   cp .env.example .env && chmod 600 .env   # secrets only; gitignored
-   nano .env           # GH_TOKEN, SANDBOX_PASSWORD, … (or use `oh secret set`)
-   oh sandbox             # build + start the container (~10 min cold)
-   oh shell               # attach as the sandbox user
+   oh sandbox install docker --repo "$PWD" --name openharness
+                          # wizard: name, timezone, git identity, SSH, Docker socket
+   oh shell openharness   # attach as the sandbox user
    oh tool install herdr  # a fresh sandbox has no herdr
    herdr                  # first inside-sandbox command
    ```
+   The answers are written to `~/.oh/sandboxes/openharness/oh.json`, not into the
+   checkout. Secrets go to that entry's `.env` with
+   `oh secret set --sandbox openharness <KEY>`.
 2. **Inside the initial Herdr pane**, authenticate GitHub over SSH — choose SSH as the protocol
    and let `gh` generate a key (details: [GitHub auth](./integrations/github.md)):
    ```bash
@@ -77,8 +79,8 @@ there is the one used for pushes.
    ```
    `oh config repo` asks for the owner, name, and visibility (default private), then
    creates the repo, renames the existing `origin` to `openharness`, points `origin`
-   at yours, and pushes. It never runs unless you answer yes in that run: `oh init
-   --yes`, `--dry-run`, and any non-interactive shell skip it. If `gh` is missing or
+   at yours, and pushes. It never runs unless you answer yes in that run: any
+   non-interactive shell skips it. If `gh` is missing or
    unauthenticated it prints these commands instead of running them — the manual
    fallback, which names the preserved upstream remote `upstream`:
    ```bash
@@ -92,8 +94,8 @@ there is the one used for pushes.
 
 > Prefer HTTPS or an installer-driven bring-up? Re-point origin to your repo with
 > `git remote set-url origin https://github.com/<your-org>/<your-repo>.git` and run
-> `bash .oh/scripts/install.sh` instead of `oh sandbox` — the installer detects the
-> local clone automatically.
+> `bash .oh/scripts/install.sh` instead of `oh sandbox install docker` — the
+> installer detects the local clone automatically.
 
 ## One-line installer (upstream only)
 
@@ -119,7 +121,7 @@ The installer:
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
 3. Prompts for sandbox name, timezone, and git identity, then writes the non-secrets to the tracked `oh.json`.
 4. Creates the gitignored, mode-`0600` root `.env` from the tracked `.env.example` when missing (all keys commented — inert until you edit), and links `.devcontainer/.env` to it so VS Code "Reopen in Container" reads the same file. Non-secret settings stay in the tracked `oh.json`.
-5. Provisions the sandbox (`oh sandbox`, i.e. `docker compose … up -d --build`).
+5. Provisions the sandbox (`oh sandbox install docker --repo <clone>`).
 6. Prints the next-step `oh` commands (open a shell, stop, tear down).
 
 ### Environment overrides
@@ -166,23 +168,19 @@ git clone --recurse-submodules https://github.com/mifunedev/openharness.git
 cd openharness
 ```
 
-### 2. Configure the environment
+### 2. Create the sandbox
 
 ```bash
-cp .env.example .env && chmod 600 .env
+oh sandbox install docker --repo "$PWD" --name openharness
 ```
 
-Edit `oh.json` for non-secret settings — `name`, `timezone`, `git`, `access.*` — and `.env` for secrets such as `GH_TOKEN`. See [Configuration](./configuration.md) for the field reference, and the comments in `.env.example` for every allow-listed secret.
+The wizard asks for the sandbox name, timezone, git identity, SSH (and its host port), and the host Docker socket, then writes `~/.oh/sandboxes/openharness/oh.json`. `--yes` keeps every default and asks nothing. Edit one field later with `oh config set --sandbox openharness <field> <value>`, and set a secret with `oh secret set --sandbox openharness <KEY>`. See [Configuration](./configuration.md) for the field reference, and the comments in `.env.example` for every allow-listed secret.
 
-### 3. Build and start the sandbox
+### 3. What the sandbox runs
 
-```bash
-oh sandbox
-```
+`oh sandbox install docker` materialises the compose files and the wrapper into the entry, then runs `.oh/scripts/docker-compose.sh up -d`, which resolves the compose overlays your `oh.json` selects. Running `docker compose -f .devcontainer/docker-compose.yml up -d --build` by hand skips that resolution and applies **no** overlays.
 
-`oh sandbox` runs `.oh/scripts/docker-compose.sh up -d --build`, which resolves the compose overlays your `oh.json` selects. Running `docker compose -f .devcontainer/docker-compose.yml up -d --build` by hand skips that resolution and applies **no** overlays.
-
-On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds. To skip the build entirely and pull the prebuilt release image instead, see [Prebuilt-image deployment](deployment-prebuilt-image.md) (`docker compose … up -d --no-build` with `OH_SANDBOX_IMAGE` set, or `oh sandbox --image`).
+With `--repo` and `image.mode` set to `build`, a cold Docker cache takes around ten minutes; subsequent starts are a few seconds. The default is to pull the published release image instead — see [`oh sandbox install docker`](deployment-prebuilt-image.md) for the image-mode recipe and the `--image` / `--no-build` flags.
 
 Check the sandbox health before attaching:
 
@@ -196,26 +194,26 @@ A healthy sandbox reports the tmux-managed runtime sessions (`cron-watchdog` and
 ### 4. Open a shell
 
 ```bash
-oh shell
+oh shell openharness
 ```
 
-Pass a container name to attach to a different one, e.g. `oh shell portfolio-advisor`.
+Omit the name when exactly one sandbox is registered, or when you are standing in the checkout it was created for. `oh sandbox list` prints every registered name.
 
 ## Standalone CLI (`oh`): equip an existing repo
 
-Every path above clones the harness repo itself. The standalone `oh` CLI path is different: it equips **your existing project repo** with the harness and drives the sandbox without keeping an OpenHarness checkout around. The host requirements are the same [Prerequisites](#prerequisites) as every other path — Docker, git, and Node ≥ 20.
+Every path above clones the harness repo itself. The standalone `oh` CLI path is different: it equips **your existing project repo** with the control plane and drives the sandbox without keeping an OpenHarness checkout around. The host requirements are the same [Prerequisites](#prerequisites) as every other path — Docker, git, and Node ≥ 20.
 
 **Get the `oh` command from npm (recommended if you have Node):** the CLI is published as [`@mifune/openharness`](https://www.npmjs.com/package/@mifune/openharness). If Node.js ≥ 20 is already on your host, install it globally or run it zero-install:
 
 ```bash
 npm install -g @mifune/openharness   # puts `oh` on your PATH
 # ...or, without a global install:
-npx @mifune/openharness init
+npx @mifune/openharness sandbox install docker
 ```
 
-The published package is the same single self-contained bundle — `oh init`/`oh update` fetch their scaffold payload on demand (no repo clone). npm does **not** install Node; Node ≥ 20 must already be on your PATH (that is exactly what `get-oh.sh` bootstraps below).
+The published package is the same single self-contained bundle: it carries the compose files and the wrapper a sandbox needs, and `oh update` carries the `.oh/` payload (falling back to an on-demand fetch, no repo clone). npm does **not** install Node; Node ≥ 20 must already be on your PATH (that is exactly what `get-oh.sh` bootstraps below).
 
-**No npm, or no Node yet?** Bootstrap with `get-oh.sh` instead. It installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it does not touch an existing `~/.openharness` sandbox. It prefers a prebuilt bundle (`oh.mifune.dev/oh.js`) and falls back to building from source in a temp dir. If Node.js ≥ 20 is missing, it offers to install nvm + Node 22 and sources it so `oh` works in the same shell. `oh init` fetches its scaffold payload on demand.
+**No npm, or no Node yet?** Bootstrap with `get-oh.sh` instead. It installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it does not touch an existing `~/.openharness` sandbox. It prefers a prebuilt bundle (`oh.mifune.dev/oh.js`) and falls back to building from source in a temp dir. If Node.js ≥ 20 is missing, it offers to install nvm + Node 22 and sources it so `oh` works in the same shell.
 
 For a review-first install, download and inspect the script before you run it.
 The review-first alternative appears below.
@@ -247,23 +245,27 @@ Environment overrides: `OH_BIN_DIR=<dir>` (install location, default `~/.local/b
 Then, in any project:
 
 ```bash
-cd <your-project>
-oh init                 # equip the repo — vendors the .oh/ payload from the local
-                        # clone (offline). Use --from-remote to shallow-clone a
-                        # fresh payload instead; pin a version with --ref <tag|branch>
-oh sandbox              # provision + start the sandbox (docker compose up -d --build)
-oh sandbox --image      # ...or pull the prebuilt release image and skip the local build
-oh shell                # zsh in the running container (or: oh shell <container>)
-oh tool install herdr   # install the terminal workspace — nothing installs at boot
-oh harness install pi   # install an agent CLI the same way
-oh gateway status       # manage messaging client sessions (pi|hermes)
+oh sandbox install docker              # create a sandbox from the published image
+oh sandbox install docker --repo <dir> # ...or bind a checkout at /home/sandbox/harness
+oh sandbox list                        # name, runtime, status, repo
+oh shell <name>                        # zsh in the running container
+oh tool install herdr                  # install the terminal workspace — nothing installs at boot
+oh harness install pi                  # install an agent CLI the same way
+oh gateway status                      # manage messaging client sessions (pi|hermes)
 ```
 
-`oh sandbox --image` (and the `OH_SANDBOX_IMAGE` key in `.devcontainer/.env`) run the
-published `ghcr.io/mifunedev/openharness` image instead of building locally — see
-[Prebuilt-image deployment](deployment-prebuilt-image.md).
+To equip your own checkout with the control plane, run `oh update` inside it:
 
-`--from-remote` fetches over public HTTPS only — private or credential-prompting remotes fail fast (`GIT_TERMINAL_PROMPT=0`); offline, use `oh init --from <local-checkout>` instead. Repos equipped this way mount your project at `/home/sandbox/project` inside the sandbox (the clone paths above use `/home/sandbox/harness`). Upgrade the vendored `.oh/` later with `oh update --from-remote [--ref <ref>]`.
+```bash
+cd <your-project>
+oh update                            # vendors .oh/ + crons/ from the CLI's bundled payload
+oh update --from-remote --ref v0.6.0 # ...or shallow-clone a pinned payload instead
+oh update --from <local-checkout>    # ...or vendor from a built checkout, offline
+```
+
+`oh update` equips an empty directory and upgrades an equipped one with the same command; a second run reports it is already up to date. It writes only `.oh/` and `crons/` — never `oh.json`, `.env`, `AGENTS.md`, `.gitignore`, `.devcontainer/`, or a provider directory. It never prompts. Payload precedence is `--from` > `--from-remote` > the CLI's bundled payload > a remote fetch announced on one line. `--from-remote` fetches over public HTTPS only — private or credential-prompting remotes fail fast (`GIT_TERMINAL_PROMPT=0`).
+
+A checkout bound with `--repo` mounts at `/home/sandbox/harness`. Without `--repo` the sandbox runs `ghcr.io/mifunedev/openharness:latest` and seeds its workspace from the image — see [`oh sandbox install docker`](deployment-prebuilt-image.md) for that recipe and the `--image` / `--no-build` flags.
 
 ## Next step
 
@@ -390,12 +392,12 @@ mount becomes a bind, so you can back the sandbox home up, inspect it, or move
 it between machines:
 
 ```bash
-oh config set storage.homePath /srv/openharness-home
+oh config set --sandbox <name> storage.homePath /srv/openharness-home
 ```
 
-`oh init` asks for this path during the Project step; leave it blank to keep the
-Docker-managed volume. Use a **dedicated, empty** directory — the sandbox takes
-ownership of everything in it, so never point it at your own host `$HOME`.
+Leave `storage.homePath` unset to keep the Docker-managed volume. Use a
+**dedicated, empty** directory — the sandbox takes ownership of everything in
+it, so never point it at your own host `$HOME`.
 
 The repository checkout is bind-mounted at `/home/sandbox/harness`, nested
 inside that mount. Its location is fixed, not configurable.
@@ -430,7 +432,7 @@ Releases before this change kept eleven separate volumes (`claude-auth`,
 mkdir -p /srv/openharness-home
 docker cp <sandbox-name>:/home/sandbox/. /srv/openharness-home
 rm -rf /srv/openharness-home/harness
-oh config set storage.homePath /srv/openharness-home
+oh config set --sandbox <sandbox-name> storage.homePath /srv/openharness-home
 ```
 
 The trailing `/.` matters: without it `docker cp` places the copy at

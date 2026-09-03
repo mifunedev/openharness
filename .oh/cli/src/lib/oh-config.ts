@@ -86,9 +86,15 @@ export interface LangfuseSettings {
   privacyPreset?: LangfusePrivacyPreset;
 }
 
+export type SandboxRuntime = "docker";
+
+export const SANDBOX_RUNTIMES: readonly SandboxRuntime[] = ["docker"];
+
 export interface OhConfig {
   version: 1;
   name?: string;
+  runtime?: SandboxRuntime;
+  repo?: string;
   timezone?: string;
   git?: GitIdentity;
   storage?: StorageSettings;
@@ -178,6 +184,8 @@ export function validateOhConfig(value: unknown): OhConfig {
   }
 
   expectString(record, "name");
+  expectEnum(record, "runtime", "", SANDBOX_RUNTIMES);
+  expectString(record, "repo");
   expectString(record, "timezone");
 
   const storage = expectSection(record, "storage");
@@ -321,6 +329,8 @@ export interface OhConfigField {
 
 export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
   { path: "name", type: "string" },
+  { path: "runtime", type: "enum", values: SANDBOX_RUNTIMES },
+  { path: "repo", type: "string" },
   { path: "timezone", type: "string" },
   { path: "git.userName", type: "string" },
   { path: "git.userEmail", type: "string" },

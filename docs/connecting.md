@@ -29,7 +29,7 @@ You land inside the container as the `sandbox` user. A fresh sandbox has no `her
 > reads `.devcontainer/devcontainer.json`, which names `docker-compose.yml` alone,
 > so it bypasses `.oh/scripts/docker-compose.sh` and applies **no compose overlays** —
 > no SSH, no host Docker socket, no Hermes dashboard, nothing from
-> `composeOverrides[]`. Provision with `oh sandbox`, then attach. Details:
+> `composeOverrides[]`. Provision with `oh sandbox install docker`, then attach. Details:
 > [lifecycle commands](lifecycle-commands.md#vs-code-reopen-in-container-applies-no-overlays).
 
 ### Option B — VSCode Attach to Running Container (local host)
@@ -147,7 +147,7 @@ oh tool install tailscale
 
 This installs the binary into the running sandbox, from the tool catalog, which is the sole owner of the pinned version and its checksums. It is idempotent, and it needs no image rebuild. The install lands in `~/.local/bin` inside the persistent home volume, so it survives a container recreate.
 
-The command needs a running sandbox. If the sandbox is not running, start it with `oh sandbox`, then re-run the command. Nothing about networking activates until you start the daemon in the next step.
+The command needs a running sandbox. If the sandbox is not running, start it with `oh sandbox install docker --name <name>`, then re-run the command. Nothing about networking activates until you start the daemon in the next step.
 
 Check the state at any time:
 
@@ -242,7 +242,7 @@ Then delete the device in the Tailscale admin console. Revoking a phone's own ta
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `/t3 start --tailscale` reports Tailscale missing | binary not installed | `oh tool install tailscale`, then `oh sandbox` if the sandbox was down |
+| `/t3 start --tailscale` reports Tailscale missing | binary not installed | `oh tool install tailscale`, then `oh sandbox install docker --name <name>` if the sandbox was down |
 | `tailscale status` fails to reach the daemon | `tailscaled` not running | repeat step 2; check `tmux ls` for `agent-tailscaled` |
 | Backend state is not `Running` / "logged out" | node never joined, or was logged out | `tailscale up` and complete the browser login |
 | No `ts.net` URL in the T3 output | Serve was not configured | confirm `tailscale status` is `Running`, then restart with `/t3 start --tailscale` |

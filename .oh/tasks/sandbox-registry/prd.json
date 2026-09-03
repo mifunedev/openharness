@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "project": "openharness",
+  "branchName": "task/950-sandbox-registry",
+  "description": "Retire oh init and oh runtime; oh sandbox install docker owns sandbox configuration through a user-level registry; oh update bootstraps a checkout.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "The registry and oh sandbox install docker | list",
+      "description": "As an operator, I want oh sandbox install docker to create and boot a sandbox from any directory, so that a sandbox never depends on a project checkout.",
+      "acceptanceCriteria": [
+        "lib/registry.ts: registryRoot() = ${OH_HOME:-~/.oh}/sandboxes; entryRoot; listEntries; nextDefaultName oh-sbx-<n> lowest unused (entries and running containers); materialize writes the bundled texts inside the entry only (image-only base without repo, flavor-A base with repo, ssh + docker-sock overlays, docker-compose.sh, check-host-port.sh); resolveSandboxRoot: name -> single entry -> entry containing cwd -> error listing names; names match [a-z0-9][a-z0-9-]*",
+        "build.mjs bundles the four compose files and the two scripts as text; dist/oh.js stays the only artifact",
+        "commands/sandbox.ts: runSandboxInstall refuses non-docker runtimes (microsandbox -> RFC pointer + oh tool install microsandbox); wizard only on a TTY without --yes (name, timezone, git name/email, SSH y/n + port, Docker socket), seeded from <repo>/oh.json when present else oh-sbx-<n>, host TZ, git config --global, SSH off, socket off; writes entry oh.json with runtime and repo; materializes; runs today's runSandbox body against the entry root (--image/--no-build/--print-argv kept; --build only with repo and image.mode build); prints next: oh shell <name>; runSandboxList prints name, runtime, repo, status",
+        "oh-config.ts: OhConfig and OH_CONFIG_FIELDS gain runtime and repo; config-render.ts renders OH_REPO_DIR from repo (absolute) and omits it when unset",
+        ".devcontainer/docker-compose.yml: bind ${OH_REPO_DIR:-..}:/home/sandbox/harness and build context ${OH_REPO_DIR:-..}; nothing else changes",
+        "lib/runtimes/catalog.ts: docker (provisionable) and microsandbox (planned, docsPath docs/runtimes/microsandbox.md); gvisor and DEFAULT_RUNTIME deleted",
+        "cli.ts: parseSandboxArgs accepts install <runtime>, list, --name, --repo, --yes, --image[=ref], --no-build, --print-argv, --json; bare oh sandbox prints help and exits 1",
+        "OH_HOME=<tmp> node dist/oh.js sandbox install docker --yes --print-argv prints the wrapper argv and leaves no entry; registry.test.ts and sandbox.test.ts cover D3, D4, materialisation, resolution order",
+        "Typecheck passes",
+        "npm --prefix .oh/cli run build succeeds",
+        "Tests pass (env -u SANDBOX_SSH pnpm test)"
+      ],
+      "priority": 1,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commits 2070995e 0e30e5d8 (+1b13bb1d image.ref persist); typecheck 0, build 0, pnpm test 895/895; registry.test.ts + sandbox.test.ts cover D3/D4; print-argv leaves OH_HOME empty; D2 child booted from the entry (evidence.md)"
+    },
+    {
+      "id": "US-002",
+      "title": "Lifecycle verbs resolve by name; --sandbox on config and secret",
+      "description": "As an operator, I want oh shell <name> and the other lifecycle verbs to find a sandbox by name from anywhere, so that I never have to know the docker or compose command.",
+      "acceptanceCriteria": [
+        "lifecycle.ts: runShell, runComposeVerb, runDestroy, runComposeConfig take an optional name resolved through resolveSandboxRoot; materialize runs before the wrapper; runDestroy removes the entry after down -v; maybePromptDockerSocket, withComposeEnvFile, namedVolumes and the runShell attach line are byte-unchanged; the implicit oh sandbox = up path is gone",
+        "cli.ts: shell, stop, restart, logs, ps, destroy accept an optional positional name; help updated",
+        "config.ts and secret.ts accept --sandbox <name> selecting the entry root; without it resolveProjectRoot as today; oh config show --sandbox reads the entry",
+        "oh secret set appends .env to <root>/.gitignore when the root has .git and the line is absent (helper moved from init.ts to lib/); never in a registry entry",
+        "lib/project.ts error text: not an OpenHarness-equipped repo \u2014 run `oh update` first",
+        "Tests: lifecycle.test.ts (resolution, destroy removes entry, no-name error lists names), config/secret tests for D8, project.test.ts; compose-args.test.ts unchanged and green",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commit 0e30e5d8; oh ps/logs/stop/restart/destroy resolved oh-child-after by name in D2; destroy removed the entry; attach line byte-unchanged (execution-target-contract.sh PASS); --sandbox on config/secret tested"
+    },
+    {
+      "id": "US-003",
+      "title": "oh update is the bootstrap; oh init and the scaffold are gone",
+      "description": "As an operator, I want oh update to equip an empty checkout and nothing to write scaffold files I did not ask for, so that the project stays mine.",
+      "acceptanceCriteria": [
+        "update.ts: equipped-repo guard deleted; missing target .oh reads as 0.0.0 and the run reports 0.0.0 -> <version>; writes only the manifest payload",
+        "cli.ts: resolveInitSource becomes resolveUpdateSource (--from > --from-remote [--ref] > bundled payload > remote fetch with notice); parseUpdateArgs needs no source flag; target stays cwd; oh update never prompts and never writes oh.json, .env, AGENTS.md, .gitignore, .devcontainer/, provider dirs",
+        "Deleted: commands/init.ts, init.test.ts, the runInit describe in config-repo.test.ts, .oh/templates/ (root .env.example stays), the !/.oh/templates/.env.example gitignore line, DEFAULT_TEMPLATES_DIR",
+        "update.test.ts covers the empty-directory bootstrap and second-run up to date; cli.remote.test.ts runs through runUpdate",
+        "git grep -nE 'runInit|resolveInitSource|parseInitArgs|DEFAULT_TEMPLATES_DIR|\\.oh/templates' -- .oh/cli returns nothing",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commit 0e30e5d8; D5 transcript: oh update --from equips an empty dir with .oh/ + crons/ only, second run 'already up to date (v0.6.0)'; init.ts, init.test.ts, .oh/templates/ deleted; oh init exits 1 unknown command"
+    },
+    {
+      "id": "US-004",
+      "title": "oh runtime retired; microsandbox is a tool",
+      "description": "As an operator, I want one catalog per kind of thing, so that a runtime is chosen by oh sandbox install <runtime> and msb is installed by oh tool install microsandbox.",
+      "acceptanceCriteria": [
+        "Deleted: commands/runtime.ts, runtime.test.ts, runtime-catalog.test.ts; parseRuntimeArgs and runRuntime* removed from cli.ts; 'nor an isolation runtime' dropped from printToolHelp",
+        "tools/catalog.ts gains microsandbox: installable, binary msb, installUser sandbox, installArgv downloads https://get.microsandbox.dev to a temp file, sha256sum -c - against a pinned digest, runs it with prefix ${NPM_USER_PREFIX:-$HOME/.local}; verifyArgv command -v msb; docsPath docs/runtimes/microsandbox.md; no doctorArgv",
+        "Installer run once in docker run --rm --entrypoint bash openharness:one-door; observed prefix or failure recorded in progress.txt",
+        "tool-catalog.test.ts and tool.test.ts cover the entry; tool-catalog-boundary.sh accepts two catalogs and keeps the no-docker-id rule; harness-one-door.sh PASS",
+        "git grep -nE 'oh runtime|parseRuntimeArgs|runRuntime|DEFAULT_RUNTIME|gvisor' -- .oh/cli returns nothing",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commit aba2de0a; runtime.ts and tests deleted; microsandbox tool entry pinned sha256 (installer curled from the raw.githubusercontent target of get.microsandbox.dev, see evidence divergence); msb 0.6.16 installed in a throwaway openharness:one-door container at ~/.local/microsandbox/bin/msb; harness-one-door.sh + tool-catalog-boundary.sh PASS"
+    },
+    {
+      "id": "US-005",
+      "title": "Probes and scripts prove the registry and bite",
+      "description": "As a maintainer, I want the probe suite to fail when the bundled compose text drifts from the tracked files or a verb bypasses the wrapper, so that the registry cannot regress silently.",
+      "acceptanceCriteria": [
+        "sandbox-registry.sh (new): bundled texts in dist/oh.js equal the tracked compose files and scripts; lifecycle.ts and sandbox.ts spawn no docker argv; sandbox.ts refuses microsandbox; fault injection (one-byte compose drift; spawn(\"docker\" in a scratch lifecycle.ts) reports REGRESSION, recorded in progress.txt",
+        "oh-init-headless-config.sh replaced by oh-update-bootstrap.sh (D5); oh-init-scaffold.sh and runtime-preflight-gate.sh deleted",
+        "One-line edits: oh-standalone-lifecycle.sh, no-project-agent-catalog.sh, config-schema-parity.sh, worktrees-layout.sh, retired-memory-vocabulary.sh, audit-stale-references.sh, workflow-boundaries.sh; compose-env-boundary.sh allows OH_REPO_DIR only; oh-image-only-deploy.sh accepts the ${OH_REPO_DIR:-..} lines",
+        "get-oh.sh next steps: oh sandbox install docker, oh shell <name>, oh tool install herdr; oh update for an equipped checkout",
+        ".github/workflows unchanged",
+        "bash .oh/skills/eval/run.sh exits 0 with no new REGRESSION; D6 grep over .oh/evals .oh/scripts .oh/install .github returns only negative-assertion guards",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commits d757223f 20ecb68b 3a3b92b1; sandbox-registry.sh new-pass with both fault injections REGRESSION; oh-update-bootstrap.sh new-pass; oh-init-scaffold.sh + runtime-preflight-gate.sh deleted; 16 probes re-pointed; get-oh.sh next steps; eval rc 0 at the final head with 0 REGRESSION and 4 pre-existing SKIPPED"
+    },
+    {
+      "id": "US-006",
+      "title": "Docs and root context describe the new flow",
+      "description": "As a new operator, I want every document to tell me oh sandbox install docker, oh shell <name>, oh tool install herdr, so that I never look for oh init or oh runtime.",
+      "acceptanceCriteria": [
+        "Flow rewritten in README.md, docs/quickstart.md, docs/installation.md, docs/lifecycle-commands.md (verb table incl. oh sandbox install|list, [name] verbs, oh update bootstrap, --sandbox), docs/configuration.md (registry vs project oh.json), docs/deployment-prebuilt-image.md (the oh sandbox install docker page), docs/oh-directory-layout.md, docs/README.md, .oh/README.md, .oh/cli/README.md, .oh/scripts/README.md",
+        "docs/runtimes/overview.md, docker.md, microsandbox.md: oh sandbox install docker; oh tool install microsandbox with the observed prefix; selector points at docs/rfcs/rfc-runtime-support.md",
+        "Onboarding pages state the CLI writes no AGENTS.md, provider config, or .gitignore line beyond .env",
+        "AGENTS.md lifecycle: 1 oh sandbox install docker, 2 oh shell <name>, 3 oh tool install herdr then herdr, 4 gh auth login && gh auth setup-git, 5 oh ps <name>; templates bullet deleted; context-tier-size-budget.sh PASS",
+        "CHANGELOG.md Unreleased: Added / Changed / Removed entries <=250 chars linking #950",
+        "git grep -nE 'oh init|oh runtime|\\.oh/templates|gvisor' -- docs README.md AGENTS.md .oh/README.md .oh/cli/README.md .oh/scripts/README.md .oh/install .oh/skills ':!docs/rfcs' returns nothing; prose pins in .oh/scripts/__tests__ and probes still match",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commits 324ec45c 27d6f919; AGENTS.md 9341 B (context-tier-size-budget PASS); D6 grep over docs/root/READMEs empty; CHANGELOG Added/Changed/Removed (changelog-entry-length PASS); deployment page retitled to oh sandbox install docker"
+    },
+    {
+      "id": "US-007",
+      "title": "Before and after evidence with a registry child",
+      "description": "As the reviewer, I want observed output from the built CLI before and after the change, so that the PR proves the flow rather than asserting it.",
+      "acceptanceCriteria": [
+        "D1 transcript from the base commit's built CLI: oh init --help and oh runtime --help exist; oh sandbox and oh update refuse in an empty dir",
+        "D2 transcript from this parent (OH_EXECUTION_TARGET=docker-compose, OH_HOME under the scratchpad): oh sandbox install docker --name oh-child-after --yes with image.ref=openharness:one-door; entry layout; healthcheck PASS; oh sandbox list; oh ps oh-child-after; oh logs oh-child-after; docker exec door test oh tool install herdr && herdr --version exits 0; oh destroy oh-child-after removes container, volume, entry",
+        "D5 transcript: oh update --from <checkout> in an empty dir, then the second run",
+        "No oh-child-* container or volume remains; oh-sbx-remote untouched",
+        "Excerpts recorded in .oh/tasks/sandbox-registry/evidence.md and the PR body",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "D1 before (98e320bd), D2 registry child oh-child-after at 1b13bb1d (healthcheck 16 s, door test herdr 0.7.4, destroy removed container+volume+entry), D5 bootstrap at fc7bb8df; no oh-child-* residue; oh-sbx-remote untouched; excerpts in evidence.md"
+    },
+    {
+      "id": "US-008",
+      "title": "Knowledge pages match the registry",
+      "description": "As the next planner, I want the knowledge base to describe the registry and oh update bootstrap, so that a future plan does not re-derive oh init.",
+      "acceptanceCriteria": [
+        "knowledge-impact.sh --changed <actual diff> run; every NEEDS-REVIEW page plus oh-cli-portable-lifecycle, fresh-machine-setup, compose-env-boundary ends in exactly one of UPDATED / REVERIFIED / NOT-AFFECTED (reason), recorded in evidence.md",
+        "oh-cli-portable-lifecycle UPDATED (registry root, bundled assets, oh update precedence, name resolution, compose.env rendering); fresh-machine-setup UPDATED (host steps 3-4); compose-env-boundary UPDATED (OH_REPO_DIR in the rendered set; a registry entry is a root); updated and verified_at advanced on rewritten pages; verified_at alone on REVERIFIED",
+        "Source-backed body shape per schema.md section 3 kept",
+        ".oh/knowledge/README.md regenerated; wiki-readme-index.sh PASS",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "dependsOn": null,
+      "passes": true,
+      "notes": "commit after 1b13bb1d: oh-cli-portable-lifecycle, fresh-machine-setup, compose-env-boundary UPDATED; managed-agents REVERIFIED; 10 pages NOT-AFFECTED; index regenerated; wiki-readme-index.sh + knowledge-source-freshness.sh PASS"
+    }
+  ]
+}

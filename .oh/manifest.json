@@ -3,7 +3,6 @@
     "cli/**",
     "scripts/**",
     "install/**",
-    "templates/**",
     "evals/**",
     "knowledge/**",
     "skills/**",

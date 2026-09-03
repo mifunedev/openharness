@@ -2,95 +2,97 @@
 title: "oh CLI Portable Lifecycle"
 slug: oh-cli-portable-lifecycle
 kind: repo
-tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
+tags: [cli, oh, lifecycle, standalone, registry, sandbox, remote-fetch, execution-target, update]
 created: 2026-07-03
-updated: 2026-09-01
+updated: 2026-09-03
 sources:
   - .oh/cli/src/cli.ts
-  - .oh/cli/src/commands/init.ts
+  - .oh/cli/src/commands/sandbox.ts
+  - .oh/cli/src/commands/lifecycle.ts
   - .oh/cli/src/commands/update.ts
+  - .oh/cli/src/lib/registry.ts
+  - .oh/cli/build.mjs
+  - .devcontainer/Dockerfile
   - .oh/cli/src/lib/manifest.ts
   - .oh/cli/src/lib/vendor.ts
   - .oh/manifest.json
-  - .oh/cli/src/commands/lifecycle.ts
   - .oh/cli/src/lib/execution/target.ts
   - .oh/cli/src/lib/execution/docker-compose-target.ts
   - .oh/cli/src/lib/remote.ts
   - .oh/cli/src/lib/project.ts
   - .oh/scripts/docker-compose.sh
   - .oh/scripts/gateway.sh
+  - .oh/evals/probes/sandbox-registry.sh
   - .oh/README.md
+  - docs/lifecycle-commands.md
   - docs/oh-directory-layout.md
   - docs/rfcs/rfc-brain-hands-boundary.md
-verified_at: 8c89894512eb5e248e68e55323333e2cd35bc813
-related: [fresh-machine-setup]
+verified_at: 55a0ba14cf78e0245dbfc262b2d2adad77236866
+related: [fresh-machine-setup, compose-env-boundary]
 confidence: provisional
 ---
 
 # oh CLI Portable Lifecycle
 
 ## Relevant Source Files
-- `.oh/cli/src/lib/execution/target.ts` — the provider-neutral `ExecutionTarget` contract: types and interface only, no engine nouns.
-- `.oh/cli/src/lib/execution/docker-compose-target.ts` — the first (and, in Phase-0, only) adapter; owns the substrate argv.
-- `.oh/cli/src/commands/lifecycle.ts` — `oh sandbox` / `oh shell` / `oh gateway`; thin wrappers over the contract and the vendored scripts.
-- `.oh/cli/src/cli.ts` — arg parsing, `resolveInitSource` (payload precedence + auto-fallback), `runWithRemoteSource` (temp checkout + version-skew line), verb dispatch.
+- `.oh/cli/src/lib/registry.ts` — the sandbox registry: `registryRoot()`, `entryRoot()`, `listEntries()`, `nextDefaultName()`, `materialize()`, `resolveSandboxRoot()`.
+- `.oh/cli/build.mjs` — the `oh-asset:` esbuild plugin that inlines the four compose files and two scripts from `OH_ASSET_ROOT` (default: the repository root) into `dist/oh.js`.
+- `.oh/cli/src/commands/sandbox.ts` — `oh sandbox install <runtime>` (wizard, entry write, materialise, provision) and `oh sandbox list`.
+- `.oh/cli/src/commands/lifecycle.ts` — `oh shell|stop|restart|logs|ps|destroy [name]`; thin wrappers over the `ExecutionTarget` contract and the materialised wrapper script.
+- `.oh/cli/src/lib/execution/target.ts`, `docker-compose-target.ts` — the provider-neutral contract and its one adapter, which owns the engine argv.
+- `.oh/cli/src/cli.ts` — arg parsing, `resolveUpdateSource` (payload precedence + auto-fallback), `runWithRemoteSource`, verb dispatch, `--sandbox` on `oh config` / `oh secret`.
+- `.oh/cli/src/commands/update.ts` — the `.oh/` + `crons/` bootstrap and upgrade.
 - `.oh/cli/src/lib/remote.ts` — `fetchRemoteSource`: shallow clone, `GIT_TERMINAL_PROMPT=0`, bounded timeout.
-- `.oh/cli/src/lib/project.ts` — equipped-root walk-up resolver.
-- `.oh/cli/src/commands/init.ts` — scaffold + devcontainer generation.
-- `.oh/cli/src/commands/update.ts` — `.oh/`-only upgrade.
-- `.oh/scripts/docker-compose.sh`, `gateway.sh`, `harness-config.sh` — the vendored scripts the verbs delegate to.
+- `.oh/cli/src/lib/project.ts` — equipped-root walk-up resolver, still used by the in-repo verbs.
+- `.oh/scripts/docker-compose.sh`, `gateway.sh` — the scripts the verbs delegate to.
+- `.oh/evals/probes/sandbox-registry.sh` — the tier-A probe that pins the bundled texts to the tracked files and forbids engine argv outside the wrapper.
 
 ## Summary
-Issue #564 gives a consumer repo a standalone lifecycle that needs no OpenHarness checkout kept around: `oh init --from-remote` equips the repo by fetching the payload from the public repo, then `oh sandbox`, `oh shell`, and `oh gateway` drive the sandbox by wrapping the vendored `.oh/scripts/` — the same scripts the source repo's Makefile drives. Bundling the payload into a published binary is a stated non-goal, gated on the npm publish decision.
-
-Issue #738 historically added `docs/**` to the `.oh/manifest.json` include list. The current manifest omits `docs/**`: root `docs/` is project-owned documentation, and `oh init` and `oh update` leave it untouched while the manifest still excludes `.oh/patches/`.
+Issue #950 moved sandbox configuration out of the project checkout. `oh sandbox install docker` runs from any directory: a wizard writes a **registry entry** under `${OH_HOME:-~/.oh}/sandboxes/<name>/`, the CLI materialises the compose files and wrapper script it bundles into that entry, and the container starts. `oh shell <name>` and the other lifecycle verbs resolve a sandbox by name from anywhere; a project checkout is an optional `--repo` bind mount. `oh update` equips an empty checkout with the `.oh/` + `crons/` payload and is also the upgrade path; `oh init`, `oh runtime`, and `.oh/templates/` no longer exist. Issue #564's standalone-consumer goal survives with one fewer moving part: an installed `oh` binary now carries everything a sandbox needs.
 
 ## Detail
-**Payload sourcing (`oh init`)** — precedence `--from <dir>` > `--from-remote` > the CLI's own bundled payload (`cli.ts:139-141`; the two flags conflict, `cli.ts:305-308`). With no source flag and no bundled payload — the installed-binary case, detected via the `manifest.json` marker (`cli.ts:464-469`) — `resolveInitSource` auto-falls back to a remote fetch with a one-line notice naming URL and ref (`cli.ts:498-534`). `--from` sets only the payload source; `--from-remote` sets BOTH payload and templates from the fetched checkout (`cli.ts:478-484`). `oh update` never falls back: it requires `--from` or `--from-remote` (`cli.ts:383-388`) and upgrades only `.oh/` (`cli.ts:110-111`).
+**A registry entry is a root.** `registryRoot()` is `${OH_HOME}/sandboxes` with `OH_HOME` defaulting to `<homedir>/.oh` (`registry.ts:19-28`); names match `^[a-z0-9][a-z0-9-]*$` (`registry.ts:15`). Each entry holds the exact layout `.oh/scripts/docker-compose.sh` already expected of a repo: `oh.json`, an optional `.env` (secrets), `.devcontainer/docker-compose.yml` plus the ssh and docker-sock overlays, and `.oh/scripts/docker-compose.sh` + `check-host-port.sh`. `materialize()` rewrites those six files from the bundled texts on every lifecycle call, so the entry always matches the CLI version and the operator edits only `oh.json`. Without `repo` the base is the image-only compose file; with `repo` it is the checkout-binding file, whose bind and build context read `${OH_REPO_DIR:-..}` — the `..` default keeps CI and an in-checkout run byte-identical.
 
-**Manifest delivery** — `.oh/manifest.json` defines POSIX globs relative to `.oh/` (`manifest.ts:4-8`). `shouldShip()` requires an include match and rejects an exclude match (`manifest.ts:59-70`). The current source manifest omits both `docs/**` and `patches/**`, and since issue #926 ships `knowledge/**` — the durable repository-knowledge surface — alongside `skills/**` (`.oh/manifest.json:1-24`). Knowledge used to reach a consumer only because it sat inside `skills/**`; moving it out without the explicit include would have silently stopped shipping it. Issue #931 then removed `agents/**` from the same list and dropped the two agent provider links from `init.ts`'s `PROVIDER_LINKS`, because skills became the only role primitive.
+**Bundled assets.** `registry.ts` imports the six files through `oh-asset:<repo-relative path>` specifiers; `build.mjs` resolves them under `OH_ASSET_ROOT` (default: the repository root above `.oh/cli`) and inlines them as text, failing the build when one is missing. The sandbox image stages exactly those six files under `/opt/oh-assets` and builds with `OH_ASSET_ROOT=/opt/oh-assets` (`.devcontainer/Dockerfile`), because it copies only `.oh/cli/` into `/opt/oh`; every other build site runs inside a full checkout. `dist/oh.js` remains the only artifact. `sandbox-registry.sh` compares what a materialised entry contains against the tracked files byte for byte, so a change to a compose file without a rebuild is a REGRESSION, and it fails if `lifecycle.ts` or `sandbox.ts` ever spawns `docker` directly.
 
-`copyOhPayload()` walks only the source `.oh/` tree and writes only below the target `.oh/` (`vendor.ts:76-85`, `vendor.ts:17-21,119-120`). Root `docs/` is therefore outside both the source walk and the destination guard. The init/update integration tests prove that an existing target `docs/` file remains unchanged (`init.test.ts`, `manifest.test.ts`). This entry cites the RFC and does not restate its decisions.
+**`oh sandbox install <runtime>`** (`sandbox.ts:139`) accepts `docker`; `microsandbox` refuses with a pointer to `docs/rfcs/rfc-runtime-support.md` and to `oh tool install microsandbox` (the runtime catalog in `lib/runtimes/catalog.ts` now lists only those two). On a TTY without `--yes` the wizard asks name, timezone, git identity, SSH (with host port), and the Docker socket; `--yes` keeps every default (name `oh-sbx-<n>` for the lowest unused integer, `registry.ts:80`; host `TZ`; global git identity; SSH and socket off). With `--repo <dir>` the defaults seed from that checkout's `oh.json` and `repo` is written into the entry. `--image=<ref>` is persisted as `image.ref` so later verbs render the same image; `--print-argv` materialises into a temporary preview root and writes no entry (`sandbox.ts:192`). Success prints `next: oh shell <name>`. `oh sandbox list [--json]` shows name, runtime, status from `target.status()`, and repo. Bare `oh sandbox` prints help and exits 1; there is no implicit `up`.
 
-**Remote fetch** — `git clone --depth 1 [--branch <ref>] -- <url> <tmp>` of `https://github.com/mifunedev/openharness` (`remote.ts:13,101-103`) with `GIT_TERMINAL_PROMPT=0` and a 120 s timeout (`remote.ts:14,106`). `runWithRemoteSource` makes the temp checkout, wraps the whole run in try/finally cleanup, and prints `fetched payload vX (installed CLI vY)` so version skew is visible (`cli.ts:577-594`).
+**Name resolution.** Every lifecycle verb calls `resolveSandboxRoot({ name, cwd })` (`lifecycle.ts:93`): an explicit name → that entry; else the single registered entry; else the entry whose `repo` contains `cwd`; else an error listing the registered names (or, with an empty registry, `create one with oh sandbox install docker`). `oh destroy <name>` prompts for the name unless `--yes`, runs `down -v`, then removes the entry directory (`lifecycle.ts:370`). `oh config show|set --sandbox <name>` and `oh secret set|list --sandbox <name>` act on the entry; without the flag they use `resolveProjectRoot` on the equipped checkout as before (`cli.ts:121-148`).
 
-**Lifecycle verbs** — deliberately thin wrappers; no compose-argv or env-file parsing is re-implemented in TypeScript (`lifecycle.ts:22-25`). Each resolves the equipped root by walking up from cwd to the nearest `.oh/` directory (`project.ts:20`). Since #733 the two hands-side verbs reach their environment through the `ExecutionTarget` contract instead of naming an engine themselves; `resolveExecutionTarget()` is internal — no `.env` key, CLI flag, or env var selects a target.
+**Rendering.** The verbs still render `oh.json` into a temporary `compose.env` passed as `--extra-env-file` (`lifecycle.ts:42-75`); the rendered set gained `OH_REPO_DIR` (`config-render.ts:40`). Nothing seeds a `.devcontainer/.env`; the wrapper reads `<root>/.env` for secrets.
 
 | Verb | Side | Route | Delegates to |
 | --- | --- | --- | --- |
-| `oh sandbox` | hands | `provision()` (`lifecycle.ts:239-246`) | `bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build\|--no-build` |
-| `oh shell [name]` | hands | `attach({argv:["zsh"], user:"sandbox"})` (`lifecycle.ts:294-297`) | the adapter's engine argv (`docker-compose-target.ts:194-214`) |
-| `oh gateway <args…>` | brain | none — deliberately not routed | `bash .oh/scripts/gateway.sh` with `OH_PROJECT_ROOT=<root>` (`gateway.sh:29`) |
+| `oh sandbox install docker` | hands | wizard → entry `oh.json` → `materialize()` → `provision()` | `bash <entry>/.oh/scripts/docker-compose.sh --repo-dir <entry> up -d --build\|--no-build` |
+| `oh shell [name]` | hands | `attach({argv:["zsh"], user:"sandbox"})` | the adapter's engine argv (`docker-compose-target.ts`) |
+| `oh stop\|restart\|logs\|ps\|destroy [name]` | hands | `resolveSandboxRoot()` → `materialize()` → wrapper | `bash <entry>/.oh/scripts/docker-compose.sh <compose verb>` |
+| `oh gateway <args…>` | brain | none — deliberately not routed | `bash .oh/scripts/gateway.sh` with `OH_PROJECT_ROOT=<root>` |
 
-Brain-side policy stays in `lifecycle.ts` and the target decides none of it: the `.devcontainer/.env` seed — its only writer — the default-off Docker-socket opt-in prompt, `--image` ref resolution (`--image=<ref>` > `.env` `OH_SANDBOX_IMAGE` > `ghcr.io/mifunedev/openharness:latest`), and `oh shell`'s container-name precedence: positional arg > `SANDBOX_NAME` in `<root>/.devcontainer/.env` > `openharness`. Since 0.4.0 those reads are plain filesystem reads — the vendored YAML parser they used to shell out to is gone. `oh gateway` is orchestration rather than execution, so it stays brain-side by design and is unchanged. The rationale for that split, the four state classes, and why `attach()` is synchronous in `contractVersion: 1` live in `docs/rfcs/rfc-brain-hands-boundary.md` — cite it, do not restate it.
+**`oh update` is the bootstrap.** `resolveUpdateSource` (`cli.ts:898`) picks `--from <dir>` > `--from-remote [--ref]` > the CLI's own bundled payload (manifest marker) > a remote fetch with a one-line notice. A target with no `.oh/` reads as version `0.0.0` (`update.ts:56`) and receives the full payload; a second run prints `already up to date (v…)` (`update.ts:88`). It writes only what `.oh/manifest.json` ships — `.oh/**` per the include list plus `crons/**` — and never `oh.json`, `.env`, `AGENTS.md`, `.gitignore`, `.devcontainer/`, or provider directories; the operator owns those. `templates/**` left the manifest with the scaffold. `copyOhPayload()` still walks only the source `.oh/` tree and writes only below the target `.oh/` (`vendor.ts`), so root `docs/` stays project-owned.
 
-Equipped repos mount the project at `/home/sandbox/harness`, the `workspaceFolder` `oh init` writes (`init.ts:503`); `oh update` touches only `.oh/` and performs no project-file migration.
+**Remote fetch** — `git clone --depth 1 [--branch <ref>] -- <url> <tmp>` of `https://github.com/mifunedev/openharness` with `GIT_TERMINAL_PROMPT=0` and a 120 s timeout (`remote.ts`); `runWithRemoteSource` prints `fetched payload vX (installed CLI vY)` (`cli.ts:953`) so version skew is visible. Public HTTPS only.
 
 **Troubleshooting / limits**
-- Host prerequisites: Node.js ≥ 18 (the bundle targets `node20` syntax, `build.mjs:19`, so 20+ is safest), git, docker. No `make` on this path.
-- Private/auth remotes unsupported: `GIT_TERMINAL_PROMPT=0` makes them fail fast with a `--from <dir>` offline-fallback hint (`remote.ts:106,128-135`). Public HTTPS only.
-- Version skew: default ref is the clone's default branch; the printed skew line plus `--ref <branch|tag>` pinning are the guard (`cli.ts:589`; `remote.ts:102`).
-- Bundling non-goal: shipping the payload inside a published package is gated on publishing (`cli.ts:492-493`; `.oh/cli/package.json` stays `"private": true`); the bundled-payload branch only fires for source-checkout builds.
-
-DeepWiki comparison (2026-08-13, when the workflow still required one — the step was removed 2026-08-24): that comparison used source snapshot `8e145e31`. DeepWiki lists public `docs/` pages but does not describe `.oh/manifest.json`, `oh init`, `oh update`, or the root-docs boundary. Local sources define those contracts. The comparison found a local coverage gap and does not change the `docs/**` decision.
+- Host prerequisites: Node.js ≥ 20, git, docker. No checkout is needed to create or drive a sandbox.
+- A sandbox created before #950 from a checkout (compose project = the checkout's `.devcontainer/`) is not in the registry; `oh sandbox install docker --name <its name> --repo <checkout>` adopts the compose project and its volumes.
+- `SANDBOX_NAME` in the process environment overrides the rendered name, so evidence runs inside another sandbox must `env -u SANDBOX_NAME`.
+- The brain/hands rationale, the state classes, and why `attach()` is synchronous live in `docs/rfcs/rfc-brain-hands-boundary.md`; cite it, do not restate it.
 
 ## System Relationships
 ```mermaid
 flowchart LR
-  subgraph SRC["oh init payload precedence (cli.ts:498-534)"]
-    direction TB
-    A["--from &lt;dir&gt;"] --> B["--from-remote [--ref]"]
-    B --> C["bundled .oh/ (manifest marker)"]
-    C --> D["auto-fallback: remote fetch + notice"]
-  end
-  SRC --> INIT["equipped repo: .oh/ + .devcontainer/"]
-  ROOTDOCS["project-owned root docs/"] -. outside .oh payload .-> INIT
-  INIT --> SB["oh sandbox (hands)"] --> PV["ExecutionTarget.provision()"] --> DC["docker-compose.sh --repo-dir &lt;root&gt; up -d"]
-  INIT --> SH["oh shell [name] (hands)"] --> AT["ExecutionTarget.attach()"] --> DE["adapter-owned engine argv"]
-  INIT --> GW["oh gateway &lt;args&gt; (brain)"] --> GS["gateway.sh (OH_PROJECT_ROOT=&lt;root&gt;)"]
+  OP[operator, any cwd] --> SI["oh sandbox install docker"]
+  SI --> WZ[wizard / --yes defaults] --> ENTRY["${OH_HOME:-~/.oh}/sandboxes/&lt;name&gt;/oh.json"]
+  BUNDLE[bundled compose + wrapper texts in dist/oh.js] --> MAT["materialize()"] --> ENTRY
+  ENTRY --> PV["ExecutionTarget.provision()"] --> DC["docker-compose.sh --repo-dir &lt;entry&gt; up -d"]
+  REPO["--repo &lt;checkout&gt;"] -. OH_REPO_DIR bind .-> DC
+  OP --> SH["oh shell|ps|logs|stop|restart|destroy [name]"] --> RS["resolveSandboxRoot()"] --> ENTRY
+  OP --> UP["oh update [--from|--from-remote]"] --> PAYLOAD[".oh/ + crons/ into a checkout"]
+  PROBE[sandbox-registry.sh] -.pins.-> BUNDLE
 ```
 
 ## See Also
 - [[fresh-machine-setup]]
+- [[compose-env-boundary]] — the rendered set and why `OH_REPO_DIR` is in it.
 - [[release-versioning]] — the harness release version; the `@mifune/openharness` npm version is independent of it.
 - `docs/rfcs/rfc-brain-hands-boundary.md` — authority for the brain/hands split this entry routes through.

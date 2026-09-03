@@ -71,14 +71,6 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
   }
 
   const targetOh = path.resolve(targetDir, '.oh');
-  if (!existsSync(targetOh) || !statSync(targetOh).isDirectory()) {
-    io.stderr(
-      'oh update: not an OpenHarness-equipped repo (no .oh/ at ' +
-        targetDir +
-        '). Run `oh init` / vendor .oh/ first.\n',
-    );
-    return 1;
-  }
 
   if (fromOh === targetOh) {
     io.stderr('oh update: source and target are the same .oh; nothing to update.\n');

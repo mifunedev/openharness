@@ -45,7 +45,7 @@ for compose in "$COMPOSE_PRIMARY" "$COMPOSE_IO"; do
   done
 done
 
-grep -Eq '^[[:space:]]*-[[:space:]]*\.\.:/home/sandbox/harness$' "$COMPOSE_PRIMARY" \
+grep -Eq '^[[:space:]]*-[[:space:]]*(\$\{OH_REPO_DIR:-\.\.\}|\.\.):/home/sandbox/harness$' "$COMPOSE_PRIMARY" \
   || fails+=("docker-compose.yml must bind the checkout at the fixed path /home/sandbox/harness, nested inside the home mount")
 
 if grep -qE '^[[:space:]]*-[[:space:]]*\.\.:' "$COMPOSE_IO"; then

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runConfigSet, runConfigShow, type ConfigIO } from "../commands/config.js";
@@ -21,6 +21,7 @@ const { parseConfigArgs, parseSecretArgs } = await import("../cli.js");
 const cleanups: string[] = [];
 afterEach(() => {
   while (cleanups.length > 0) rmSync(cleanups.pop()!, { recursive: true, force: true });
+  vi.unstubAllEnvs();
 });
 
 function makeRepo(): string {
@@ -103,6 +104,98 @@ describe("parseSecretArgs", () => {
     const parsed = parseSecretArgs(["show"]);
     expect(parsed.ok).toBe(false);
     if (!parsed.ok) expect(parsed.error).toMatch(/expected set or list/);
+  });
+});
+
+describe("--sandbox <name>", () => {
+  function registryEntry(name: string): string {
+    const home = mkdtempSync(join(tmpdir(), "oh-config-registry-"));
+    cleanups.push(home);
+    vi.stubEnv("OH_HOME", home);
+    const root = join(home, "sandboxes", name);
+    mkdirSync(root, { recursive: true });
+    writeFileSync(join(root, "oh.json"), `${JSON.stringify({ version: 1, name })}\n`);
+    return root;
+  }
+
+  it("parses --sandbox out of `oh config` and `oh secret` argv", () => {
+    expect(parseConfigArgs(["set", "access.ssh", "true", "--sandbox", "box"])).toEqual({
+      ok: true,
+      args: {
+        help: false,
+        integrationHelp: false,
+        verb: "set",
+        key: "access.ssh",
+        value: "true",
+        sandbox: "box",
+      },
+    });
+    expect(parseSecretArgs(["--sandbox", "box", "set", "GH_TOKEN"])).toEqual({
+      ok: true,
+      args: { help: false, verb: "set", key: "GH_TOKEN", sandbox: "box" },
+    });
+    const missing = parseSecretArgs(["set", "GH_TOKEN", "--sandbox"]);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error).toContain("--sandbox requires a sandbox name");
+  });
+
+  it("`oh config set --sandbox` writes the entry, not the project", async () => {
+    const entry = registryEntry("box");
+    const project = makeRepo();
+    const { io } = makeIo();
+
+    expect(
+      await runConfigSet("access.sshPort", "2345", { cwd: project, sandbox: "box" }, io),
+    ).toBe(0);
+    expect(readConfig(entry)).toMatchObject({ access: { sshPort: 2345 } });
+    expect(existsSync(ohConfigPath(project))).toBe(false);
+  });
+
+  it("`oh config show --sandbox` reads the entry", async () => {
+    registryEntry("box");
+    const { io, out } = makeIo();
+    expect(await runConfigShow({ cwd: makeRepo(), sandbox: "box" }, io)).toBe(0);
+    expect(JSON.parse(out.join(""))).toMatchObject({ name: "box" });
+  });
+
+  it("errors when the named sandbox is not registered", async () => {
+    registryEntry("box");
+    const { io } = makeIo();
+    await expect(runConfigShow({ sandbox: "absent" }, io)).rejects.toThrow(
+      "no sandbox named `absent`",
+    );
+  });
+
+  it("`oh secret set --sandbox` writes the entry .env and no .gitignore", async () => {
+    const entry = registryEntry("box");
+    const { io } = makeIo();
+    io.askSecret = async () => "ghp_registry";
+
+    expect(await runSecretSet("GH_TOKEN", { sandbox: "box" }, io)).toBe(0);
+    expect(readFileSync(join(entry, ".env"), "utf8")).toContain("GH_TOKEN=ghp_registry");
+    expect(existsSync(join(entry, ".gitignore"))).toBe(false);
+  });
+
+  it("`oh secret set` appends .env to the project .gitignore exactly once", async () => {
+    const project = makeRepo();
+    mkdirSync(join(project, ".git"), { recursive: true });
+    const { io } = makeIo();
+    io.askSecret = async () => "ghp_project";
+
+    expect(await runSecretSet("GH_TOKEN", { cwd: project }, io)).toBe(0);
+    expect(readFileSync(join(project, ".gitignore"), "utf8")).toBe(".env\n");
+
+    expect(await runSecretSet("GH_TOKEN", { cwd: project }, io)).toBe(0);
+    expect(readFileSync(join(project, ".gitignore"), "utf8")).toBe(".env\n");
+  });
+
+  it("writes no .gitignore when the project root is not a git checkout", async () => {
+    const project = makeRepo();
+    const { io } = makeIo();
+    io.askSecret = async () => "ghp_project";
+
+    expect(await runSecretSet("GH_TOKEN", { cwd: project }, io)).toBe(0);
+    expect(existsSync(join(project, ".gitignore"))).toBe(false);
   });
 });
 

@@ -97,6 +97,31 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     docsPath: TOOLS_DOC,
   }),
   Object.freeze({
+    id: "microsandbox",
+    title: "MicroSandbox CLI",
+    kind: "installable",
+    binary: "msb",
+    verifyArgv: Object.freeze(["bash", "-lc", "command -v msb >/dev/null"]),
+    versionArgv: Object.freeze(["msb", "--version"]),
+    installArgv: Object.freeze([
+      "bash",
+      "-lc",
+      [
+        "set -e",
+        "sha=767df6954e09fec9bf8276cc2858fc9038024b3a22fa4740572620370eb719f4",
+        'prefix="${NPM_USER_PREFIX:-$HOME/.local}"',
+        'tmp="$(mktemp -d)"',
+        "trap 'rm -rf \"$tmp\"' EXIT",
+        'curl -fsSL "https://raw.githubusercontent.com/superradcompany/microsandbox/refs/heads/main/scripts/install.sh" -o "$tmp/install-msb.sh"',
+        'echo "$sha  $tmp/install-msb.sh" | sha256sum -c -',
+        'MSB_HOME="$prefix/microsandbox" sh "$tmp/install-msb.sh"',
+        '"$prefix/bin/msb" --version >/dev/null',
+      ].join("\n"),
+    ]),
+    installUser: "sandbox",
+    docsPath: "docs/runtimes/microsandbox.md",
+  }),
+  Object.freeze({
     id: "docker-cli",
     title: "Docker CLI + Compose",
     kind: "baked-in",
@@ -104,7 +129,7 @@ export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
     verifyArgv: Object.freeze(["bash", "-lc", "command -v docker >/dev/null"]),
     versionArgv: Object.freeze(["docker", "--version"]),
     notInstallableReason:
-      "The Docker CLI is installed in the base image. Note that the CLI being present says nothing about whether a daemon is reachable — `oh runtime status docker` answers that.",
+      "The Docker CLI is installed in the base image. Note that the CLI being present says nothing about whether a daemon is reachable — `oh ps <name>` answers that.",
     docsPath: TOOLS_DOC,
   }),
   Object.freeze({

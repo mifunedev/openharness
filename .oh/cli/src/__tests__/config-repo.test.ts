@@ -1,15 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import { runConfigRepo, type RepoIO } from "../commands/config.js";
-import { runInit, type InitIO, type InitOptions } from "../commands/init.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
-
-const TEMPLATES = resolve(dirname(fileURLToPath(import.meta.url)), "../../../templates");
-const SOURCE_OH = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 const cleanups: string[] = [];
 
@@ -257,97 +252,5 @@ describe("oh config repo — command sequence", () => {
       "git remote get-url origin",
     ]);
     expect(err.join("")).toContain("already exists");
-  });
-});
-
-function initOpts(targetDir: string, extra: Partial<InitOptions> = {}): InitOptions {
-  return { targetDir, templatesDir: TEMPLATES, sourceOhDir: SOURCE_OH, ...extra };
-}
-
-function freshTarget(): string {
-  const dir = mkdtempSync(join(tmpdir(), "oh-init-repo-"));
-  cleanups.push(dir);
-  return dir;
-}
-
-describe("oh init — the repo step never runs unattended", () => {
-  it("--yes skips the step entirely: no prompt, no commands", async () => {
-    const t = freshTarget();
-    const { calls, run } = recorder();
-    let asked = 0;
-    const io: InitIO = {
-      stdout: () => {},
-      stderr: () => {},
-      ask: async () => {
-        asked++;
-        return "y";
-      },
-      askSecret: async () => "",
-      isTTY: true,
-    };
-
-    expect(await runInit(initOpts(t, { yes: true, minimal: true, run }), io)).toBe(0);
-    expect(asked).toBe(0);
-    expect(calls).toEqual([]);
-  });
-
-  it("a piped (non-TTY) run skips the step", async () => {
-    const t = freshTarget();
-    const { calls, run } = recorder();
-    const asked: string[] = [];
-    const io: InitIO = {
-      stdout: () => {},
-      stderr: () => {},
-      ask: async (q) => {
-        asked.push(q);
-        return "";
-      },
-      askSecret: async () => "",
-      isTTY: false,
-    };
-
-    expect(await runInit(initOpts(t, { minimal: true, run }), io)).toBe(0);
-    expect(calls).toEqual([]);
-    expect(asked.some((q) => q.includes("own repo"))).toBe(false);
-  });
-
-  it("--dry-run skips the step", async () => {
-    const t = freshTarget();
-    const { calls, run } = recorder();
-    const asked: string[] = [];
-    const io: InitIO = {
-      stdout: () => {},
-      stderr: () => {},
-      ask: async (q) => {
-        asked.push(q);
-        return "";
-      },
-      askSecret: async () => "",
-      isTTY: true,
-    };
-
-    expect(await runInit(initOpts(t, { dryRun: true, minimal: true, run }), io)).toBe(0);
-    expect(calls).toEqual([]);
-    expect(asked.some((q) => q.includes("own repo"))).toBe(false);
-  });
-
-  it("an interactive run asks, and a bare Enter declines without touching a remote", async () => {
-    const t = freshTarget();
-    const { calls, run } = recorder();
-    const asked: string[] = [];
-    const io: InitIO = {
-      stdout: () => {},
-      stderr: () => {},
-      ask: async (q) => {
-        asked.push(q);
-        return "";
-      },
-      askSecret: async () => "",
-      isTTY: true,
-    };
-
-    expect(await runInit(initOpts(t, { minimal: true, run }), io)).toBe(0);
-    expect(asked.some((q) => q.includes("Version this harness in your own repo?"))).toBe(true);
-    expect(calls).toEqual([]);
   });
 });

@@ -1,7 +1,6 @@
 # Configuration
 
-Open Harness has two authored configuration surfaces at the repository root,
-split by kind:
+Open Harness has two authored configuration surfaces, split by kind:
 
 | File | Tracked | Holds |
 | --- | --- | --- |
@@ -15,13 +14,35 @@ must never reach `.env`. The split is enforced in code:
 `.oh/cli/src/lib/config-render.ts` refuses to render an allow-listed secret into
 the compose environment.
 
-`oh init` writes both files. `oh config show` prints the resolved `oh.json` and
-`oh config set <field> <value>` edits one dotted field in it; `oh secret set
-<KEY>` prompts for a credential with the input hidden and writes it to `.env`,
-and `oh secret list` shows which keys hold a value with the values redacted.
+## The two `oh.json` files
+
+The same schema has two homes, and the flag you pass picks one:
+
+| Home | Path | Written by | Holds |
+| --- | --- | --- | --- |
+| **Registry entry** | `${OH_HOME:-~/.oh}/sandboxes/<name>/oh.json` | `oh sandbox install docker`, then `oh config set --sandbox <name>` | the sandbox: `name`, `runtime`, `repo`, `timezone`, `git.*`, `access.*`, `image.*`, `storage.homePath`, `composeOverrides` |
+| **Project** | `<repo>/oh.json` | you, and `oh config set` with no flag | the settings a checkout wants to carry in git |
+
+`oh sandbox install docker` writes the registry entry and, beside it, the
+compose files and the compose wrapper. Those are **generated**: the CLI
+re-materialises them on every lifecycle call, so edit only `oh.json` there.
+A registry entry keeps its own gitignored `.env`, written with
+`oh secret set <KEY> --sandbox <name>`.
+
+The project `oh.json` is the seed, not the sandbox. `oh sandbox install docker
+--repo <dir>` reads it once to pre-fill the wizard; after that the entry is
+authoritative. Nothing else about a checkout is written by the CLI — no
+`AGENTS.md`, no provider configuration, no `.gitignore` line other than the
+`.env` line `oh secret set` adds inside a git checkout.
+
+`oh config show` prints the resolved `oh.json` and `oh config set <field>
+<value>` edits one dotted field in it; `oh secret set <KEY>` prompts for a
+credential with the input hidden and writes it to `.env`, and `oh secret list`
+shows which keys hold a value with the values redacted. Both accept
+`--sandbox <name>` to act on a registry entry instead of the project.
 `oh config set` refuses a secret key and `oh secret set` refuses a non-secret
 key, each pointing at the other command. Apply a change with
-`oh stop && oh sandbox`.
+`oh stop <name> && oh sandbox install docker --name <name>`.
 
 ## How `oh.json` reaches the sandbox
 
@@ -55,6 +76,8 @@ or consumed by the CLI itself.
 | --- | --- | --- | --- | --- |
 | `version` | number | `1` | — | Schema version. Must be `1`. |
 | `name` | string | directory name | `SANDBOX_NAME` | Container and Compose project name. |
+| `runtime` | `"docker"` | unset | — | The runtime the entry was provisioned on. `oh sandbox install docker` writes it; `docker` is the only value today. |
+| `repo` | string | unset | `OH_REPO_DIR` | Absolute **host** path of a checkout to bind-mount at `/home/sandbox/harness`, set by `oh sandbox install docker --repo <dir>`. It also selects the build-capable compose base and lets a lifecycle verb resolve this sandbox from inside that directory. Unset means image-only: the workspace volume is seeded from the image's `/opt/oh-seed`. |
 | `timezone` | string | `America/Los_Angeles` | `TZ` | Timezone for cron schedules and log timestamps. |
 | `storage.homePath` | string | unset | `OH_HOME_MOUNT` | Absolute **host** path for the single `/home/sandbox` mount. Leave unset and Docker manages it as the named volume `<name>_workspace`. Must start with `/`; use a dedicated empty directory, since the sandbox takes ownership of it. A stale `OH_HOME_MOUNT` in `.devcontainer/.env` outranks this value, because the wrapper passes the dotenv last. |
 
@@ -106,12 +129,12 @@ boot. The install lands in `~/.local` inside the persistent home volume, and
 ### Prebuilt image
 
 Run a published image instead of building from `.devcontainer/Dockerfile`.
-Recipe: [prebuilt-image deployment](deployment-prebuilt-image.md).
+Recipe: [`oh sandbox install docker`](deployment-prebuilt-image.md).
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `image.ref` | string | unset | `OH_SANDBOX_IMAGE` | Published image reference, for example `ghcr.io/mifunedev/openharness:latest`. |
-| `image.mode` | `"build"` \| `"image"` | `build` | — | Whether the lifecycle builds locally or runs `image.ref`. Pairs with `oh sandbox --image`. |
+| `image.ref` | string | `ghcr.io/mifunedev/openharness:latest` | `OH_SANDBOX_IMAGE` | Published image reference. Set it per sandbox with `oh config set --sandbox <name> image.ref <ref>`. |
+| `image.mode` | `"build"` \| `"image"` | `build` | — | Whether the lifecycle builds locally or runs `image.ref`. A build happens only when `repo` is also set. Pairs with `oh sandbox install docker --image`. |
 | `image.pullPolicy` | `"missing"` \| `"always"` \| `"never"` | `missing` | `OH_PULL_POLICY` | Compose pull policy for `image.ref`. |
 
 ### Cloud

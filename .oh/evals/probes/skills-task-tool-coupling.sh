@@ -28,8 +28,7 @@ mapfile -t consumers < <(
 enabled_in=()
 for f in "$ROOT/.devcontainer/docker-compose.yml" \
          "$ROOT/.devcontainer/docker-compose.image-only.yml" \
-         "$ROOT/.claude/settings.json" \
-         "$ROOT/.oh/templates/full/.claude/settings.json"; do
+         "$ROOT/.claude/settings.json"; do
   [[ -f "$f" ]] || continue
   grep -qE 'CLAUDE_CODE_ENABLE_TODO_TOOLS' "$f" && enabled_in+=("${f#"$ROOT"/}")
 done

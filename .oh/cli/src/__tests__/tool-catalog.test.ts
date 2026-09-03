@@ -15,11 +15,12 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".."
 const read = (p: string): string => readFileSync(join(REPO_ROOT, p), "utf8");
 
 describe("tool catalog shape", () => {
-  it("lists the six known tools", () => {
+  it("lists the seven known tools", () => {
     expect(toolIds()).toEqual([
       "agent-browser",
       "herdr",
       "cloudflared",
+      "microsandbox",
       "docker-cli",
       "gh",
       "tailscale",
@@ -31,6 +32,7 @@ describe("tool catalog shape", () => {
       "agent-browser",
       "herdr",
       "cloudflared",
+      "microsandbox",
       "tailscale",
     ]);
     for (const t of TOOL_CATALOG) {
@@ -56,7 +58,12 @@ describe("tool catalog shape", () => {
     const downloaders = TOOL_CATALOG.filter((t) =>
       (t.installArgv ?? []).join("\n").includes("curl -fsSL"),
     );
-    expect(downloaders.map((t) => t.id)).toEqual(["herdr", "cloudflared", "tailscale"]);
+    expect(downloaders.map((t) => t.id)).toEqual([
+      "herdr",
+      "cloudflared",
+      "microsandbox",
+      "tailscale",
+    ]);
     for (const t of downloaders) {
       expect(t.installArgv!.join("\n"), t.id).toContain("NPM_USER_PREFIX");
       expect(t.installArgv!.join("\n"), t.id).toContain("sha256sum -c -");
@@ -86,6 +93,7 @@ describe("tool catalog shape", () => {
     expect(withVersion).toEqual([
       "herdr",
       "cloudflared",
+      "microsandbox",
       "docker-cli",
       "gh",
       "tailscale",
@@ -114,14 +122,20 @@ describe("tool catalog shape", () => {
   });
 });
 
-describe("the three catalogs are disjoint", () => {
-  it("shares no id with the harness or runtime catalog", () => {
+describe("the catalogs stay separate", () => {
+  it("shares no id with the harness catalog", () => {
     const harness = new Set(HARNESS_CATALOG.map((h) => h.id));
-    const runtime = new Set(RUNTIME_CATALOG.map((r) => r.id));
     for (const t of TOOL_CATALOG) {
       expect(harness.has(t.id), `${t.id} is also a harness`).toBe(false);
-      expect(runtime.has(t.id), `${t.id} is also a runtime`).toBe(false);
     }
+  });
+
+  it("shares exactly one id with the runtime catalog: the planned microsandbox substrate", () => {
+    const runtime = new Set(RUNTIME_CATALOG.map((r) => r.id));
+    const shared = toolIds().filter((id) => runtime.has(id));
+    expect(shared).toEqual(["microsandbox"]);
+    expect(RUNTIME_CATALOG.find((r) => r.id === "microsandbox")?.provisionable).toBe(false);
+    expect(findTool("microsandbox")?.kind).toBe("installable");
   });
 
   it("has unique ids within itself", () => {

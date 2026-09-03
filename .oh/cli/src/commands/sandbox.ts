@@ -66,8 +66,12 @@ function readSeedConfig(repo: string | undefined): OhConfig | undefined {
   return existsSync(file) ? readOhConfig(file) : undefined;
 }
 
-function seedConfig(name: string, repo: string | undefined, run: LifecycleRunner): OhConfig {
-  const seed = readSeedConfig(repo);
+function seedConfig(
+  name: string,
+  repo: string | undefined,
+  seed: OhConfig | undefined,
+  run: LifecycleRunner,
+): OhConfig {
   const config = defaultOhConfig(name);
   config.runtime = "docker";
   if (repo !== undefined) config.repo = repo;
@@ -168,7 +172,7 @@ export async function runSandboxInstall(
     return 1;
   }
 
-  const config = seedConfig(name, repo, run);
+  const config = seedConfig(name, repo, seed, run);
   const interactive =
     opts.yes !== true && (process.stdin.isTTY === true || io.ask !== undefined);
   if (interactive) {

@@ -1,14 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
-import {
-  CHECK_HOST_PORT,
-  COMPOSE_BASE_IMAGE_ONLY,
-  COMPOSE_BASE_REPO,
-  COMPOSE_DOCKER_SOCK_OVERLAY,
-  COMPOSE_SSH_OVERLAY,
-  COMPOSE_WRAPPER,
-} from "./bundled-assets.js";
+import composeRepo from "../../../../.devcontainer/docker-compose.yml";
+import composeImageOnly from "../../../../.devcontainer/docker-compose.image-only.yml";
+import composeSsh from "../../../../.devcontainer/docker-compose.ssh.yml";
+import composeDockerSock from "../../../../.devcontainer/docker-compose.docker-sock.yml";
+import composeWrapper from "../../../scripts/docker-compose.sh";
+import checkHostPort from "../../../scripts/check-host-port.sh";
 import { spawnRunner, type LifecycleRunner } from "./execution/runner.js";
 import { ohConfigPath, readOhConfig } from "./oh-config.js";
 
@@ -90,33 +88,20 @@ export interface MaterializeOptions {
   repo?: string;
 }
 
-interface MaterializedFile {
-  rel: string;
-  body: string;
-  mode: number;
-}
-
-function materializedFiles(opts: MaterializeOptions = {}): MaterializedFile[] {
-  return [
-    {
-      rel: ".devcontainer/docker-compose.yml",
-      body: opts.repo === undefined ? COMPOSE_BASE_IMAGE_ONLY : COMPOSE_BASE_REPO,
-      mode: 0o644,
-    },
-    { rel: ".devcontainer/docker-compose.ssh.yml", body: COMPOSE_SSH_OVERLAY, mode: 0o644 },
-    {
-      rel: ".devcontainer/docker-compose.docker-sock.yml",
-      body: COMPOSE_DOCKER_SOCK_OVERLAY,
-      mode: 0o644,
-    },
-    { rel: ".oh/scripts/docker-compose.sh", body: COMPOSE_WRAPPER, mode: 0o755 },
-    { rel: ".oh/scripts/check-host-port.sh", body: CHECK_HOST_PORT, mode: 0o755 },
-  ];
-}
-
 export function materialize(root: string, opts: MaterializeOptions = {}): void {
   const entry = resolve(root);
-  for (const file of materializedFiles(opts)) {
+  const files = [
+    {
+      rel: ".devcontainer/docker-compose.yml",
+      body: opts.repo === undefined ? composeImageOnly : composeRepo,
+      mode: 0o644,
+    },
+    { rel: ".devcontainer/docker-compose.ssh.yml", body: composeSsh, mode: 0o644 },
+    { rel: ".devcontainer/docker-compose.docker-sock.yml", body: composeDockerSock, mode: 0o644 },
+    { rel: ".oh/scripts/docker-compose.sh", body: composeWrapper, mode: 0o755 },
+    { rel: ".oh/scripts/check-host-port.sh", body: checkHostPort, mode: 0o755 },
+  ];
+  for (const file of files) {
     const dest = resolve(entry, file.rel);
     if (!dest.startsWith(entry + sep)) {
       throw new Error(`refusing to materialize outside the sandbox entry: ${dest}`);

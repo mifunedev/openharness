@@ -12,12 +12,12 @@ Install Docker with the Compose plugin ([docs.docker.com/get-docker](https://doc
 
 ## Install
 
-`oh` is the only front door. Get it, then point it at a repo.
+`oh` is the only front door. Get it, then create a sandbox.
 
 **1. Get `oh`** — from npm if you already have Node ≥ 20:
 
 ```bash
-npm install -g @mifune/openharness      # or, zero-install: npx @mifune/openharness init
+npm install -g @mifune/openharness   # or, zero-install: npx @mifune/openharness --help
 ```
 
 …or with the curl bootstrap, which offers to install nvm + Node 22 when Node is
@@ -40,26 +40,56 @@ repo clone. `source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)` installs *and
 puts `oh` on the current shell's PATH; after the piped form,
 `export PATH="$HOME/.local/bin:$PATH"` does the same in an already-open shell.
 
-**2. Equip a repo and bring the sandbox up:**
+**2. Create the sandbox** — from any directory, with no project checkout:
+
+```bash
+oh sandbox install docker   # wizard: name, timezone, git identity, SSH, Docker socket
+```
+
+It asks for the sandbox name (default `oh-sbx-<n>`, the lowest unused number),
+the timezone, your git identity, whether to run sshd and on which host port, and
+whether to mount the host Docker socket. `--yes` keeps every default and asks
+nothing. The answers land in a registry entry at
+`~/.oh/sandboxes/<name>/oh.json`, together with the compose files and the
+wrapper script the CLI regenerates on every lifecycle call — edit only
+`oh.json` there.
+
+Without `--repo` the sandbox runs the published image
+(`ghcr.io/mifunedev/openharness:latest`) and seeds its workspace from the
+image's `/opt/oh-seed`, so there is no build and no clone.
+
+Finish by attaching:
+
+```bash
+oh sandbox list  # name, runtime, status, repo
+oh shell <name>  # zsh in the container, as the sandbox user
+```
+
+**3. (Optional) Mount your own project.** Point the sandbox at a checkout and it
+is bind-mounted at `/home/sandbox/harness`:
 
 ```bash
 cd <your-project>
-oh init          # .oh/ control plane + oh.json + a gitignored .env
-oh sandbox       # build + start (~10 min cold, ~30s warm)
+oh update                                     # vendor .oh/ + crons/ into this checkout
+oh sandbox install docker --repo "$PWD" --name <your-project>
 ```
+
+`oh update` writes `.oh/` and `crons/` and **nothing else** — no `oh.json`, no
+`.env`, no `AGENTS.md`, no provider configuration, and no `.gitignore` line
+beyond the `.env` line `oh secret set` adds inside a git checkout. Those files
+are yours to author. With `--repo` and `image.mode` set to `build`, the sandbox
+builds from that checkout's `.devcontainer/Dockerfile` instead of pulling
+(~10 min cold, ~30s warm).
 
 <details><summary>Other install methods (from source · one-line harness installer · fork)</summary>
 
-**From source.** Build the CLI out of a checkout — the audit-first path, and the
-one that lets you edit `oh.json` before the ~10-minute first image build:
+**From source.** Build the CLI out of a checkout — the audit-first path:
 
 ```bash
 git clone https://github.com/mifunedev/openharness.git ~/.openharness
 cd ~/.openharness/.oh/cli && npm install && npm run build   # put dist/oh.js on PATH as `oh`
 cd ~/.openharness
-nano oh.json                              # non-secrets: name, timezone, git identity
-cp .env.example .env && chmod 600 .env    # secrets only; gitignored
-oh sandbox
+oh sandbox install docker --repo "$PWD" --name openharness
 ```
 
 **One-line installer for this harness.** Gets `oh`, clones this repo to
@@ -94,10 +124,13 @@ from inside an existing clone and it detects the local repo. Set
 **Terminal fallback** for when VS Code isn't available or you just need a shell:
 
 ```bash
-cd ~/.openharness
-oh shell
+oh shell <name>
 ```
-Pass an optional container name to attach to a different running container, e.g. `oh shell portfolio-advisor`. `oh shell` always attaches as the `sandbox` user; if the target container has no such user, use `docker exec -it -u <user> <container> zsh` instead.
+`<name>` is an entry from `oh sandbox list`; omit it when exactly one sandbox is
+registered, or when you are standing in the checkout a sandbox was created for.
+`oh shell` always attaches as the `sandbox` user; if the target container has no
+such user, use `docker exec -it -u <user> <container> zsh` instead. On a stopped
+container it tells you to start it with `oh sandbox install docker`.
 
 Either way you're inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.
@@ -168,10 +201,15 @@ gh auth login && gh auth setup-git
 
 ## Configuration
 
-Configuration lives in **two** files at the repository root, split by kind.
-Tracked `oh.json` holds every non-secret setting. A gitignored, mode-`0600`
-`.env` holds nothing but secrets; the tracked `.env.example` documents every
-allow-listed secret key, commented out, so a fresh copy changes nothing.
+Configuration lives in **two** files, split by kind. `oh.json` holds every
+non-secret setting. A gitignored, mode-`0600` `.env` holds nothing but secrets;
+the tracked `.env.example` documents every allow-listed secret key, commented
+out, so a fresh copy changes nothing.
+
+Each sandbox keeps its own pair inside its registry entry at
+`~/.oh/sandboxes/<name>/`. Write them with `oh config set --sandbox <name>
+<field> <value>` and `oh secret set --sandbox <name> <KEY>`; without
+`--sandbox` both act on the project root instead. In an equipped checkout,
 `.devcontainer/.env` is a symlink to that root `.env`.
 
 Both work on **every** path. `oh ...` renders `oh.json` and passes it plus the
@@ -195,12 +233,14 @@ lifecycle command.)
 }
 ```
 
-`oh.json` also carries the SSH, Docker-socket, Hermes-dashboard, cron, build,
-and prebuilt-image settings. See [Configuration](./configuration.md) for the
-full field reference, and `oh config set <field> <value>` to edit one field.
+`oh.json` also carries `repo` and `runtime` for a registry entry, plus the SSH,
+Docker-socket, Hermes-dashboard, cron, build, and image settings. See
+[Configuration](./configuration.md) for the full field reference, and
+`oh config set <field> <value>` to edit one field.
 
-**Secrets** — keep in the root `.env` only (gitignored, `0600`); set one with
-`oh secret set <KEY>`:
+**Secrets** — keep in `.env` only (gitignored, `0600`); set one with
+`oh secret set <KEY>`, or `oh secret set --sandbox <name> <KEY>` for a registry
+entry:
 
 | Var | Purpose |
 |-----|---------|
@@ -222,7 +262,8 @@ full field reference, and `oh config set <field> <value>` to edit one field.
 `oh harness install <id>` or `oh tool install <id>` instead.
 
 Set one field with `oh config set <field> <value>` and one secret with
-`oh secret set <KEY>`, then apply with `oh stop && oh sandbox`.
+`oh secret set <KEY>`, then apply with
+`oh stop <name> && oh sandbox install docker --name <name>`.
 
 For additional services (databases, tunnels, reverse proxies), add overlay
 paths to `composeOverrides[]` in `oh.json` (last wins).
@@ -231,7 +272,7 @@ paths to `composeOverrides[]` in `oh.json` (last wins).
 
 The full path from a bare Linux host to an authenticated multi-agent sandbox. Each step
 inlines the command to run; follow the link for depth/troubleshooting. Steps 5–14 run
-**inside the sandbox** (`oh shell`); step 5 enters Herdr before setup. For agent-auth steps (9–12), the simplest
+**inside the sandbox** (`oh shell <name>`); step 5 enters Herdr before setup. For agent-auth steps (9–12), the simplest
 cross-provider method is `/login` → **device mode** inside each agent's interactive session
 (see [Set up agents inside Herdr](#set-up-agents-inside-herdr)); the explicit commands shown are equivalents.
 
@@ -248,14 +289,15 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
    cd ~/.openharness
    ```
-3. **Edit `oh.json` and create `.env`** — set `name`, `timezone`, `git.userName`,
-   and `git.userEmail` in the tracked `oh.json`, then
-   `cp .env.example .env && chmod 600 .env` for secrets (see
-   [Configuration](#configuration) above).
-4. **Build and enter the sandbox**:
+3. **Create the sandbox against that checkout** — the wizard asks for the name,
+   timezone, git identity, SSH, and the Docker socket, then writes
+   `~/.oh/sandboxes/<name>/`:
    ```bash
-   oh sandbox        # build + start (~10 min cold)
-   oh shell          # attach as the sandbox user
+   oh sandbox install docker --repo "$PWD" --name openharness
+   ```
+4. **Enter the sandbox**:
+   ```bash
+   oh shell openharness   # attach as the sandbox user
    ```
 5. **Install and start Herdr** — a fresh sandbox has none; all remaining setup runs in its panes:
    ```bash
@@ -275,7 +317,7 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    It prompts for owner, repository name, and visibility (default private), then runs
    `gh repo create`, renames the existing `origin` to `openharness`, adds your repo as
    `origin`, and pushes. Nothing is created unless you answer yes in that run —
-   `oh init --yes`, `--dry-run`, and piped (non-TTY) runs skip the step entirely.
+   a piped (non-TTY) run skips the step entirely.
 8. **Or do it by hand** — the same result without `gh`, keeping upstream as `upstream`
    ([clone-and-own](./installation.md#clone-and-own-private-origin-and-upstream-recommended)):
    ```bash
@@ -324,13 +366,15 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
 When you're finished, exit the shell and clean up from the host:
 
 ```bash
-oh destroy
+oh destroy <name>
 ```
 
-This stops the container and removes its volumes. To keep auth credentials across rebuilds, stop without removing volumes:
+This stops the container, removes its volumes, and drops the registry entry, so
+the name becomes free again. To keep auth credentials across rebuilds, stop
+without removing volumes:
 
 ```bash
-oh stop
+oh stop <name>
 ```
 
-Bring it back later with `oh sandbox`.
+Bring it back later with `oh sandbox install docker --name <name>`.

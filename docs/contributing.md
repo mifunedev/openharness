@@ -45,7 +45,7 @@ oh restart    # restart the service
 oh --help     # list every verb
 ```
 
-A first-run helper is available at `.oh/scripts/install.sh` — it prompts for the non-secret values written to `oh.json` and the secrets written to the gitignored root `.env` (GitHub token autodetect, idempotent re-runs) before it calls `oh sandbox`.
+A first-run helper is available at `.oh/scripts/install.sh` — it prompts for the non-secret values written to `oh.json` and the secrets written to the gitignored root `.env` (GitHub token autodetect, idempotent re-runs) before it calls `oh sandbox install docker`.
 
 ### Onboard inside the sandbox
 

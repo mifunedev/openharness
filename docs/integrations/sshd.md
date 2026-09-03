@@ -47,7 +47,7 @@ You can paste multiple keys separated by literal `\n`. Apply the change with:
 oh stop && oh sandbox
 ```
 
-`oh sandbox` runs a **port-collision preflight**: if `SANDBOX_SSH_PORT` is
+`oh sandbox install docker` runs a **port-collision preflight**: if `SANDBOX_SSH_PORT` is
 already bound by another container or host process, it aborts *before* creating
 the container and prints the conflict plus the next free port — it never
 silently clobbers a port another tenant is using. Bypass with
@@ -142,7 +142,7 @@ Each tenant's `.devcontainer/.env` sets a unique loopback port, e.g. tenant-1 �
 `ssh.port: 12201`, tenant-2 → `ssh.port: 12202`. Pick a free port per tenant:
 
 ```bash
-bash .oh/scripts/check-host-port.sh 12201   # ensure it's free before `oh sandbox`
+bash .oh/scripts/check-host-port.sh 12201   # ensure it's free before creating the sandbox
 ```
 
 ### (a) Subdomain + port per tenant — simple, no TLS

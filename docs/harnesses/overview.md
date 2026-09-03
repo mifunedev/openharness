@@ -21,7 +21,7 @@ oh harness status hermes        # one harness
 ```
 
 The command needs a running sandbox. If the sandbox is not running, it says so
-and exits non-zero. Start the sandbox with `oh sandbox`, then re-run it.
+and exits non-zero. Start the sandbox with `oh sandbox install docker`, then re-run it.
 
 `oh harness` works from inside the sandbox too. There it installs into the
 environment you are already in, and `list`/`status` report the CLIs actually

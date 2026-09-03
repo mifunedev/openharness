@@ -13,7 +13,7 @@
   <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
 </p>
 
-**Open Harness provides the sandbox; you choose the harness.** It's a Docker-based workspace, agent-tended over time: clone-and-own the repo, set one `.env`, and `oh sandbox` boots a long-lived container where the coding agent of your choice — Claude Code, Codex, Pi, Hermes, Grok, and more, each installed with one `oh harness install` command — works on its own branch and identity. Because it's just Docker, it runs **identically on your laptop or a remote VM** — and remote is the default: deployed on a VM, Open Harness becomes a **lights-out software factory**, where the agent works unattended, on a schedule and reachable over Slack, fanning out across isolated **git worktrees** — parallel branches, delegated sub-agents, even other cloned repos — while you're away and your laptop stays clean.
+**Open Harness provides the sandbox; you choose the harness.** It's a Docker-based workspace, agent-tended over time: one `oh sandbox install docker` boots a long-lived container where the coding agent of your choice — Claude Code, Codex, Pi, Hermes, Grok, and more, each installed with one `oh harness install` command — works on its own branch and identity. Because it's just Docker, it runs **identically on your laptop or a remote VM** — and remote is the default: deployed on a VM, Open Harness becomes a **lights-out software factory**, where the agent works unattended, on a schedule and reachable over Slack, fanning out across isolated **git worktrees** — parallel branches, delegated sub-agents, even other cloned repos — while you're away and your laptop stays clean.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
@@ -69,14 +69,33 @@ cd ~/.openharness/.oh/cli && npm install && npm run build
 # put dist/oh.js on your PATH as `oh`
 ```
 
-### 2. Provision the sandbox
+### 2. Create the sandbox
+
+`oh sandbox install docker` runs from **any** directory — it needs no project
+checkout:
 
 ```bash
-cd <your-project>   # or ~/.openharness for the clone above
-oh init             # equip the repo: .oh/ control plane, oh.json, .env
-oh sandbox          # build + start the container (~10 min cold, ~30s warm)
-oh shell            # attach as the sandbox user
+oh sandbox install docker   # wizard: name, timezone, git identity, SSH, Docker socket
+oh shell <name>             # attach as the sandbox user
 ```
+
+The wizard's answers land in a registry entry at
+`~/.oh/sandboxes/<name>/oh.json`, beside the compose files and the wrapper
+script the CLI regenerates on every lifecycle call. The default name is
+`oh-sbx-<n>`; `--yes` keeps every default and asks nothing. Without `--repo` the
+sandbox runs the published image and seeds its workspace from it.
+
+**Mount a project instead.** Point the sandbox at a checkout and it is
+bind-mounted at `/home/sandbox/harness`:
+
+```bash
+oh sandbox install docker --repo ~/my-project --name my-project
+```
+
+Equip that checkout with the control plane first — `cd ~/my-project && oh
+update` writes `.oh/` and `crons/` and **nothing else**: no `AGENTS.md`, no
+provider configuration, no `.gitignore` line beyond the `.env` line
+`oh secret set` adds. Those files stay yours.
 
 Then, inside the sandbox, install and open the persistent interactive workspace
 first — a fresh sandbox has no `herdr`, because nothing installs at boot:
@@ -86,17 +105,10 @@ oh tool install herdr
 herdr
 ```
 
-`oh init` vendors the `.oh/` control plane into **your** repo rather than cloning
-this one, and runs the interactive setup — sandbox name, timezone, git
-identity — writing non-secrets to the tracked `oh.json` and secrets to a
-gitignored, `0600` `.env`. Your own repo mounts at `/home/sandbox/project`; a
-clone of this one mounts at `/home/sandbox/harness`.
-
-`oh tool install herdr`, then `herdr`, should be your first inside-sandbox
-commands. Run the remaining setup,
-authentication, agents, tests, and servers from its panes. That is already a
-working sandbox. To make it **yours** (private `origin` + `upstream`) and
-authenticate the agents, continue with the optional full setup.
+Run the remaining setup, authentication, agents, tests, and servers from its
+panes. That is already a working sandbox. To make it **yours** (private `origin`
++ `upstream`) and authenticate the agents, continue with the optional full
+setup.
 
 > **One-line install of this harness.** `curl -fsSL https://oh.mifune.dev/install.sh | bash`
 > does steps 1 and 2 in one shot for a clone of *this* repo at `~/.openharness`
@@ -106,7 +118,7 @@ authenticate the agents, continue with the optional full setup.
 
 ### 3. Full setup (optional) — private repo, remotes, agent auth
 
-Run these **inside the initial Herdr pane** (`oh shell`, then `oh tool install herdr`, then `herdr`). Per-step depth + troubleshooting:
+Run these **inside the initial Herdr pane** (`oh shell <name>`, then `oh tool install herdr`, then `herdr`). Per-step depth + troubleshooting:
 [quickstart → End-to-end setup walkthrough](docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
@@ -143,8 +155,9 @@ tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 
 ### VS Code (secondary path)
 
-Provision with `oh sandbox`, then attach with **Dev Containers: Attach to
-Running Container** against your sandbox. That is the supported editor path.
+Provision with `oh sandbox install docker`, then attach with **Dev Containers:
+Attach to Running Container** against your sandbox. That is the supported editor
+path.
 
 **Do not provision with "Reopen in Container".** That path reads
 `.devcontainer/devcontainer.json`, which lists `docker-compose.yml` alone, so it
@@ -163,15 +176,15 @@ defaults. Details: [lifecycle commands](docs/lifecycle-commands.md#vs-code-reope
 
 ## 🧩 How the primitive pack ships
 
-Open Harness vendors the shared skills/hooks primitive pack directly into the `.oh/` control plane: `.oh/skills/`, `.oh/hooks/`, and `.oh/skills.lock` are tracked as ordinary files in this repo. Skills are the reusable-behavior primitive; the harness ships no repository-authored agent definitions, and provider-native sub-agents remain available as a bounded execution primitive through `/delegate`. The `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has the skills immediately — no submodule, no recursive clone, no network step.
+Open Harness vendors the shared skills/hooks primitive pack directly into the `.oh/` control plane: `.oh/skills/`, `.oh/hooks/`, and `.oh/skills.lock` are tracked as ordinary files in this repo. Skills are the reusable-behavior primitive; the harness ships no repository-authored agent definitions, and provider-native sub-agents remain available as a bounded execution primitive through `/delegate`. `oh update` lays them down, so a fresh checkout has the skills immediately — no submodule, no recursive clone, no network step.
 
 Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and `.codex/skills` point at `.oh/skills`; `.claude/hooks` → `.oh/hooks`. `.pi/` itself remains the Pi provider surface in v1.
 
 ## 🚀 Use it
 
 ```bash
-cd ~/.openharness
-oh shell              # enter the isolated sandbox
+oh sandbox list       # every sandbox: name, runtime, status, repo
+oh shell <name>       # enter the isolated sandbox
 oh tool install herdr # nothing installs at boot; install the workspace first
 herdr                 # open the primary interactive workspace
 # install an agent CLI the same way, then launch it from a Herdr pane:
@@ -181,9 +194,9 @@ herdr                 # open the primary interactive workspace
 #   oh harness install opencode     → opencode  # OpenCode
 #   oh harness install hermes       → hermes    # Nous Research Hermes
 #   oh harness install grok-build   → grok      # xAI Grok Build
-oh stop          # stop the sandbox, keeping volumes
-oh destroy       # stop and remove the sandbox
-oh --help        # every verb
+oh stop <name>    # stop the sandbox, keeping volumes
+oh destroy <name> # stop the sandbox, wipe its volumes, drop the registry entry
+oh --help         # every verb
 ```
 
 ## 🧪 Testing
@@ -194,27 +207,28 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 ## ⚙️ Configure (optional)
 
-Configuration is split by kind across two files at the repository root. Tracked
-`oh.json` holds every non-secret setting — sandbox identity, git identity, the
-SSH and Docker-socket toggles. It holds no install field: `oh harness install
-<id>` and `oh tool install <id>` are the only door. A gitignored,
-mode-`0600` `.env` holds nothing but secrets (`GH_TOKEN`, `SANDBOX_PASSWORD`,
-`PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`, …); the tracked `.env.example`
-documents every allow-listed key. Set one field with `oh config set <field>
-<value>` or one secret with `oh secret set <KEY>`, then apply with
-`oh stop && oh sandbox`.
+Configuration is split by kind across two files. `oh.json` holds every
+non-secret setting — sandbox identity, git identity, the SSH and Docker-socket
+toggles. It holds no install field: `oh harness install <id>` and `oh tool
+install <id>` are the only door. A gitignored, mode-`0600` `.env` holds nothing
+but secrets (`GH_TOKEN`, `SANDBOX_PASSWORD`, `PI_SLACK_APP_TOKEN`,
+`PI_SLACK_BOT_TOKEN`, …); the tracked `.env.example` documents every
+allow-listed key. A sandbox keeps its pair inside its registry entry —
+`oh config set --sandbox <name> <field> <value>` and `oh secret set --sandbox
+<name> <KEY>` write there; without the flag both write the project root. Apply a
+change with `oh stop <name> && oh sandbox install docker --name <name>`.
 Full field reference: [Configuration](docs/configuration.md).
 
 Secrets are read on **every** path, including VS Code "Reopen in Container" —
 that path loads `.devcontainer/docker-compose.yml` directly and compose
 auto-loads the dotenv beside it, which is a symlink to the root one. Compose
-*overlays* are the exception: that path applies none, which is why `oh sandbox`
-provisions and VS Code only attaches. A
+*overlays* are the exception: that path applies none, which is why
+`oh sandbox install docker` provisions and VS Code only attaches. A
 `harness.yaml` layer used to sit in front of these files and was invisible on
 exactly that path; it was removed in 0.4.0, and a leftover one is migrated
 automatically on the next lifecycle command. Compose overlay *paths* live in
 `composeOverrides[]` in `oh.json`. See
-[the prebuilt-image deployment guide](docs/deployment-prebuilt-image.md) for
+[the `oh sandbox install docker` guide](docs/deployment-prebuilt-image.md) for
 the image-mode recipe.
 
 ## ✨ What you get
@@ -241,7 +255,7 @@ the image-mode recipe.
 ## 🧹 Cleanup
 
 ```bash
-oh destroy
+oh destroy <name>
 ```
 
 ## 🤝 Contributing & community

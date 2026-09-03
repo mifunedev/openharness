@@ -57,6 +57,7 @@ Schema, frontmatter spec, provenance kinds, and every authoring rule:
 | pattern-spec-stubbed-runner-state-gap | Unit tests with a stubbed runner cannot see state a verb fails to persist | [spec, cli, testing, evidence, rehearsal, persistence] | 2026-09-03 |
 | pattern-spec-simplify-round-seeded-non-reducing | A simplify round seeded with the audit's own measurement is non-reducing by construction | [spec, audit, simplify, netAdded, bookkeeping, monotone-stop] | 2026-09-03 |
 | pattern-evals-probe-brief-under-enumeration | A probe brief derived from a name grep misses the probes that pin behaviour | [evals, probes, spec, delegate, blast-radius, briefing] | 2026-09-03 |
+| pattern-cli-bundled-asset-relative-import | Bundling repository files by relative import breaks the build site that stages the package alone | [cli, esbuild, dockerfile, ci, bundling, build-context] | 2026-09-03 |
 | pattern-audit-remote-head-verdict | The implementation audit's promotable gate classifies the pushed head, not the audited tree | [audit, spec, promotable, head-mismatch, ci, gh] | 2026-09-03 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, registry, sandbox, remote-fetch, execution-target, update] | 2026-09-03 |
 | fresh-machine-setup | Fresh-Machine Setup Flow | [setup, onboarding, installation, registry, gateway, ssh, github, slack] | 2026-09-03 |

@@ -1,7 +1,7 @@
 # Evidence: retire `oh init` and `oh runtime`; `oh sandbox install docker` owns sandbox configuration
 
 **Task:** `.oh/tasks/sandbox-registry/` · **Issue:** #950 · **PR:** #951 (`task/950-sandbox-registry` → `task/948-one-door`, stacked on #949) · **Plan approved:** `.claude/plans/happy-watching-sloth.md`
-**Audit run:** `audit-20260903T022532Z-4178951` (`/audit implementation`, AUDIT-PASS, driver `claude -p --allowedTools=Bash,Read,Glob,Grep`; a first run `audit-20260903T021807Z-4129338` also passed at `2c955907` and named the three residuals that simplify round 2 removed) · **Eval record:** `eval-result.json` at `8d610463`, runner exit 0
+**Audit run:** `audit-20260903T024351Z-81267` (`/audit implementation`, AUDIT-PASS, driver `claude -p --allowedTools=Bash,Read,Glob,Grep`; earlier runs `audit-20260903T021807Z-4129338` at `2c955907` and `audit-20260903T022532Z-4178951` at `8d610463` also passed; the first named the three residuals simplify round 2 removed) · **Eval record:** `eval-result.json` at `3a94dff5`, runner exit 0
 
 Every block below is observed output from the built CLI, a child sandbox, or a gate; nothing is argued from the diff alone. Transcripts were taken from inside the parent sandbox `oh-sbx-remote` over its Docker socket with `OH_EXECUTION_TARGET=docker-compose`, `OH_HOME` under the session scratchpad, and `SANDBOX_NAME`/`SANDBOX_SSH` unset.
 
@@ -177,12 +177,22 @@ The three hits are the runtime catalog the plan keeps under `oh sandbox` (docker
 | `sandbox-registry.sh` fault injection (ii) `spawn("docker", …)` appended to a scratch `lifecycle.ts` | `REGRESSION: … lifecycle.ts builds a \`docker\` argv of its own` rc=1 |
 | `execution-target-contract.sh`, `compose-env-boundary.sh`, `oh-image-only-deploy.sh`, `oh-update-bootstrap.sh`, `harness-one-door.sh` | PASS |
 | `compose-args.test.ts` | unchanged, green |
+| `docker build -f .devcontainer/Dockerfile --target base .` at `55a0ba14` | exit 0 (`Successfully built 77c7019bd714`; `/opt/oh/dist/oh.js` inside the image contains the bundled texts); the same stage failed on `9d52d780` with six unresolved asset imports |
 | `context-tier-size-budget.sh` | PASS, `AGENTS.md` 9341 B of 9500 |
 | `wiki-readme-index.sh`, `knowledge-source-freshness.sh` | PASS at `8d610463` |
 
-### D11 — CI on the pushed head
+### D11 — CI on the pushed head `3a94dff5` (2026-09-03T02:43Z)
 
-CI_PLACEHOLDER
+| Check | Result |
+|---|---|
+| Boot Path Lint (shellcheck + hadolint) | pass, 11 s |
+| Eval Probe Regression Gate | pass, 25 s |
+| Install every optional harness through the CLI | pass, 3 m 35 s |
+| Lint, Typecheck, Build & Test | pass, 34 s |
+| Validate sandbox compose and image build (`sandbox-boot-guard`) | pass, 1 m 40 s — failed on `9d52d780` (six unresolved asset imports in the `/opt/oh` build), fixed by `55a0ba14` |
+| Verify exact Node and pnpm parity across Debian bases | pass, 13 s |
+
+`mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`. The evidence and pattern commits that follow `3a94dff5` re-enter the promotable gate; the `/audit pr` verdict recorded in the PR body names the head it classified.
 
 ### D12 — docs
 
@@ -219,6 +229,7 @@ Index regenerated; `wiki-readme-index.sh` PASS.
 - **Probe list.** The plan named nine one-line probe edits; sixteen probes went red after wave 1 (`oh-compose-env-wiring`, `oh-config-surfaces`, `oh-destroy-guard`, `oh-devcontainer-restructure`, `oh-home-mount`, `oh-lifecycle-surface`, `slack-admin-command-surface`, `skills-task-tool-coupling` in addition). All re-pointed; `compose-env-boundary.sh` needed no edit because it derives the allowed set from `config-render.ts`.
 - **Registry entry `oh.json` shape.** The entry is written by the existing `oh.json` writer, so it also carries the project-level defaults (`hermesDashboard`, `cron`, `build`, `langfuse`); they are inert for a registry sandbox. The plan's sandbox-level/project-level split was not enforced in the schema.
 - **PR base.** Stacked on `task/948-one-door` because #949 is open; the plan said `development`. GitHub retargets when #949 merges.
+- **Bundled assets resolve through `OH_ASSET_ROOT`**, not relative imports. The first CI run on `9d52d780` failed in `sandbox-boot-guard`'s image build (`Could not resolve "../../../../.devcontainer/docker-compose.yml"`, six errors) because the Dockerfile copies only `.oh/cli/` to `/opt/oh`. `build.mjs` now resolves `oh-asset:<path>` specifiers under `OH_ASSET_ROOT` (default: the repository root) and fails clearly when a file is missing; the Dockerfile stages the six files under `/opt/oh-assets` and sets `OH_ASSET_ROOT` for both `npm install` (whose `prepare` script builds) and `npm run build` (`55a0ba14`).
 - **`.env.example` and `.oh/manifest.json`** were touched outside the plan's list (the `oh init` hint; `templates/**` dropped from the manifest). `vitest.config.ts` gained a text-asset plugin so tests can import the bundled files.
 
 ## 4. What remains unverified
@@ -228,5 +239,5 @@ Index regenerated; `wiki-readme-index.sh` PASS.
 - `oh tool install microsandbox` was run in a throwaway `openharness:one-door` container by the wave-1 executor; it was not re-run inside the D2 child because that image's baked `oh` predates the catalog entry. `msb self doctor` was not run.
 - Adopting the running parent `oh-sbx-remote` into the registry is a follow-up on #950; until then the lifecycle verbs on this host do not find it (the parent was created from the checkout, and this task did not touch it).
 - `sandbox-boot-guard.yml:93` still says the devcontainer bind-mounts `..:/home/sandbox/harness` (comment only; CI workflows are a non-goal).
-- Simplify sub-loop: two rounds (`simplify-rounds.json`; netAdded 3 360 → 3 335 after inlining the bundled-asset shim and the materialise helper and reading the seed config once). The second audit's `SIMPLICITY-RESIDUAL: 3` are readability refactors left for the operator: `sandbox.ts` `runSandboxInstall` (CCN 21, four `stderr; return 1` guards could become one typed error), `runWizard` (CCN 17, the SSH-port validation could route through `coerceFieldValue`), `registry.ts` `resolveSandboxRoot` (CCN 11, the single-entry shortcut is subsumed by the cwd loop once the zero check moves first). Four functions in the two new files are above the CCN 10 threshold; five pre-existing ones are unchanged or improved.
+- Simplify sub-loop: two rounds (`simplify-rounds.json`; netAdded 3 360 → 3 335 after inlining the bundled-asset shim and the materialise helper and reading the seed config once). The final audit's `SIMPLICITY-RESIDUAL: 4` are readability refactors left for the operator (a `seedConfig` defaults-merge helper, ~8 lines, joined the list): `sandbox.ts` `runSandboxInstall` (CCN 21, four `stderr; return 1` guards could become one typed error), `runWizard` (CCN 17, the SSH-port validation could route through `coerceFieldValue`), `registry.ts` `resolveSandboxRoot` (CCN 11, the single-entry shortcut is subsumed by the cwd loop once the zero check moves first). Four functions in the two new files are above the CCN 10 threshold; five pre-existing ones are unchanged or improved.
 - Pre-existing SKIPPED probes (`cc-safety-net-wiring`, `debugmcp-availability`, `next-dev-prod`, `registry-portability`) were SKIPPED on the base and carried forward unchanged.

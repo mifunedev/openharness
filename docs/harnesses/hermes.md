@@ -67,7 +67,7 @@ bash hermes-install.sh --skip-setup --skip-browser
 
 If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
-That keeps `oh sandbox` non-interactive. User setup remains explicit
+That keeps `oh sandbox install docker` non-interactive. User setup remains explicit
 inside the running sandbox.
 
 ## Authentication

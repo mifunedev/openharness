@@ -5,12 +5,19 @@ title: "MicroSandbox"
 # MicroSandbox
 
 [MicroSandbox](https://github.com/microsandbox/microsandbox) is a microVM tier:
-one real kernel per sandbox, KVM-backed. It is the default — and currently the
-only — runtime `oh runtime install` knows how to install.
+one real kernel per sandbox, KVM-backed. It is **planned**, not provisionable —
+`oh sandbox install microsandbox` refuses:
+
+```
+oh sandbox install: microsandbox is not a provisionable runtime yet; see
+docs/rfcs/rfc-runtime-support.md. Inside a sandbox run `oh tool install microsandbox`.
+```
+
+What *is* shipped is the `msb` binary, as an ordinary installable tool:
 
 ```bash
-oh runtime status microsandbox   # what this host has, and what it needs
-oh runtime install               # microsandbox is the default name
+oh tool install microsandbox   # inside a sandbox; installs msb as the sandbox user
+oh tool status microsandbox    # installed state and version
 ```
 
 ## Which question are you asking?
@@ -20,116 +27,90 @@ actually asking.
 
 | Question | Short answer |
 |---|---|
-| **Can `oh runtime install microsandbox` succeed *in this devcontainer*?** | **No** — one remaining blocker, `/dev/kvm`. See [why it is blocked](#why-oh-runtime-install-microsandbox-is-blocked-here). |
+| **How do I get the `msb` binary?** | `oh tool install microsandbox` — see [Installing `msb`](#installing-msb). |
 | **Can I run Open Harness *on* MicroSandbox, from my own host?** | **Possibly yes, today** — see [Running Open Harness on MicroSandbox](#running-open-harness-on-microsandbox). Nothing on this page measures your host. |
 
 The distinction matters because the two use different commands on different
-machines. `oh runtime install` installs `msb` **inside the container** today
-(`installUser: "sandbox"`, and both its checks are target-scoped — and that may
-be [the wrong side](#which-side-msb-belongs-on-is-not-settled)). If you want msb
-as the **runner** for Open Harness, you install msb on your **host**, from
-upstream — `oh runtime install` is not that command and wires nothing up.
+machines. `oh tool install microsandbox` installs `msb` **inside the sandbox**
+(`installUser: "sandbox"`). If you want msb as the **runner** for Open Harness,
+you install msb on your **host**, from upstream — the tool verb is not that
+command and wires nothing up.
 
-## Why `oh runtime install microsandbox` is blocked here
+## Installing `msb`
 
-### The two requirements, and which one still blocks
+`oh tool install microsandbox` runs the pinned upstream installer as the
+`sandbox` user. It downloads the script to a temp file, checks it against a
+pinned `sha256`, and runs it with
+`MSB_HOME="${NPM_USER_PREFIX:-$HOME/.local}/microsandbox"`. Observed result:
 
-Both were **measured**, not assumed
+```
+~/.local/microsandbox/bin/msb      # the binary MSB_HOME receives
+~/.local/bin/msb                   # the symlink that puts it on PATH
+$ msb --version
+msb 0.6.16
+```
+
+Only the installer *script* is pinned. Upstream's script always fetches the
+latest release, so the version you get is whatever upstream publishes.
+
+The install lands in `~/.local`, inside the persistent home mount, so it
+survives a container recreate and `oh destroy <name>` removes it. It needs
+network access, rebuilds no image, restarts no sandbox, and writes no
+`oh.json` field.
+
+**`msb self doctor` is yours to run.** The harness runs no doctor and makes no
+readiness verdict: `oh tool install microsandbox` verifies only that `msb` is on
+PATH (`command -v msb`). Check the host yourself:
+
+```bash
+msb self doctor                  # expect exit 0
+msb run alpine --exec 'echo ok'  # expect "ok"
+```
+
+## What a microVM still needs
+
+`msb` runs microVMs, and a microVM needs a kernel boundary the container cannot
+fabricate. Two requirements were **measured**
 ([#805](https://github.com/mifunedev/openharness/issues/805), from the P0 spike
-in [#803](https://github.com/mifunedev/openharness/pull/803)). `msb` has never
-produced a binary in this harness, so there is no local round trip.
-
-**Everything in this section measures the devcontainer, not your host.** Both
-preflight checks are target-scoped, so they answer the install question only. A
-current host — Ubuntu 24.04 ships glibc 2.39 and `/dev/kvm` — may clear both and
-is simply not measured here.
+in [#803](https://github.com/mifunedev/openharness/pull/803)):
 
 | Requirement | This devcontainer | Why |
 |---|---|---|
 | glibc >= 2.39 | **cleared** | `.devcontainer/Dockerfile` pins `debian:trixie-slim`, whose glibc clears the 2.39 floor with headroom. |
-| `/dev/kvm` present | **absent — blocks** | `.devcontainer/docker-compose.yml` declares no `devices:` key, so the container reaches no KVM. |
+| `/dev/kvm` present | **absent** | `.devcontainer/docker-compose.yml` declares no `devices:` key, so the container reaches no KVM. |
 
-The glibc floor was a base-image decision, not an `oh runtime` one, and the base
-upgrade to `debian:trixie-slim`
-([#807](https://github.com/mifunedev/openharness/issues/807)) cleared it. The
-WSL2 host this harness runs on measures 2.35 and is not what the target-scoped
-check reads. Measurements for every candidate are in
-[#803](https://github.com/mifunedev/openharness/pull/803).
+The glibc floor was a base-image decision and the base upgrade to
+`debian:trixie-slim`
+([#807](https://github.com/mifunedev/openharness/issues/807)) cleared it.
+Passing `/dev/kvm` into the sandbox is a compose change, tracked in
+[#805](https://github.com/mifunedev/openharness/issues/805).
 
-**Both must clear.** glibc now does; `/dev/kvm` does not, so the install still
-stops — a microVM needs KVM, and no glibc version substitutes for it.
+So the binary installs cleanly here, and **running** a microVM from inside this
+sandbox still fails for want of KVM. That is why the install is a tool verb with
+no preflight verdict: installing a binary and being able to boot a microVM are
+different claims, and only you can measure the second one on your host.
 
-The remaining fix does not belong to `oh runtime` either: the `devices:` key is
-a compose change, tracked in
-[#805](https://github.com/mifunedev/openharness/issues/805). Passing `/dev/kvm`
-into the sandbox is out of scope for the base upgrade.
+## Which side msb belongs on is not settled
 
-### What `install` prints on a blocked host
-
-It measures, reports, and stops — with no network call and no installer run.
-On the current Trixie image only the device check fails:
-
-```
-microsandbox: not supported on this host — nothing was installed.
-
-  /dev/kvm   absent   requires present
-             .devcontainer/docker-compose.yml declares no `devices:` key, …
-
-Tracked in #805. Re-run after the blockers clear,
-or pass --force to attempt the install anyway.
-```
-
-Exit code 1. `--force` runs the installer regardless — useful for confirming the
-upstream error yourself, or on a host you know the probe misread.
-
-### What the upstream installer script does
-
-This is what `oh runtime install microsandbox` runs **inside the container**
-once `/dev/kvm` is present. It is the same upstream script you run on your host in
-[Step 1](#step-1--install-msb-on-your-host) — the difference is where.
-
-```bash
-curl -sSL https://get.microsandbox.dev -o /tmp/get-msb.sh
-sh /tmp/get-msb.sh
-```
-
-This is copied verbatim from the P0 spike record
-(`.oh/tasks/microsandbox-substrate/next-tasks.md` on
-[#803](https://github.com/mifunedev/openharness/pull/803)). It is **not**
-reconstructed from upstream docs — with no working binary in this harness there
-is nothing to verify a guess against, so the catalog cites the spike instead.
-
-After a successful install the command runs `msb self doctor` and reports a
-non-zero result **without** failing the install: the install succeeded, and the
-doctor is diagnosing the host.
-
-### Which side msb belongs on is not settled
-
-Today this command installs `msb` **inside the container**, because that is the
-only side the CLI's `ExecutionTarget` can reach. Whether that is the *right*
-side is open.
+`oh tool install microsandbox` installs `msb` **inside the sandbox**, because
+that is the only side the CLI's `ExecutionTarget` can reach. Whether that is the
+*right* side is open.
 
 #805 measures the glibc floor against *both* the WSL2 host (2.35) and the
 devcontainer (now Trixie, above the 2.39 floor) and does not say which is the
-intended target. A microVM
-tier that replaces the container would plausibly be installed on the host. If
-#731 settles it the other way, this command's target changes — and that is a
-reason it writes no config today.
-
-### The round trip that would prove `msb` works
-
-From #805's acceptance list; neither has ever passed here. The commands are in
-[Step 1](#step-1--install-msb-on-your-host).
-
-Both prove that **`msb`** works. Neither says anything about Open Harness
-running on it — that is the other question, and it is a different exercise.
+intended target. A microVM tier that replaces the container would plausibly be
+installed on the host. If
+[#731](https://github.com/mifunedev/openharness/issues/731) settles it the other
+way, the tool's target changes — and that is a reason it writes no config
+today. The axes taxonomy behind the decision is in
+[the runtime-support RFC](../rfcs/rfc-runtime-support.md).
 
 ## Running Open Harness on MicroSandbox
 
 This does not go through the `oh` CLI at all.
 
 **MicroSandbox is not a Docker runtime.** You cannot point `docker compose` at it
-the way you can point it at gVisor (`--runtime=runsc`). It is its own VM manager
+the way you can point it at a Docker-level runtime. It is its own VM manager
 with its own CLI. So it does not plug into the boot path — **it replaces it.**
 msb becomes the runner, and the thing it runs is the image Open Harness already
 publishes:
@@ -141,13 +122,14 @@ ghcr.io/mifunedev/openharness:latest
 msb runs standard OCI images from any registry, so no new image is needed. The
 invocation to translate is **not** the compose stack — it is the plain
 `docker run` recipe in
-[Prebuilt-image deployment](../deployment-prebuilt-image.md) (Flavor B), which
-already boots the harness with no compose, no CLI, and no build.
+[`oh sandbox install docker`](../deployment-prebuilt-image.md), which already
+boots the harness with no compose, no CLI, and no build.
 
 :::caution UNTESTED
-Nobody has executed this end to end. `msb` has never produced a binary in this
-harness (see the remaining blocker above), so this section is a **translation of a verified
-`docker run` recipe into a documented msb schema** — every part is individually
+Nobody has executed this end to end. No microVM has ever booted in this harness
+(see [what a microVM still needs](#what-a-microvm-still-needs)), so this section
+is a **translation of a verified `docker run` recipe into a documented msb
+schema** — every part is individually
 grounded, and the combination is not. The five specific risks are listed at the
 bottom. Treat it as a starting point, not a runbook, and please report what you
 find.
@@ -155,7 +137,7 @@ find.
 
 ### Step 1 — Install `msb` on your host
 
-This is the step `oh runtime install` does *not* do for you: that command
+This is the step `oh tool install microsandbox` does *not* do for you: that verb
 installs `msb` inside the sandbox, which is the wrong side for this.
 
 Check the floor first — `msb` needs both, and neither is Open Harness's
@@ -240,7 +222,7 @@ Container paths are the same on both sides.
 #### `sandbox.yaml`
 
 Derived from the verified `docker run` recipe in
-[Prebuilt-image deployment](../deployment-prebuilt-image.md) (Flavor B), reconciled
+[`oh sandbox install docker`](../deployment-prebuilt-image.md), reconciled
 against `docker-compose.image-only.yml`. Two deliberate differences from that
 recipe: the compose mount set (all of `~/.config`, plus `.herdr`) replaces the
 recipe's `.config/gh` and `.pi`, and `SANDBOX_NAME` is dropped because the
@@ -357,7 +339,7 @@ msb run --conf sandbox.yaml --name openharness   # second boot skips the seed
 
 | What goes away | Consequence |
 |---|---|
-| **The host Docker socket** | **Gone, and this is the headline.** A microVM has no host `dockerd` to reach. Nested-Docker work stops: `/health-check`'s inventory, container work from inside the sandbox, and — most importantly — **the entire lifecycle verb family run *inside* an msb-hosted harness has no daemon**: `oh sandbox`, `oh shell`, `oh stop`, `oh restart`, `oh logs`, `oh ps`, and `oh destroy`. All of them go through `.oh/scripts/docker-compose.sh`. You cannot manage a harness from in there. |
+| **The host Docker socket** | **Gone, and this is the headline.** A microVM has no host `dockerd` to reach. Nested-Docker work stops: `/health-check`'s inventory, container work from inside the sandbox, and — most importantly — **the entire lifecycle verb family run *inside* an msb-hosted harness has no daemon**: `oh sandbox install docker`, `oh shell`, `oh stop`, `oh restart`, `oh logs`, `oh ps`, and `oh destroy`. All of them go through `.oh/scripts/docker-compose.sh`. You cannot manage a harness from in there. |
 | **VS Code "Attach to Running Container"** | Gone — this is not a container. Options B and C in [Connecting](../connecting.md) do not apply; `msb exec` is the only door. For an editor, use Remote-SSH to the host and drive the sandbox from a terminal, or enable the SSH overlay inside the sandbox and connect to that. |
 | `host.docker.internal` | No equivalent. Affects self-hosted Langfuse only. |
 | The compose healthcheck | No equivalent. `max_duration` / `idle_timeout` are different semantics — confirm whether msb reaps idle sandboxes by default and, if so, which key disables it. Open Harness is meant to run for weeks. |
@@ -389,6 +371,7 @@ user-selection flag is shown above because none is confirmed.
 
 ## Related
 
-- [Runtimes overview](overview.md) — why the CLI selects no runtime
+- [Runtimes overview](overview.md) — the catalog, and why the CLI selects no substrate key
+- [Runtime support RFC](../rfcs/rfc-runtime-support.md) — the axes taxonomy and the open selector decision
 - [#805](https://github.com/mifunedev/openharness/issues/805) — the two measured requirements
 - [#803](https://github.com/mifunedev/openharness/pull/803) — the P0 measurement record

@@ -1,6 +1,6 @@
 {
   "name": "@mifune/openharness",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Open Harness CLI — scaffold sandboxes and manage OpenHarness Cloud nodes.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mifunedev/openharness#readme",

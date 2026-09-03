@@ -8,6 +8,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-03
+
 ### Added
 
 - Add `oh sandbox install docker`: a wizard writes a sandbox registry entry under `${OH_HOME:-~/.oh}/sandboxes/<name>/` and boots it from any directory, with no project checkout. ([#950](https://github.com/mifunedev/openharness/issues/950))

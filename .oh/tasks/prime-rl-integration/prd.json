@@ -1,0 +1,124 @@
+{
+    "schemaVersion": 1,
+    "project": "Prime Intellect prime-rl Integration",
+    "branchName": "feat/623-prime-rl-integration",
+    "description": "Wire Prime Intellect's prime CLI (RL training: prime lab setup -> verifiers/StatefulToolEnv env authoring -> prime env init -> eval run/tui/gepa -> HOSTED prime train run -> LoRA deploy) into the harness as an opt-in, manual-invoke, harness-infra-only capability: opt-in INSTALL_PRIME_RL build arg, /prime-rl skill with prime train run STOP-for-human, three-layer secret-guard hardening for the non-dot-prefixed secrets.env/configs/endpoints.toml surfaces, integration doc, wiki entry, wiring-only eval probe, and a credential-gated validation runbook. Spec of mifunedev/openharness#623; no hosted training is ever run or automated by this work.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Devcontainer opt-in provisioning",
+            "description": "As the harness maintainer, I want prime CLI installation gated behind an opt-in build arg mirroring the DeepAgents pattern, so default sandboxes are unaffected and only operators who opt in pay the install cost.",
+            "acceptanceCriteria": [
+                ".devcontainer/Dockerfile gains ARG INSTALL_PRIME_RL=false block immediately after the existing DeepAgents block (~lines 69-79), build-only UV_TOOL_DIR=/opt/uv/tools UV_TOOL_BIN_DIR=/usr/local/bin + uv tool install prime pattern (ADR-1, unpinned by precedent); diff to this protected path is a pure addition — no existing line modified or removed",
+                ".devcontainer/docker-compose.yml passes INSTALL_PRIME_RL: ${INSTALL_PRIME_RL:-false} as a build arg alongside INSTALL_DEEPAGENTS/INSTALL_HERMES (~lines 43-44); pure addition",
+                ".oh/scripts/harness-config.sh gains envmap[\"install.prime_rl\"] = \"INSTALL_PRIME_RL\" alongside the existing install.* entries",
+                "harness.yaml.example gains a commented '# prime_rl: false          # INSTALL_PRIME_RL — Prime Intellect prime CLI (build arg)' line under install:, matching the existing commented-default style; harness.yaml edit + make destroy && make sandbox is the primary documented opt-in path, INSTALL_PRIME_RL=true make sandbox only a shorthand",
+                "Real check: INSTALL_PRIME_RL=true build resolves prime --version inside the image; default build has no prime on PATH; shellcheck -S warning .oh/scripts/harness-config.sh passes clean (exact CI invocation, .github/workflows/ci-harness.yml:126)"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Secret-guard hardening for prime-rl config surfaces (three layers)",
+            "description": "As the harness security owner, I want secrets.env and configs/endpoints.toml covered by all three guard layers that protect every other credential file, so prime-rl's non-dot-prefixed secret filenames don't slip past .gitignore, the Read/Edit path hook, and the Bash-command hook by construction (ADR-4).",
+            "acceptanceCriteria": [
+                ".gitignore gains glob-anchored entries **/secrets.env and **/configs/endpoints.toml (not the bare mid-slash form, which only matches at repo root)",
+                ".oh/hooks/deny-secret-paths.sh DENY_PATH alternation gains (^|/)secrets\\.env$ and (^|/)configs/endpoints\\.toml$ (existing one-glob-per-line comment convention)",
+                ".claude/settings.json permissions.deny gains the mirrored Read(file_path=**/secrets.env) and Read(file_path=**/configs/endpoints.toml) entries in the same change",
+                ".oh/hooks/deny-env-dump.sh SECRET_PATH gains configs/endpoints\\.toml and an explicit (^|/)secrets\\.env\\b term — word-boundary, NOT $-anchored (this hook matches the whole command string, so $ misses 'cat foo/secrets.env | grep TOKEN'-style commands; see ADR-4); both new terms land INSIDE the existing outer-paren alternation group",
+                "Real check: grep -q 'secrets\\.env' .oh/hooks/deny-secret-paths.sh && grep -q 'endpoints\\.toml' .oh/hooks/deny-secret-paths.sh exits 0; grep -q 'endpoints\\.toml' .oh/hooks/deny-env-dump.sh && grep -qF 'secrets\\.env\\b' .oh/hooks/deny-env-dump.sh exits 0 (-qF asserts the word-boundary form so a $-anchored term fails); git check-ignore -v secrets.env configs/endpoints.toml foo/secrets.env foo/configs/endpoints.toml reports all four ignored (root-relative AND nested)"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": "No dependency on US-001; sequenced before the skill so no window exists where the skill documents unprotected paths."
+        },
+        {
+            "id": "US-003",
+            "title": "/prime-rl skill body",
+            "description": "As an operator who has opted into the install, I want the /prime-rl skill's core body and invocation shape defined, so the manual-invoke contract (never auto-triggers, never silently trains) is locked before the supporting reference doc is written.",
+            "acceptanceCriteria": [
+                "Create .oh/skills/prime-rl/SKILL.md: frontmatter (name: prime-rl, argument-hint for '<lab-name|env-name> [lab-setup|env-init|eval-run|eval-tui|gepa-run|train-run] [--model <id>] [--n N]', disable-model-invocation: true, allowed-tools: Bash, TRIGGER-style description) mirroring .oh/skills/rlm/SKILL.md (ADR-2); RESULT: tag convention (PRIME-RL-WIRED | BLOCKED-NO-CREDS | STOP-FOR-HUMAN)",
+                "Procedure covers in order: prime lab setup <name> (scaffold at $HOME/prime-labs/<name>, ADR-6 pinned) -> AI-agent-authored env from prompt.md naming the verifiers package + StatefulToolEnv pattern (not authored by this skill, out of scope) -> prime env init my-env -> prime eval run my-env -m <model> -n 5 / prime eval tui / prime gepa run",
+                "prime train run configs/rl/<config>.toml explicitly marked STOP-for-human per ADR-5; LoRA-adapter deployment (one-click from https://app.primeintellect.ai) named as the lifecycle's terminal step, described but never invoked",
+                "Real check: test -f .oh/skills/prime-rl/SKILL.md AND test -f .claude/skills/prime-rl/SKILL.md both exit 0 (the second asserts provider-symlink resolution, which link-providers.sh --check alone would not catch — its hardcoded lists don't cover prime-rl)"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "/prime-rl lifecycle reference + CLAUDE.md registration",
+            "description": "As an operator, I want the config-surface/TOML/guardrail detail split into its own reference doc and the skill registered in CLAUDE.md's Skills table, so SKILL.md stays a lean procedure and the skill is discoverable.",
+            "acceptanceCriteria": [
+                "Create .oh/skills/prime-rl/references/lifecycle.md documenting config surfaces (configs/endpoints.toml, optional secrets.env, explicit note that W&B config is NOT yet guarded pending a confirmed filename), TOML knobs (model, max_steps, batch_size, rollouts_per_example), and guardrails (never-unattended ADR-5, $HOME/prime-labs/<name> ADR-6, three-layer secret-guard coverage per US-002 pointing at hardened files by name)",
+                ".oh/skills/prime-rl/SKILL.md updated with a one-line pointer to the new reference file",
+                "CLAUDE.md § Skills gains a /prime-rl row (ADR-7), noting /rlm's pre-existing absence from that table",
+                "Real check: bash .oh/scripts/link-providers.sh --check passes, and grep -q '/prime-rl' CLAUDE.md exits 0"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-005",
+            "title": "Integration doc",
+            "description": "As an operator, I want a doc mirroring the existing integrations (sshd.md, slack.md) so enabling and using prime-rl follows the same prerequisites -> enable -> configure -> verify shape as every other opt-in capability.",
+            "acceptanceCriteria": [
+                "Create .oh/docs/integrations/prime-rl.md: frontmatter, 'accurate as of <build date>' disclaimer (slack.md pattern), Prerequisites, Enable section with harness.yaml edit (install: prime_rl: true + make destroy && make sandbox) primary and INSTALL_PRIME_RL=true make sandbox as shorthand, secrets section mandating env-var interpolation only in secrets.env/configs/endpoints.toml and pointing at US-002's three guard layers by name, usage walkthrough (lab setup at $HOME/prime-labs/<name> -> env init -> eval run/tui -> gepa run -> train run STOP-for-human -> LoRA deployment from https://app.primeintellect.ai) naming verifiers + StatefulToolEnv, and a Security posture section",
+                "Doc cross-links .oh/skills/prime-rl/SKILL.md, references/lifecycle.md, and the wiki entry (US-006) under See also",
+                "Real check: grep -c '^## ' .oh/docs/integrations/prime-rl.md shows the required sections; grep -q 'STOP-for-human', grep -q 'verifiers', grep -q 'StatefulToolEnv', grep -q 'app.primeintellect.ai' all pass against the file"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-006",
+            "title": "Wiki entry",
+            "description": "As a future session reading this repo, I want a schema-conformant wiki entry capturing what Prime Intellect's prime-rl ecosystem IS, distinct from the skill's how-to-behave content (ADR-3), cross-linked so it isn't a guaranteed orphan on day one.",
+            "acceptanceCriteria": [
+                "Create .oh/skills/wiki/corpus/prime-rl-training.md per schema.md: frontmatter (title, slug: prime-rl-training, tags [prime-rl, verifiers, rl-training, prime-intellect, gepa], created/updated = build date, sources citing a /wiki ingest snapshot of docs.primeintellect.ai/llms.txt if network available else this PRD + US-003/004/005 artifacts as provisional source, confidence: provisional, related: [recursive-language-models])",
+                "Body in schema order (Relevant Source Files, Summary, Detail, System Relationships, See Also), <= 900 words",
+                "Detail records the DeepWiki comparison (no existing page on deepwiki.com/mifunedev/openharness for prime-rl; closest entries recursive-language-models + DeepAgents/Hermes opt-in precedent) and names verifiers + StatefulToolEnv and the LoRA deployment step at app.primeintellect.ai",
+                "See Also links [[recursive-language-models]] AND, in the same change, recursive-language-models.md's See Also gains the reciprocal [[prime-rl-training]] link (a new entry with zero inbound links is a true-positive orphan finding by design per lint.md § 6)",
+                "Whitelisted into git via git add -f (new entry; edited recursive-language-models.md staged together)",
+                "Real check: /wiki lint --dry-run reports no broken-link findings, and bash .oh/evals/probes/wiki-readme-index.sh passes"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-007",
+            "title": "Wiring-only eval probe",
+            "description": "As the harness's regression floor, I want a deterministic, network-free probe asserting this integration's wiring — including all three secret-guard layers — exists, so future changes can't silently regress it.",
+            "acceptanceCriteria": [
+                "Create .oh/evals/probes/prime-rl-wiring.sh (# tier: A) asserting: .oh/skills/prime-rl/SKILL.md exists with disable-model-invocation: true; .claude/skills/prime-rl/SKILL.md resolves through the provider symlink; references/lifecycle.md exists; .oh/docs/integrations/prime-rl.md exists; .oh/skills/wiki/corpus/prime-rl-training.md exists with parseable slug:/confidence: frontmatter; .devcontainer/Dockerfile contains ARG INSTALL_PRIME_RL; docker-compose.yml contains INSTALL_PRIME_RL; harness.yaml.example contains prime_rl; deny-secret-paths.sh contains the secrets.env/endpoints.toml guard terms (layer 2); deny-env-dump.sh SECRET_PATH contains the configs/endpoints.toml and secrets.env guard terms (layer 3) — all three guard layers asserted",
+                "Probe invokes NO prime/uv/docker command and makes NO network call — grep/file-existence assertions only; header comment states this and flags itself as an /eval-lint always-SKIP-candidate watch item (wiring-only)",
+                "Real check: bash .oh/evals/probes/prime-rl-wiring.sh exits 0 standalone, and a full /eval run shows no green->red regression against the current .oh/evals/RESULTS.md baseline"
+            ],
+            "priority": 7,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-008",
+            "title": "Local validation runbook (isolated build, redacted, STOP-for-human at credentials)",
+            "description": "As the platform operator, I want a recorded runbook proving the wiring is real up to the point credentials are required, on an isolated sandbox that can't collide with a running one, with pasted output scrubbed before it's committed.",
+            "acceptanceCriteria": [
+                "Validation build uses an isolated SANDBOX_NAME (e.g. SANDBOX_NAME=oh-prime-rl-validation) so it never collides with container_name: openharness on a shared host",
+                ".oh/skills/prime-rl/references/lifecycle.md (or a dedicated references/validation.md) records a real verbatim walkthrough: SANDBOX_NAME=oh-prime-rl-validation INSTALL_PRIME_RL=true make sandbox -> prime lab setup <name> scaffolds at $HOME/prime-labs/<name> -> prime env init my-env output pasted verbatim",
+                "Mandatory redaction pass before commit: every captured CLI output grepped against deny-secret-paths.sh DENY_PATH and deny-env-dump.sh SECRET_NAME patterns, plus a manual token/credential visual review (hooks screen tool-call paths/commands, not pasted prose content)",
+                "prime eval run / eval tui / gepa run / train run steps recorded as BLOCKED — pending human-supplied credentials, naming the credential each step needs — distinct from any early network/login failure at prime lab setup/env init; the runbook labels which failure mode occurred at which step",
+                "Runbook states explicitly: testing stops at wiring-correct; hosted training is unverifiable in this environment",
+                "Real check: every step that ran has verbatim redacted output in the runbook; git status --porcelain from the harness root shows NO new untracked files from the scaffold (ADR-6 compliance); bash .oh/evals/probes/prime-rl-wiring.sh still exits 0"
+            ],
+            "priority": 8,
+            "passes": false,
+            "notes": "STOP-for-human at the credential boundary: needs operator-supplied Prime Intellect account/credits (and optional OPENAI_API_KEY/WANDB_API_KEY) — the agent halts and records BLOCKED evidence, never fabricates results."
+        }
+    ]
+}

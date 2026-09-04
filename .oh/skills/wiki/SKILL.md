@@ -1,7 +1,7 @@
 ---
 name: wiki
 description: |
-  Dispatch harness knowledge-base operations: ingest, query, lint, or compile.
+  Dispatch four subcommands: ingest, query, lint, or compile.
   This skill owns procedures; .oh/knowledge/ owns tracked source pages, patterns,
   and raw snapshots. Queries exclude local scratch. Canonical schema:
   .oh/skills/wiki/references/schema.md. Procedures:

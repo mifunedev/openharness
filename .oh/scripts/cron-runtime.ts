@@ -723,6 +723,14 @@ export function sighupHandler(dir: string = CRONS_DIR): void {
   }
 }
 
+const SIGNAL_HOLD_INTERVAL_MS = 3_600_000;
+
+export function holdEventLoopForSignals(
+  intervalMs: number = SIGNAL_HOLD_INTERVAL_MS,
+): NodeJS.Timeout {
+  return setInterval(() => undefined, intervalMs);
+}
+
 function main(): void {
   if (!acquireLock()) {
     process.stderr.write("cron-runtime: another instance is running\n");
@@ -738,6 +746,7 @@ function main(): void {
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
   process.on("SIGHUP", () => setImmediate(sighupHandler));
+  holdEventLoopForSignals();
   scheduleAll();
 }
 

@@ -1,0 +1,21 @@
+[Unit]
+Description=Open Harness cron runtime
+Documentation=https://github.com/mifunedev/openharness
+Requires=openharness-bootstrap.service
+After=openharness-bootstrap.service
+
+[Service]
+Type=simple
+User=sandbox
+WorkingDirectory=/home/sandbox/harness
+Environment=HOME=/home/sandbox
+ExecStart=/usr/local/bin/node --experimental-strip-types /home/sandbox/harness/.oh/scripts/cron-runtime.ts
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+KillMode=process
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

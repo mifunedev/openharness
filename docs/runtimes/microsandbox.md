@@ -212,9 +212,10 @@ Container paths are the same on both sides.
 | `environment:` | `env:` | two keys are load-bearing; see below |
 | `ports:` (overlays only) | `network.ports:` | the base stack declares none — it is exec-based |
 | *(implicit)* | `network.policy: public` | first boot needs broad egress |
-| `entrypoint:` | `entrypoint:` | compose sets this explicitly too — so does the config below. See the note under the file. |
-| `command: sleep infinity` | `cmd:` | matches the image's own `CMD`; set explicitly because msb may not inherit it |
-| `init: true` | *(no confirmed equivalent)* | PID 1 is the entrypoint chain with no reaper — see risk 5 |
+| *(image `CMD ["/sbin/init"]`)* | `cmd:` | systemd must be PID 1; set explicitly because msb may not inherit the image `CMD` |
+| `cap_add: [SYS_ADMIN]` | *(no confirmed equivalent)* | systemd needs it to mount its own cgroup2 hierarchy — see risk 5 |
+| `tmpfs: [/sys/fs]` | *(no confirmed equivalent)* | leaves `/sys/fs/cgroup` unmounted so systemd mounts it writable and container-private — see risk 5 |
+| `cgroup: private` | *(no confirmed equivalent)* | pins the private cgroup namespace the isolation depends on |
 | `restart: unless-stopped` | *(no confirmed equivalent)* | no auto-recovery after a host reboot; confirm msb's restart policy before relying on this for anything long-lived |
 | `extra_hosts: host.docker.internal` | *(no equivalent)* | only self-hosted Langfuse uses it |
 | `healthcheck:` | *(no equivalent)* | run `.oh/scripts/sandbox-healthcheck.sh` manually |
@@ -231,8 +232,7 @@ sandbox is named on the `msb run` command line in Step 4.
 ```yaml
 image: ghcr.io/mifunedev/openharness:latest
 workdir: /home/sandbox/harness
-entrypoint: ["/usr/local/bin/entrypoint.sh"]
-cmd: ["sleep", "infinity"]
+cmd: ["/sbin/init"]
 
 env:
   OH_PROJECT_ROOT: /home/sandbox/harness      # load-bearing — must equal the mount target
@@ -250,13 +250,12 @@ network:
   policy: public
 ```
 
-**Set `entrypoint:` explicitly.** Do not rely on msb inheriting the image's
-`ENTRYPOINT`. Everything that makes this a harness rather than a bare container
-lives in that script — the UID sync, the `gosu` privilege drop,
-`link-providers.sh --init`, and the workspace seed. If msb does not inherit it,
-`sleep infinity` becomes PID 1, none of that runs, and Step 5 fails with no
-explanation. Compose sets the same key explicitly
-(`docker-compose.image-only.yml`), so this matches the verified stack.
+**Set `cmd:` explicitly.** Do not rely on msb inheriting the image's `CMD`.
+systemd must be PID 1: it runs `entrypoint.sh` as `openharness-bootstrap.service`
+— the UID sync, the `gosu` privilege drop, `link-providers.sh --init`, and the
+workspace seed — and then supervises `openharness-cron.service`. If msb starts
+anything else as PID 1, none of that runs and Step 5 fails with no explanation.
+Whether msb can satisfy systemd's cgroup requirement at all is risk 5.
 
 **No token here**, unlike the `docker run` recipe, which passes
 `-e GH_TOKEN="${GH_TOKEN:-}"`. Compose and `docker run` interpolate `${VAR}`
@@ -361,9 +360,11 @@ Ranked by what they cost if wrong:
    Open Harness is explicitly one long-lived sandbox running agents on cron.
 4. **Bind UID mapping** through the microVM's filesystem transport — whether
    `chown -R 1000` means the same thing on both sides.
-5. **PID 1 reaping.** Compose sets `init: true`; the msb config has no confirmed
-   equivalent. With no reaper, orphaned processes from cron agents and tmux
-   sessions may accumulate.
+5. **systemd as PID 1.** Compose grants `cap_add: [SYS_ADMIN]`, `tmpfs: [/sys/fs]`,
+   and `cgroup: private` so systemd mounts a writable, container-private cgroup2
+   hierarchy and reaps orphans itself. The msb config has no confirmed equivalent
+   for any of the three; without them systemd exits at PID 1 with
+   `Failed to create /init.scope control group`.
 
 `msb exec` matching `docker exec -u sandbox` is a sixth open question — the
 verified recipes all attach with an explicit `-u sandbox`, and no msb

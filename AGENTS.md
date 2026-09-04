@@ -42,10 +42,11 @@ canonical `.oh/` source. Do not patch a generated mirror.
 
 ### 3. Remote and unattended operation are normal
 
-A terminal disconnect must not end useful work. Interactive agents, tests, and
-development servers run in Herdr. Cron, gateways, supervisors, and watchdogs run in
-named tmux sessions. A raw shell is a recovery path. Design every persistent process
-for restart, inspection, and operation from another machine.
+A terminal disconnect must not end useful work. systemd is PID 1 in the sandbox and
+supervises container infrastructure: the bootstrap oneshot and the cron runtime.
+Interactive agents, tests, and development servers run in Herdr. Gateways, tunnels, and
+detached cron fires run in named tmux sessions. A raw shell is a recovery path. Design
+every persistent process for restart, inspection, and operation from another machine.
 
 ### 4. Parallel work does not share mutable state
 

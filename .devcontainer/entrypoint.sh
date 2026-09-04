@@ -507,46 +507,6 @@ WORKTREES_PATH="$HARNESS/.worktrees"
 PROJECTS_PATH="$HARNESS/projects"
 CRONS_PATH="$HARNESS/crons"
 mkdir -p "$WORKTREES_PATH" "$PROJECTS_PATH" "$CRONS_PATH"
-if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
-  if gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
-    echo "[entrypoint] legacy system-cron tmux session detected — stopping it before starting cron-watchdog"
-    gosu sandbox tmux kill-session -t system-cron 2>/dev/null || true
-  fi
-
-  rm -f /tmp/cron-watchdog.sh 2>/dev/null || true
-  if cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
-#!/usr/bin/env bash
-set -u
-HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
-INTERVAL="${CRON_WATCHDOG_INTERVAL:-60}"
-while true; do
-  if tmux has-session -t system-cron 2>/dev/null; then
-    echo "[$(date -Iseconds)] legacy system-cron detected; stopping it before supervising cron-system"
-    tmux kill-session -t system-cron 2>/dev/null || true
-  fi
-  if ! tmux has-session -t cron-system 2>/dev/null; then
-    echo "[$(date -Iseconds)] cron-system missing; starting cron-runtime.ts"
-    tmux new-session -d -s cron-system \
-      "cd $HARNESS && node --experimental-strip-types .oh/scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log"
-  fi
-  sleep "$INTERVAL"
-done
-CRON_WATCHDOG
-  then
-    chmod 755 /tmp/cron-watchdog.sh 2>/dev/null || true
-    if gosu sandbox tmux has-session -t cron-watchdog 2>/dev/null; then
-      echo "[entrypoint] cron-watchdog tmux session already running — skipping"
-    elif gosu sandbox tmux new-session -d -s cron-watchdog \
-      "OH_PROJECT_ROOT=$OH_PROJECT_ROOT HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"; then
-      echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
-    else
-      echo "[entrypoint] WARN: cron-watchdog tmux launch failed — skipping (sandbox boot continues)"
-    fi
-  else
-    echo "[entrypoint] WARN: could not write /tmp/cron-watchdog.sh — skipping cron-watchdog (sandbox boot continues)"
-  fi
-fi
-
 ln -sf "$HARNESS/.oh/scripts/gateway.sh" /usr/local/bin/gateway 2>/dev/null || true
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 if [ -f "$SLACK_ENV" ] \
@@ -585,4 +545,6 @@ if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo ""
 fi
 
-exec "$@"
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+fi

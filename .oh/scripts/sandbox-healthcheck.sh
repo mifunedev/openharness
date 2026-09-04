@@ -4,6 +4,7 @@ set -u
 
 HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 TMUX_BIN="${TMUX_BIN:-tmux}"
+SYSTEMCTL_BIN="${SYSTEMCTL_BIN:-systemctl}"
 HERMES_BIN="${HERMES_BIN:-hermes}"
 PI_BIN="${PI_BIN:-pi}"
 
@@ -36,6 +37,13 @@ require_session() {
   fi
 }
 
+require_unit() {
+  local unit="$1"
+  if ! "$SYSTEMCTL_BIN" is-active --quiet "$unit"; then
+    record_failure "systemd unit not active: $unit"
+  fi
+}
+
 oh_config_truthy() {
   local filter="$1" config="$HARNESS/oh.json"
   [ -f "$config" ] || return 1
@@ -58,18 +66,19 @@ has_value() {
   [ -n "$value" ] && [ "$value" != "''" ] && [ "$value" != '""' ]
 }
 
+if ! command_exists "$SYSTEMCTL_BIN"; then
+  record_failure "systemctl binary not found: $SYSTEMCTL_BIN"
+else
+  require_unit openharness-bootstrap.service
+
+  if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ]; then
+    require_unit openharness-cron.service
+  fi
+fi
+
 if ! command_exists "$TMUX_BIN"; then
   record_failure "tmux binary not found: $TMUX_BIN"
 else
-  if has_session system-cron; then
-    record_failure "legacy tmux session present: system-cron blocks cron-system startup"
-  fi
-
-  if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ]; then
-    require_session cron-watchdog
-    require_session cron-system
-  fi
-
   if oh_config_truthy '.hermesDashboard.enabled' && command_exists "$HERMES_BIN"; then
     require_session app-hermes-dashboard
   fi

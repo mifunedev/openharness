@@ -12,10 +12,16 @@
 #         #920 removed the duplicate boot-path installer: the tool catalog is now the
 #         only place the version and both checksums may appear.
 #         #948 made `oh tool install tailscale` the only door: nothing installs at boot.
+#         #956 made systemd PID 1, which needs cap_add SYS_ADMIN to mount its own cgroup2
+#         hierarchy. That capability is unrelated to Tailscale: a tun device still requires
+#         /dev/net/tun plus CAP_NET_ADMIN, and neither is granted. The blanket "no cap_add"
+#         check therefore narrows to an allowlist of exactly SYS_ADMIN, whose presence and
+#         justification are owned by .oh/evals/probes/systemd-sandbox-init.sh.
 # desc: the Tailscale tool stays a zero-privilege, zero-exposure install reached only
 #       through `oh tool install` — tools/catalog.ts is the sole owner of the version
 #       and both sha256 pins, the entrypoint holds neither a guard nor a pin, no
-#       cap_add/devices/privileged/3773 in any compose file, no tailscaled or
+#       no networking capability, devices, privileged or 3773 in any compose file
+#       (SYS_ADMIN for systemd is the only capability allowed), no tailscaled or
 #       `tailscale up` on boot, no Funnel, no committed auth key.
 set -euo pipefail
 
@@ -74,9 +80,27 @@ if grep -qE 'TS_AUTHKEY|--authkey' "$ENTRY"; then
 fi
 
 for f in "${COMPOSE[@]}"; do
-  if grep -qE '^[[:space:]]*cap_add:' "$f"; then
-    missing+=("$f: cap_add — userspace networking needs no capability grant")
+  if grep -qE '^[[:space:]]*cap_add:[[:space:]]*\[' "$f"; then
+    missing+=("$f: inline cap_add list — declare capabilities as a block list so the allowlist below can read them")
   fi
+  granted=$(awk '
+    /^[[:space:]]*cap_add:[[:space:]]*$/ { indent = match($0, /[^ ]/); incaps = 1; next }
+    incaps {
+      if ($0 ~ /^[[:space:]]*$/) next
+      if (match($0, /[^ ]/) <= indent) { incaps = 0; next }
+      if ($0 ~ /^[[:space:]]*-[[:space:]]*/) {
+        sub(/^[[:space:]]*-[[:space:]]*/, "")
+        sub(/[[:space:]]*$/, "")
+        print
+      }
+    }
+  ' "$f")
+  while IFS= read -r cap; do
+    [ -n "$cap" ] || continue
+    if [ "$cap" != "SYS_ADMIN" ]; then
+      missing+=("$f: cap_add $cap — SYS_ADMIN (systemd's cgroup mount) is the only capability this sandbox may grant; userspace networking needs none")
+    fi
+  done <<<"$granted"
   if grep -qE '^[[:space:]]*devices:' "$f"; then
     missing+=("$f: devices: — /dev/net/tun must never be handed to the sandbox")
   fi
@@ -151,4 +175,4 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS: Tailscale installs pinned and checksummed into the home mount as the sandbox user, grants no capability, publishes no port, joins no tailnet on boot, and ships no Funnel or auth key" >&2
+echo "PASS: Tailscale installs pinned and checksummed into the home mount as the sandbox user, grants no networking capability (SYS_ADMIN for systemd is the only one allowed), gets no tun device, publishes no port, joins no tailnet on boot, and ships no Funnel or auth key" >&2

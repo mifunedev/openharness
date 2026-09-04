@@ -60,15 +60,10 @@ Body becomes the agent prompt at fire time.
 ## Conventions
 
 - Filename = `<id>.md`, kebab-case.
-- Cron tmux sessions follow the `cron-<name>` category-prefix convention:
-  the supervisor is `cron-watchdog`, the runtime is `cron-system`, and
-  detached job fires are `cron-<id>-<MMDD>-<HHMM>` (see
+- systemd supervises the runtime as `openharness-cron.service`; only detached
+  job fires get tmux sessions, named `cron-<id>-<MMDD>-<HHMM>` under the
+  `cron-` category prefix (see
   `.oh/skills/t3/references/sandbox-processes.md`).
-- Migration note: older sandboxes used runtime session `system-cron` and
-  per-run sessions/markers. New sandboxes use
-  `cron-system` and `cron-<id>-*`. To complete migration, kill the
-  legacy `system-cron` session once, then restart/relaunch the sandbox so the
-  entrypoint starts `cron-system` without running duplicate cron runtimes.
 - Disable a job by setting `enabled: false` — do not delete the file
   (preserves history).
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are
@@ -127,9 +122,20 @@ returns before generating a shell wrapper or spawning an agent.
 | `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
 | `prompt-miner.md` | `0 5 * * *` (daily 05:00 MT) | Daily prompt-miner — mine 24h of session traces for prompt-quality markers; ship a top finding to the origin fork via `/spec` (opt-in `enabled: false`, cap-gated by `preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh`) |
 
-## tmux sessions
+## Runtime supervision
 
-The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `.oh/scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a legacy `system-cron` session blocks both `cron-watchdog` and `cron-system`; kill `system-cron` and restart/relaunch the sandbox to complete the migration.
+systemd is PID 1 in the sandbox and runs `.oh/scripts/cron-runtime.ts` directly as `openharness-cron.service` (user `sandbox`, working directory `/home/sandbox/harness`). It starts after `openharness-bootstrap.service`, restarts on failure, and its `ExecReload` sends `SIGHUP`. Inspect it with `systemctl status openharness-cron.service` and read its output with `journalctl -u openharness-cron.service`.
+
+| Action | Command |
+|--------|---------|
+| Liveness | `systemctl is-active openharness-cron.service` |
+| Reschedule (SIGHUP) | `systemctl reload openharness-cron.service` |
+| Restart | `systemctl restart openharness-cron.service` |
+| Logs | `journalctl -u openharness-cron.service` |
+
+There is no tmux supervisor and no tmux wrapper around the scheduler. tmux remains the convention for detached job fires.
+
+## tmux sessions
 
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
@@ -148,7 +154,7 @@ A cron definition's **body** (the agent prompt) hot-reloads at fire time: the ru
 
 ## Reload schedules (SIGHUP)
 
-The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the `cron-system` tmux session. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
+The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the service. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
 
 The runtime runs inside the container, so reload from the host via `docker exec`:
 
@@ -157,10 +163,10 @@ The runtime runs inside the container, so reload from the host via `docker exec`
 docker exec -u sandbox openharness sh -c 'kill -0 "$(cat crons/.pid)" 2>/dev/null && echo alive || echo "not running"'
 
 # Reload schedules.
-docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
+docker exec openharness systemctl reload openharness-cron.service
 ```
 
-The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types .oh/scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.devcontainer/entrypoint.sh`).
+The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `systemctl restart openharness-cron.service`; systemd relaunches `node --experimental-strip-types .oh/scripts/cron-runtime.ts` from `.devcontainer/openharness-cron.service`.
 
 ## Layout
 

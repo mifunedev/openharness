@@ -175,9 +175,9 @@ for _oh_binary in claude codex pi opencode grok hermes herdr cloudflared tailsca
   if [ -z "$shortcuts" ]; then shortcuts="$_oh_binary"; else shortcuts="$shortcuts · $_oh_binary"; fi
 done
 if [ -n "$shortcuts" ]; then
-  printf '  Recovery commands: %s · tmux attach -t cron-system\n' "$shortcuts"
+  printf '  Recovery commands: %s · systemctl status openharness-cron.service\n' "$shortcuts"
 else
-  printf '  Recovery commands: tmux attach -t cron-system\n'
+  printf '  Recovery commands: systemctl status openharness-cron.service\n'
   printf '  No harness or tool is installed. Add one with `oh harness install <id>` or `oh tool install <id>`.\n'
 fi
 printf '\n'

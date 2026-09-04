@@ -4,10 +4,13 @@ ENV OH_PROJECT_ROOT=/home/sandbox/harness
 
 ENV TZ=America/Denver
 
+ENV container=docker
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client openssh-server build-essential ca-certificates curl wget sudo gosu git jq gnupg \
     lsb-release nano ripgrep tmux unzip bash-completion procps less \
     iproute2 zsh cron lsof htop inetutils-telnet \
+    systemd systemd-sysv dbus \
  && command -v lsof >/dev/null \
  && command -v htop >/dev/null \
  && command -v telnet >/dev/null \
@@ -125,6 +128,12 @@ COPY --chown=sandbox:sandbox . /opt/oh-seed/
 COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+COPY .devcontainer/openharness-bootstrap.service .devcontainer/openharness-cron.service /usr/lib/systemd/system/
+COPY .devcontainer/openharness-env-generator.sh /usr/lib/systemd/system-environment-generators/10-openharness
+RUN chmod 0755 /usr/lib/systemd/system-environment-generators/10-openharness \
+ && systemctl enable openharness-bootstrap.service openharness-cron.service \
+ && systemctl mask cron.service ssh.service ssh.socket
+
 COPY --from=home --chown=sandbox:sandbox /home/sandbox /opt/home-seed
 RUN rm -rf /opt/home-seed/harness /home/sandbox \
  && chmod 0700 /opt/home-seed \
@@ -132,5 +141,6 @@ RUN rm -rf /opt/home-seed/harness /home/sandbox \
 
 WORKDIR ${OH_PROJECT_ROOT}
 
-ENTRYPOINT ["entrypoint.sh"]
-CMD ["sleep", "infinity"]
+STOPSIGNAL SIGRTMIN+3
+ENTRYPOINT []
+CMD ["/sbin/init"]

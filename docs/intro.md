@@ -26,7 +26,7 @@ The primary agent pane at the project root inside Herdr is your **orchestrator**
 
 Stand up a **second sandbox** only when you want isolation — an independent identity, branch, or provider key running on its own. Most users won't need this.
 
-Inside the sandbox, a `cron-system` tmux session runs `scripts/cron-runtime.ts`, which reads `crons/*.md` and fires each body as a prompt to the configured agent on its declared schedule.
+Inside the sandbox, systemd runs `scripts/cron-runtime.ts` as `openharness-cron.service`, which reads `crons/*.md` and fires each body as a prompt to the configured agent on its declared schedule.
 
 ```mermaid
 flowchart TB
@@ -38,7 +38,7 @@ flowchart TB
     subgraph sandbox["Sandbox container — default workspace"]
         Herdr["<b>Herdr</b><br/>interactive workspaces · panes"]
         Orch{{"<b>Orchestrator pane</b><br/>chosen agent @ project root<br/>git · lifecycle · file edits"}}
-        Tmux["managed tmux services<br/>client-slack-pi · cron-system · gateways"]
+        Tmux["managed tmux services<br/>client-slack-pi · gateways · detached cron fires"]
         Sock(["docker.sock<br/><i>opt-in</i>"])
     end
 

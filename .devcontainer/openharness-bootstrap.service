@@ -1,0 +1,18 @@
+[Unit]
+Description=Open Harness sandbox bootstrap
+Documentation=https://github.com/mifunedev/openharness
+After=network-online.target
+Wants=network-online.target
+Before=openharness-cron.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/entrypoint.sh
+TimeoutStartSec=0
+KillMode=process
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

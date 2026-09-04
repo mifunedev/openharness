@@ -8,6 +8,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Fixed
+
+- Shorten spec and wiki skill descriptions to remove Pi skill-conflict warnings. ([#967](https://github.com/mifunedev/openharness/issues/967))
+
 ### Added
 
 - Boot the sandbox with `systemd` as PID 1 via `cap_add: SYS_ADMIN`, `apparmor=unconfined`, `tmpfs: /run,/run/lock,/sys/fs` and `cgroup: private` — no host cgroup bind. ([#956](https://github.com/mifunedev/openharness/issues/956))

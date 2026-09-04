@@ -1,15 +1,11 @@
 ---
 name: spec
 description: >-
-  Canonical decomposed build workflow and dispatcher, and the harness's closed
-  repo-knowledge learning loop. Routes the first token of $ARGUMENTS to plan or
-  execute; an unrecognized first token is an approved plan path and runs plan
-  then execute. `plan` recalls tracked knowledge from .oh/knowledge/, re-grounds
-  it against current sources, and writes the .oh/tasks/<slug>/ folder;
-  `execute` re-grounds, implements under one owner — the agent running it — and
-  derives knowledge invalidation from the actual diff. This skill owns the ONLY build
-  path; there is no all-in-one composer beside it. Full per-subcommand
-  procedures live in references/{plan,execute,retro}.md.
+  Canonical build dispatcher and repo-knowledge learning loop. Routes to plan,
+  execute, or retro; an approved plan path runs plan then execute. Recalls and
+  re-grounds .oh/knowledge/, scaffolds .oh/tasks/<slug>/, implements under one
+  owner, and derives knowledge invalidation from the diff. Owns the only build
+  path. Procedures: references/{plan,execute,retro}.md.
   TRIGGER when: an approved plan file should become a ready PR without further
   hand-holding, "/spec <plan-path>", "build this plan end to end" -> the default
   plan-then-execute path; a topic/plan/issue needs to become a buildable task

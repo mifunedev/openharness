@@ -17,6 +17,22 @@ function fixture() {
   mkdirSync(join(harness, ".oh", "scripts"), { recursive: true });
   writeFileSync(join(harness, ".oh", "scripts", "cron-runtime.ts"), "// fixture\n");
 
+  const systemctl = join(bin, "systemctl");
+  writeFileSync(
+    systemctl,
+    `#!/usr/bin/env bash
+if [ "$1" = "is-active" ]; then
+  unit="\${*: -1}"
+  case ",\${HEALTHCHECK_ACTIVE_UNITS:-},"  in
+    *,"$unit",*) exit 0 ;;
+    *) exit 1 ;;
+  esac
+fi
+exit 1
+`,
+  );
+  chmodSync(systemctl, 0o755);
+
   const tmux = join(bin, "tmux");
   writeFileSync(
     tmux,
@@ -33,8 +49,10 @@ exit 1
   );
   chmodSync(tmux, 0o755);
 
-  return { dir, bin, harness, tmux };
+  return { dir, bin, harness, tmux, systemctl };
 }
+
+const ALL_UNITS = "openharness-bootstrap.service,openharness-cron.service";
 
 function runHealthcheck(env: Record<string, string>) {
   return spawnSync("bash", [SCRIPT], {
@@ -48,47 +66,58 @@ function runHealthcheck(env: Record<string, string>) {
 }
 
 describe("sandbox healthcheck", () => {
-  it("passes when required cron tmux sessions are present", () => {
-    const { harness, tmux } = fixture();
+  it("passes when both Open Harness systemd units are active", () => {
+    const { harness, tmux, systemctl } = fixture();
 
     const result = runHealthcheck({
       HARNESS: harness,
       TMUX_BIN: tmux,
-      HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog,cron-system",
+      SYSTEMCTL_BIN: systemctl,
+      HEALTHCHECK_ACTIVE_UNITS: ALL_UNITS,
     });
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("sandbox healthcheck ok");
   });
 
-  it("fails when cron-system is missing", () => {
-    const { harness, tmux } = fixture();
+  it("fails when the cron service is not active", () => {
+    const { harness, tmux, systemctl } = fixture();
 
     const result = runHealthcheck({
       HARNESS: harness,
       TMUX_BIN: tmux,
-      HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog",
+      SYSTEMCTL_BIN: systemctl,
+      HEALTHCHECK_ACTIVE_UNITS: "openharness-bootstrap.service",
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("missing required tmux session: cron-system");
+    expect(result.stderr).toContain("systemd unit not active: openharness-cron.service");
   });
 
-  it("fails when legacy system-cron is present", () => {
-    const { harness, tmux } = fixture();
+  it("fails when the bootstrap oneshot is not active", () => {
+    const { harness, tmux, systemctl } = fixture();
 
     const result = runHealthcheck({
       HARNESS: harness,
       TMUX_BIN: tmux,
-      HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog,cron-system,system-cron",
+      SYSTEMCTL_BIN: systemctl,
+      HEALTHCHECK_ACTIVE_UNITS: "openharness-cron.service",
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("legacy tmux session present: system-cron");
+    expect(result.stderr).toContain("systemd unit not active: openharness-bootstrap.service");
+  });
+
+  it("no longer requires any cron tmux session", () => {
+    const script = readFileSync(SCRIPT, "utf8");
+
+    for (const retired of ["cron-watchdog", "cron-system", "system-cron"]) {
+      expect(script).not.toContain(retired);
+    }
   });
 
   it("checks optional Hermes dashboard only when enabled in oh.json and installed", () => {
-    const { bin, harness, tmux } = fixture();
+    const { bin, harness, tmux, systemctl } = fixture();
     const hermes = join(bin, "hermes");
     writeFileSync(hermes, "#!/usr/bin/env bash\nexit 0\n");
     chmodSync(hermes, 0o755);
@@ -101,7 +130,8 @@ describe("sandbox healthcheck", () => {
       HARNESS: harness,
       TMUX_BIN: tmux,
       HERMES_BIN: hermes,
-      HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog,cron-system",
+      SYSTEMCTL_BIN: systemctl,
+      HEALTHCHECK_ACTIVE_UNITS: ALL_UNITS,
     });
 
     expect(result.status).toBe(1);
@@ -109,7 +139,7 @@ describe("sandbox healthcheck", () => {
   });
 
   it("checks Slack session when Slack credentials are configured", () => {
-    const { bin, harness, tmux } = fixture();
+    const { bin, harness, tmux, systemctl } = fixture();
     const pi = join(bin, "pi");
     writeFileSync(pi, "#!/usr/bin/env bash\nexit 0\n");
     chmodSync(pi, 0o755);
@@ -127,7 +157,8 @@ describe("sandbox healthcheck", () => {
       HARNESS: harness,
       TMUX_BIN: tmux,
       PI_BIN: pi,
-      HEALTHCHECK_TMUX_SESSIONS: "cron-watchdog,cron-system",
+      SYSTEMCTL_BIN: systemctl,
+      HEALTHCHECK_ACTIVE_UNITS: ALL_UNITS,
     });
 
     expect(result.status).toBe(1);

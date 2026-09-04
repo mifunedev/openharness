@@ -11,6 +11,8 @@ INTERVAL=${BOOT_SMOKE_INTERVAL_SECONDS:-10}
 UP_ARGS=${BOOT_SMOKE_UP_ARGS:-up -d --no-build}
 DOWN_ARGS=${BOOT_SMOKE_DOWN_ARGS:-down -v --remove-orphans}
 HEALTH_CMD=${BOOT_SMOKE_HEALTH_CMD:-bash ${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh}
+RELOAD_TIMEOUT=${BOOT_SMOKE_RELOAD_TIMEOUT_SECONDS:-20}
+RECOVERY_TIMEOUT=${BOOT_SMOKE_RECOVERY_TIMEOUT_SECONDS:-60}
 
 compose() {
   bash "$COMPOSE" "$@"
@@ -139,6 +141,87 @@ verify_nothing_installed() {
   [ "$failed" = "0" ]
 }
 
+verify_systemd_supervision() {
+  local cid="$1"
+  local project_root=${OH_PROJECT_ROOT:-/home/sandbox/harness}
+  local pid_file="$project_root/crons/.pid"
+  local cron_log="$project_root/crons/.cron.log"
+  local pid1 main_pid locked_pid reloads_before reloads_after new_pid waited
+
+  pid1=$(docker exec "$cid" ps -p 1 -o comm= 2>/dev/null | tr -d ' ') || pid1=""
+  if [ "$pid1" != "systemd" ]; then
+    echo "sandbox boot smoke failed: PID 1 is '${pid1:-<unreadable>}', not systemd" >&2
+    return 1
+  fi
+
+  if ! docker exec "$cid" systemctl is-active --quiet openharness-bootstrap.service; then
+    echo "sandbox boot smoke failed: openharness-bootstrap.service is not active" >&2
+    docker exec "$cid" systemctl status openharness-bootstrap.service --no-pager >&2 || true
+    return 1
+  fi
+
+  if ! docker exec "$cid" systemctl is-active --quiet openharness-cron.service; then
+    echo "sandbox boot smoke failed: openharness-cron.service is not active" >&2
+    docker exec "$cid" systemctl status openharness-cron.service --no-pager >&2 || true
+    return 1
+  fi
+
+  main_pid=$(docker exec "$cid" systemctl show -p MainPID --value openharness-cron.service 2>/dev/null | tr -d ' \r')
+  locked_pid=$(docker exec "$cid" cat "$pid_file" 2>/dev/null | tr -d ' \r')
+  if [ -z "$main_pid" ] || [ "$main_pid" -le 1 ] 2>/dev/null; then
+    echo "sandbox boot smoke failed: openharness-cron.service reports MainPID '${main_pid:-<empty>}'" >&2
+    return 1
+  fi
+  if [ "$main_pid" != "$locked_pid" ]; then
+    echo "sandbox boot smoke failed: systemd MainPID $main_pid disagrees with $pid_file (${locked_pid:-<empty>})" >&2
+    return 1
+  fi
+  echo "sandbox boot smoke: systemd is PID 1 and supervises cron-runtime.ts at PID $main_pid (matches crons/.pid)"
+
+  reloads_before=$(docker exec "$cid" sh -lc "awk -F'\t' '\$3 == \"RELOAD\"' '$cron_log' 2>/dev/null | wc -l" | tr -d ' \r')
+  if ! docker exec "$cid" systemctl reload openharness-cron.service; then
+    echo "sandbox boot smoke failed: systemctl reload openharness-cron.service returned non-zero" >&2
+    return 1
+  fi
+  waited=0
+  reloads_after="$reloads_before"
+  while [ "$waited" -lt "$RELOAD_TIMEOUT" ]; do
+    reloads_after=$(docker exec "$cid" sh -lc "awk -F'\t' '\$3 == \"RELOAD\"' '$cron_log' 2>/dev/null | wc -l" | tr -d ' \r')
+    [ "$reloads_after" -gt "$reloads_before" ] && break
+    waited=$((waited + 1))
+    sleep 1
+  done
+  if [ "$reloads_after" -le "$reloads_before" ]; then
+    echo "sandbox boot smoke failed: systemctl reload did not reach the runtime's SIGHUP path (no new RELOAD line in crons/.cron.log)" >&2
+    return 1
+  fi
+  echo "sandbox boot smoke: systemctl reload exercised the existing SIGHUP reschedule (RELOAD logged)"
+
+  docker exec "$cid" sh -c "kill -9 $main_pid" || true
+  waited=0
+  new_pid=""
+  while [ "$waited" -lt "$RECOVERY_TIMEOUT" ]; do
+    new_pid=$(docker exec "$cid" systemctl show -p MainPID --value openharness-cron.service 2>/dev/null | tr -d ' \r')
+    if [ -n "$new_pid" ] && [ "$new_pid" != "0" ] && [ "$new_pid" != "$main_pid" ] \
+      && docker exec "$cid" systemctl is-active --quiet openharness-cron.service; then
+      break
+    fi
+    waited=$((waited + 1))
+    sleep 1
+  done
+  if [ -z "$new_pid" ] || [ "$new_pid" = "0" ] || [ "$new_pid" = "$main_pid" ]; then
+    echo "sandbox boot smoke failed: systemd did not recover the scheduler after SIGKILL (MainPID stayed '${new_pid:-<empty>}')" >&2
+    docker exec "$cid" systemctl status openharness-cron.service --no-pager >&2 || true
+    return 1
+  fi
+  locked_pid=$(docker exec "$cid" cat "$pid_file" 2>/dev/null | tr -d ' \r')
+  if [ "$new_pid" != "$locked_pid" ]; then
+    echo "sandbox boot smoke failed: after recovery MainPID $new_pid disagrees with $pid_file (${locked_pid:-<empty>})" >&2
+    return 1
+  fi
+  echo "sandbox boot smoke: systemd recovered the killed scheduler at PID $new_pid (crons/.pid re-agreed)"
+}
+
 trap teardown EXIT
 
 # shellcheck disable=SC2086 # BOOT_SMOKE_UP_ARGS is an intentional argv fragment for CI tuning.
@@ -172,7 +255,11 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, bind-ownership, and installed no harness or tool at boot"
+      if ! verify_systemd_supervision "$cid"; then
+        status_diagnostics "$cid"
+        exit 1
+      fi
+      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, systemd PID-1 supervision (bootstrap, cron, PID agreement, reload, kill recovery), Herdr runtime, bind-ownership, and installed no harness or tool at boot"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

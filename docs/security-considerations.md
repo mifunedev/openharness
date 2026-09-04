@@ -114,7 +114,7 @@ event.
 - **Rollout / restart step (required).** The guard binds at process spawn, so long-lived sessions started **before** the guard landed stay unguarded until restarted — without this step they defeat the purpose indefinitely. After the merge and image rebuild:
   - **Simplest — recreate the container** (restarts every session with the new image + env): `docker compose -f .devcontainer/docker-compose.yml up -d --build` (or `oh sandbox install docker`).
   - **Or restart the long-lived sessions in place:**
-    - `cron-system`: `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../.devcontainer/entrypoint.sh)).
+    - cron runtime: `systemctl restart openharness-cron.service` — systemd owns the scheduler ([`openharness-cron.service`](../.devcontainer/openharness-cron.service)).
     - `client-slack-pi` (Slack bridge): `gateway pi --restart` (see [Integrations → Slack](integrations/slack.md)).
 - **Audit trail.** Every block logs to `~/.cc-safety-net/logs/<session_id>.jsonl` with secrets redacted. The `~/.cc-safety-net` directory is a Docker **named volume** (`docker-compose.yml:57,109`), so the log survives rebuilds.
 - **Honesty note — the script-file gap cuts both ways.** The same script-file route the harness uses for its own destructive git is also the model's evasion route: an agent that writes its own `.sh` and runs it bypasses this layer entirely. That is **accepted**. cc-safety-net (per its own README) is a footgun net, not a security control — **Docker is the security boundary** (§4). This layer catches accidents, not a determined adversary who controls the model.
@@ -134,7 +134,65 @@ socket in trades it away for Docker access and makes the sandbox no longer
 an escape-proof jail. Run the harness on hosts and repos you are willing to
 expose to whichever trust level you choose.
 
-- **Caveat 3 — the optional sshd overlay (RECOMMENDED to configure).** The base
+- **Caveat 3 — `cap_add: SYS_ADMIN` for systemd as PID 1 (REVIEWED trade-off).** systemd is
+  PID 1 in the sandbox ([`Dockerfile`](../.devcontainer/Dockerfile) `CMD ["/sbin/init"]`), and
+  systemd cannot boot without a **writable** cgroup2 hierarchy. Docker mounts
+  `/sys/fs/cgroup` read-only for unprivileged containers, so the compose files grant
+  `cap_add: [SYS_ADMIN]`, `security_opt: [apparmor=unconfined]`, and
+  `tmpfs: [/run, /run/lock, /sys/fs]`, with `cgroup: private`. The tmpfs on `/sys/fs` leaves
+  `/sys/fs/cgroup` unmounted, so systemd mounts cgroup2 there itself; because the container
+  has a private cgroup namespace, that mount is rooted at the **container's own cgroup
+  subtree**. The host cgroup tree is never exposed.
+
+  `apparmor=unconfined` is required because Docker's `docker-default` AppArmor profile denies
+  `mount` **even when `CAP_SYS_ADMIN` is granted**. Without it, PID 1 dies immediately on a
+  native Linux host with `Failed to mount tmpfs (type tmpfs) on /run … Permission denied` /
+  `Failed to mount API filesystems`. `/run` and `/run/lock` come from Docker for the same
+  reason, so systemd performs one mount rather than three. Note that AppArmor's container
+  profile is already largely redundant once `CAP_SYS_ADMIN` is granted — its principal
+  container-relevant restrictions are mount and a handful of `/proc` writes — so this pairs
+  a capability with the profile that would otherwise block that same capability's use.
+
+  **Untested: SELinux hosts.** This shape is verified on Docker Desktop/WSL2 and on a Debian
+  Linux runner with AppArmor. On a host running `container-selinux` (Fedora, RHEL, CentOS
+  Stream) systemd's mounts may be denied by SELinux instead, which `apparmor=unconfined`
+  does not affect. The failure is loud rather than silent — PID 1 exits and the container
+  restart-loops — so an affected operator sees it immediately in `oh logs`. Tracked as
+  [#960](https://github.com/mifunedev/openharness/issues/960); the supported host baseline
+  remains Debian/Ubuntu per
+  [Runtimes → Docker](runtimes/docker.md).
+
+  This is the minimum proven necessary, established by testing in increasing order of
+  authority against Docker 29.7.2 / cgroup v2 / `cgroupfs` driver:
+
+  | Grant | Result |
+  |---|---|
+  | Docker defaults | systemd exits at PID 1: `Failed to create /init.scope control group: Read-only file system` |
+  | `--cgroupns=private` | same failure — the namespace is already the default; the mount is still `ro` |
+  | `+ tmpfs /run,/run/lock` | same failure — `/run` was never the blocker |
+  | `+ cap_add SYS_ADMIN` alone | same failure — systemd does not remount an already-mounted `ro` `/sys/fs/cgroup` |
+  | `+ tmpfs /sys/fs`, AppArmor enforced | boots on hosts without AppArmor; on a native Linux runner PID 1 dies at `mount … /run: Permission denied` |
+  | `--security-opt systempaths=unconfined` | same failure — it does not reach the cgroup mount |
+  | `-v /sys/fs/cgroup:/sys/fs/cgroup:rw` | boots, **rejected**: the container gets the host cgroup **root** read-write — it can create cgroups at the host root and write other containers' `cgroup.procs`. Also leaves journald failed and the system `degraded`. |
+  | `privileged: true` | boots, **prohibited** by policy and strictly broader than the alternative |
+  | **`cap_add SYS_ADMIN` + `apparmor=unconfined` + `tmpfs /run,/run/lock,/sys/fs`** | **boots `running` with zero failed units on both Docker Desktop and a native Linux runner, and `/sys/fs/cgroup` is the container's own private subtree** |
+
+  The residual risk is honest: `CAP_SYS_ADMIN` plus `apparmor=unconfined` is a real
+  reduction in confinement — it permits mount operations inside the container's mount
+  namespace and is a well-known lateral-movement primitive. It is still less authority than
+  `privileged: true` (no extra devices, no unmasked `/proc`, no full capability set, no host
+  cgroup access) and, unlike the widely-copied host-cgroup-bind recipe, it exposes **nothing
+  belonging to the host** — the trade chosen deliberately, because a sandbox that can write
+  the host's cgroup tree and its neighbours' `cgroup.procs` breaks the first non-negotiable
+  in `AGENTS.md` (agent work stays inside the sandbox) in a way a mount capability does not. It is also far narrower than the
+  Docker socket in Caveat 1, which remains the dominant risk when enabled.
+  [`.oh/evals/probes/systemd-sandbox-init.sh`](../.oh/evals/probes/systemd-sandbox-init.sh)
+  pins this shape and fails on `privileged: true` or a host cgroup bind;
+  [`.oh/evals/probes/tailscale-tool-boundary.sh`](../.oh/evals/probes/tailscale-tool-boundary.sh)
+  holds `SYS_ADMIN` as the **only** capability the sandbox may grant, so a networking
+  capability can never be added quietly.
+
+- **Caveat 4 — the optional sshd overlay (RECOMMENDED to configure).** The base
   container publishes **no ports** and runs **no** SSH daemon. The opt-in overlay
   ([`.devcontainer/docker-compose.ssh.yml`](../.devcontainer/docker-compose.ssh.yml),
   enabled via `access.ssh: true` in `oh.json`) starts `sshd` and ships a **safe
@@ -148,7 +206,7 @@ expose to whichever trust level you choose.
   can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:
   [Integrations → SSH](integrations/sshd.md).
 
-- **Caveat 4 — the Tailscale tool (install-on-request, private-by-default).** Installing
+- **Caveat 5 — the Tailscale tool (install-on-request, private-by-default).** Installing
   `tailscale` with `oh tool install tailscale` adds **no container capability**: `tailscaled` runs inside the
   sandbox in **userspace-networking** mode as the unprivileged `sandbox` user, so
   there is no `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, and no host

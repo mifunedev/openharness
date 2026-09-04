@@ -21,9 +21,15 @@ services:
       - GH_TOKEN=${GH_TOKEN:-}
     stdin_open: true
     tty: true
-    init: true
-    entrypoint: /usr/local/bin/entrypoint.sh
-    command: sleep infinity
+    cgroup: private
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+    tmpfs:
+      - /run
+      - /run/lock
+      - /sys/fs
     healthcheck:
       test: ["CMD", "bash", "/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh"]
       interval: 30s

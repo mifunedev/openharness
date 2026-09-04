@@ -22,6 +22,7 @@ import {
   buildTmuxWrapper,
   decideOverlap,
   fire,
+  holdEventLoopForSignals,
   isValidAgentBin,
   isValidCronId,
   isValidRemote,
@@ -1233,6 +1234,17 @@ describe("SIGHUP reload", () => {
     expect(stop).toHaveBeenCalledTimes(1);
     expect(reloadLines()).toHaveLength(1);
     expect(loggedLines().filter((l) => l.includes("\tBOOT\t"))).toHaveLength(1);
+  });
+});
+
+describe("holdEventLoopForSignals", () => {
+  it("keeps the runtime alive for SIGHUP/SIGTERM when zero crons are armed", () => {
+    const handle = holdEventLoopForSignals(50);
+    try {
+      expect(handle.hasRef()).toBe(true);
+    } finally {
+      clearInterval(handle);
+    }
   });
 });
 

@@ -10,6 +10,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 
+- Boot the sandbox with `systemd` as PID 1 via `cap_add: SYS_ADMIN`, `apparmor=unconfined`, `tmpfs: /run,/run/lock,/sys/fs` and `cgroup: private` — no host cgroup bind. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Run the existing `entrypoint.sh` as `openharness-bootstrap.service`, a `Type=oneshot` unit whose environment is derived from PID 1 by a systemd environment generator. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Supervise `.oh/scripts/cron-runtime.ts` directly with `openharness-cron.service` as `sandbox`, with a rate-limited `Restart=on-failure` and an `ExecReload` that sends `SIGHUP`. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Add the `systemd-sandbox-init` and `cron-systemd-service` probes, and prove PID 1, unit state, PID agreement, reload, and kill recovery in `sandbox-boot-smoke.sh`. ([#956](https://github.com/mifunedev/openharness/issues/956))
+
 - Add `oh sandbox install docker`: a wizard writes a sandbox registry entry under `${OH_HOME:-~/.oh}/sandboxes/<name>/` and boots it from any directory, with no project checkout. ([#950](https://github.com/mifunedev/openharness/issues/950))
 - Add `oh sandbox list [--json]`, reporting each registry entry's name, runtime, container status, and bound repo. ([#950](https://github.com/mifunedev/openharness/issues/950))
 - Add `--sandbox <name>` to `oh config show|set` and `oh secret set|list`, which read and write a registry entry instead of the project root. ([#950](https://github.com/mifunedev/openharness/issues/950))
@@ -17,6 +22,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Changed
 
+- **BREAKING:** The sandbox image boots `CMD ["/sbin/init"]` with `STOPSIGNAL SIGRTMIN+3`; both Docker flavors drop `init: true`, the `entrypoint:` override, and `command: sleep infinity`. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- `sandbox-healthcheck.sh` reads systemd unit state for scheduler liveness instead of requiring the `cron-watchdog` and `cron-system` tmux sessions. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Mask the Debian `cron.service` and `ssh.service`/`ssh.socket` so installing systemd cannot start a second scheduler or bypass the `access.ssh` gate. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- `cron-runtime.ts` now holds its event loop open for signals, so a registry with zero armed crons stays reloadable and never leaves a stale `crons/.pid`. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Narrow `tailscale-tool-boundary` from "no `cap_add`" to an allowlist of exactly `SYS_ADMIN`, keeping every networking capability and `/dev/net/tun` forbidden. ([#956](https://github.com/mifunedev/openharness/issues/956))
 - **BREAKING:** `oh update` is the bootstrap: it equips an empty checkout with `.oh/` and `crons/`, writes nothing else, and never prompts. ([#950](https://github.com/mifunedev/openharness/issues/950))
 - **BREAKING:** `oh shell|stop|restart|logs|ps|destroy` take an optional sandbox name, resolving name, then the single entry, then the entry containing the cwd. ([#950](https://github.com/mifunedev/openharness/issues/950))
 - `oh destroy <name>` removes the registry entry after `down -v`, so the sandbox name becomes free again. ([#950](https://github.com/mifunedev/openharness/issues/950))
@@ -24,6 +34,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Removed
 
+- **BREAKING:** Remove the `cron-watchdog` tmux supervisor, its generated `/tmp/cron-watchdog.sh`, and `CRON_WATCHDOG_INTERVAL`; systemd `Restart=` replaces the polling loop. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- **BREAKING:** Remove the scheduler-level `cron-system` tmux session and the legacy `system-cron` reaping; per-fire `tmux: true` sessions are unchanged. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Remove `.oh/scripts/maintenance/restart-openharness-tmux.sh` and its date-expired heartbeat step, which recreated the retired scheduler sessions. ([#956](https://github.com/mifunedev/openharness/issues/956))
+- Remove the `cron-watchdog` eval probe, whose subject no longer exists. ([#956](https://github.com/mifunedev/openharness/issues/956))
 - Remove boot provisioning and every install switch: `oh harness install <id>` and `oh tool install <id>` are the only door. A fresh sandbox has no harness and no `herdr`. ([#948](https://github.com/mifunedev/openharness/issues/948))
 - **BREAKING:** Remove `oh init`. `oh sandbox install docker` owns sandbox configuration and `oh update` owns the control-plane payload. ([#950](https://github.com/mifunedev/openharness/issues/950))
 - **BREAKING:** Remove `oh runtime`. The runtime catalog lives under `oh sandbox`, and `msb` is installed with `oh tool install microsandbox`. ([#950](https://github.com/mifunedev/openharness/issues/950))

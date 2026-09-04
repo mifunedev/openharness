@@ -156,25 +156,47 @@ describe("client-slack bridge supervisor", () => {
 });
 
 describe("devcontainer entrypoint cron supervision", () => {
-  it("starts a cron-watchdog session that supervises cron-system", () => {
+  const CRON_UNIT = join(ROOT, ".devcontainer/openharness-cron.service");
+  const BOOTSTRAP_UNIT = join(ROOT, ".devcontainer/openharness-bootstrap.service");
+
+  it("owns no cron supervision — systemd does", () => {
     const text = entrypoint();
 
-    expect(text).toContain("cron-watchdog");
-    expect(text).toContain("cron-system missing; starting cron-runtime.ts");
-    expect(text).toContain("tmux new-session -d -s cron-system");
-    expect(text).toContain("node --experimental-strip-types .oh/scripts/cron-runtime.ts");
-    expect(text).toContain("/tmp/cron-system.log");
-    expect(text).toContain("/tmp/cron-watchdog.log");
+    for (const retired of [
+      "cron-watchdog",
+      "cron-system",
+      "system-cron",
+      "CRON_WATCHDOG_INTERVAL",
+    ]) {
+      expect(text).not.toContain(retired);
+    }
   });
 
-  it("reaps stale legacy system-cron instead of blocking modern cron supervision", () => {
-    const text = entrypoint();
+  it("runs as a finite bootstrap oneshot and only execs a command when one is given", () => {
+    const unit = readFileSync(BOOTSTRAP_UNIT, "utf8");
 
-    expect(text).toContain("tmux has-session -t system-cron");
-    expect(text).toContain("legacy system-cron tmux session detected — stopping it before starting cron-watchdog");
-    expect(text).not.toContain("not starting cron-system or cron-watchdog");
-    expect(text).toContain("legacy system-cron detected; stopping it before supervising cron-system");
-    expect(text).not.toContain("watchdog exiting");
+    expect(unit).toContain("Type=oneshot");
+    expect(unit).toContain("RemainAfterExit=yes");
+    expect(unit).toContain("ExecStart=/usr/local/bin/entrypoint.sh");
+    expect(unit).toContain("KillMode=process");
+    expect(entrypoint()).toContain('if [ "$#" -gt 0 ]; then\n  exec "$@"\nfi');
+  });
+
+  it("supervises cron-runtime.ts with a native systemd service", () => {
+    const unit = readFileSync(CRON_UNIT, "utf8");
+
+    expect(unit).toContain(
+      "ExecStart=/usr/local/bin/node --experimental-strip-types /home/sandbox/harness/.oh/scripts/cron-runtime.ts",
+    );
+    expect(unit).toContain("User=sandbox");
+    expect(unit).toContain("WorkingDirectory=/home/sandbox/harness");
+    expect(unit).toContain("ExecReload=/bin/kill -HUP $MAINPID");
+    expect(unit).toContain("Restart=on-failure");
+    expect(unit).toContain("StartLimitIntervalSec=");
+    expect(unit).toContain("StartLimitBurst=");
+    expect(unit).toContain("Requires=openharness-bootstrap.service");
+    expect(unit).toContain("After=openharness-bootstrap.service");
+    expect(unit).toContain("KillMode=process");
   });
 });
 

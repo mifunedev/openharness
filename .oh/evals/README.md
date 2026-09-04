@@ -80,6 +80,23 @@ Treat `SKIPPED` the same way. A probe whose skip guard can fire in the environme
 that normally runs it is unexercised, not healthy; prefer a guard whose absence is
 itself a REGRESSION over one that exits 2.
 
+### Boot-path changes are not proven by a local Docker run
+
+A static probe pins the text of a boot contract; it cannot observe whether that
+contract boots. Host security modules differ, and the local Docker Desktop / WSL2
+daemon does not enforce AppArmor, so a container shape that boots there can still
+die at PID 1 on a Linux host. Issue #956 hit exactly this: `cap_add: SYS_ADMIN`
+plus `tmpfs: /sys/fs` booted locally, then failed the `sandbox-boot-guard`
+workflow with `Failed to mount tmpfs (type tmpfs) on /run … Permission denied`,
+because the `docker-default` AppArmor profile denies `mount` even when the
+capability is granted.
+
+A change to `.devcontainer/` boot files is validated when
+`.github/workflows/sandbox-boot-guard.yml` is green — it builds the image and runs
+`.oh/scripts/sandbox-boot-smoke.sh` against a real container on a Linux runner.
+Local boots narrow the search; they do not close it. SELinux hosts remain
+unexercised by both.
+
 ### Pinning contract text
 
 A contract-text probe asserts a document still makes a claim. Pin the shortest
@@ -177,7 +194,7 @@ present in `ci-harness.yml`, so the gate itself cannot be silently deleted.
 ### Known limitation: `PASS→SKIPPED` is silent in CI
 
 A probe that is `PASS` in the committed `RESULTS.md` baseline but `SKIPPED`
-(exit 2) in a cold CI runner — no docker/tmux/cron-system/live process — is
+(exit 2) in a cold CI runner — no docker/tmux/systemd/live process — is
 **not** a regression: `run.sh:106` flags only a `PASS → REGRESSION|TIMEOUT|ERROR`
 transition. This is exactly what keeps the gate hermetic, but it also means a
 probe that should be exercising real state can silently degrade to a no-op in CI

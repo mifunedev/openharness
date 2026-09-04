@@ -177,7 +177,7 @@ When behind count > 0, print:
 ### (C) Host/state drift (cron-staleness)
 
 **Goal**: detect schedulable cron files changed after the running
-`cron-system` runtime started. Cron body text is hot-reloaded at fire time,
+cron runtime started. Cron body text is hot-reloaded at fire time,
 but restart-required frontmatter/config (`schedule`, `enabled`, `agent`,
 `tmux`, `worktree`, `preflight`) is loaded when the scheduler arms the cron;
 a changed cron file may therefore leave the live runtime using stale config
@@ -210,15 +210,17 @@ fi
 ```
 
 If `/proc/<pid>/stat` is inaccessible (PID namespace isolation, non-Linux
-host, stale PID), fall back to the `cron-system` tmux session creation
-time:
+host, stale PID), fall back to the `openharness-cron.service` start
+timestamp:
 
 ```bash
 if [ -z "$RUNTIME_START" ]; then
-  TMUX_START=$(tmux display-message -p '#{session_created}' -t cron-system 2>/dev/null)
-  if [ -n "$TMUX_START" ] && [ "$TMUX_START" -gt 0 ] 2>/dev/null; then
-    RUNTIME_START=$TMUX_START
-    echo "DRIFT-CHECK (C): cron runtime start time (from tmux session): $(date -d @$RUNTIME_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo $RUNTIME_START)"
+  UNIT_START=$(systemctl show -p ExecMainStartTimestamp --value openharness-cron.service 2>/dev/null)
+  if [ -n "$UNIT_START" ]; then
+    RUNTIME_START=$(date -d "$UNIT_START" +%s 2>/dev/null || echo "")
+    if [ -n "$RUNTIME_START" ]; then
+      echo "DRIFT-CHECK (C): cron runtime start time (from systemd): $(date -d @$RUNTIME_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo $RUNTIME_START)"
+    fi
   fi
 fi
 ```
@@ -392,12 +394,11 @@ If `INERT` is empty, print a single `OK` token for class C:
 Print (do not execute):
 
 ```
-  Recommended: reschedule or restart the cron-system runtime
-    # preferred live reschedule when the PID is valid:
-    kill -HUP $(cat crons/.pid)
-    # or restart the tmux session:
-    tmux kill-session -t cron-system
-    # then relaunch via the documented runtime-start procedure in scripts/cron-runtime.ts
+  Recommended: reschedule or restart the cron runtime
+    # preferred live reschedule:
+    systemctl reload openharness-cron.service
+    # or restart the service:
+    systemctl restart openharness-cron.service
 ```
 
 Note: this recommendation names the reschedule/restart commands but never runs
@@ -435,7 +436,7 @@ DRIFT-CHECK (A): origin/development is 3 behind upstream/development (0 ahead)
 DRIFT-CHECK (B): ...
 (B) Branch-behind drift: OK
 DRIFT-CHECK (C): crons/heartbeat.md modified after runtime start — restart-required frontmatter/config may be stale until SIGHUP reschedule or runtime restart (schedule enabled agent tmux worktree preflight; current schedule=0 * * * * enabled=true agent=pi tmux=<unset> worktree=<unset> preflight=<unset>)
-  Recommended: reschedule or restart the cron-system runtime ...
+  Recommended: reschedule or restart the cron runtime ...
 DRIFT: framework drift (3 behind upstream), cron-staleness drift (1 inert file)
 ```
 

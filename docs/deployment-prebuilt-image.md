@@ -255,7 +255,10 @@ docker volume rm "${NAME}_workspace" 2>/dev/null || true   # the whole sandbox h
 
 # ── 2. Fresh run (no bind mount, no build) ─────────────────────────
 docker run -d --name "$NAME" --restart unless-stopped \
-  --cgroupns private --cap-add SYS_ADMIN --tmpfs /sys/fs \
+  --cgroupns private \
+  --cap-add SYS_ADMIN \
+  --security-opt apparmor=unconfined \
+  --tmpfs /run --tmpfs /run/lock --tmpfs /sys/fs \
   -e GIT_USER_NAME="ryaneggz" \
   -e GIT_USER_EMAIL="kre8mymedia@gmail.com" \
   -e GH_TOKEN="${GH_TOKEN:-}" \

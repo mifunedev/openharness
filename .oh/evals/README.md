@@ -177,7 +177,7 @@ present in `ci-harness.yml`, so the gate itself cannot be silently deleted.
 ### Known limitation: `PASS→SKIPPED` is silent in CI
 
 A probe that is `PASS` in the committed `RESULTS.md` baseline but `SKIPPED`
-(exit 2) in a cold CI runner — no docker/tmux/cron-system/live process — is
+(exit 2) in a cold CI runner — no docker/tmux/systemd/live process — is
 **not** a regression: `run.sh:106` flags only a `PASS → REGRESSION|TIMEOUT|ERROR`
 transition. This is exactly what keeps the gate hermetic, but it also means a
 probe that should be exercising real state can silently degrade to a no-op in CI

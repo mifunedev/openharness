@@ -24,7 +24,11 @@ services:
     cgroup: private
     cap_add:
       - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
     tmpfs:
+      - /run
+      - /run/lock
       - /sys/fs
     healthcheck:
       test: ["CMD", "bash", "/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh"]

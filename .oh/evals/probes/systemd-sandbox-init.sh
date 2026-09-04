@@ -67,6 +67,12 @@ for compose in "$COMPOSE" "$COMPOSE_IO"; do
     || missing+=("$rel must grant cap_add SYS_ADMIN — systemd cannot mount its own cgroup2 hierarchy without it")
   grep -qE '^[[:space:]]*-[[:space:]]*/sys/fs[[:space:]]*$' "$compose" \
     || missing+=("$rel must tmpfs /sys/fs so /sys/fs/cgroup is unmounted and systemd mounts it writable")
+  grep -qE '^[[:space:]]*-[[:space:]]*/run[[:space:]]*$' "$compose" \
+    || missing+=("$rel must tmpfs /run — Docker's AppArmor profile denies systemd mounting it itself")
+  grep -qE '^[[:space:]]*-[[:space:]]*/run/lock[[:space:]]*$' "$compose" \
+    || missing+=("$rel must tmpfs /run/lock, or run-lock.mount fails")
+  grep -qE '^[[:space:]]*-[[:space:]]*apparmor=unconfined[[:space:]]*$' "$compose" \
+    || missing+=("$rel must set security_opt apparmor=unconfined — the docker-default profile denies systemd's cgroup2 mount even with CAP_SYS_ADMIN")
 done
 
 if (( ${#missing[@]} )); then

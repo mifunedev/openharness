@@ -137,11 +137,21 @@ expose to whichever trust level you choose.
 - **Caveat 3 — `cap_add: SYS_ADMIN` for systemd as PID 1 (REVIEWED trade-off).** systemd is
   PID 1 in the sandbox ([`Dockerfile`](../.devcontainer/Dockerfile) `CMD ["/sbin/init"]`), and
   systemd cannot boot without a **writable** cgroup2 hierarchy. Docker mounts
-  `/sys/fs/cgroup` read-only for unprivileged containers, so the compose files grant exactly
-  two things: `cap_add: [SYS_ADMIN]` and `tmpfs: [/sys/fs]`, with `cgroup: private`. The tmpfs
-  leaves `/sys/fs/cgroup` unmounted, so systemd mounts cgroup2 there itself; because the
-  container has a private cgroup namespace, that mount is rooted at the **container's own
-  cgroup subtree**. The host cgroup tree is never exposed.
+  `/sys/fs/cgroup` read-only for unprivileged containers, so the compose files grant
+  `cap_add: [SYS_ADMIN]`, `security_opt: [apparmor=unconfined]`, and
+  `tmpfs: [/run, /run/lock, /sys/fs]`, with `cgroup: private`. The tmpfs on `/sys/fs` leaves
+  `/sys/fs/cgroup` unmounted, so systemd mounts cgroup2 there itself; because the container
+  has a private cgroup namespace, that mount is rooted at the **container's own cgroup
+  subtree**. The host cgroup tree is never exposed.
+
+  `apparmor=unconfined` is required because Docker's `docker-default` AppArmor profile denies
+  `mount` **even when `CAP_SYS_ADMIN` is granted**. Without it, PID 1 dies immediately on a
+  native Linux host with `Failed to mount tmpfs (type tmpfs) on /run … Permission denied` /
+  `Failed to mount API filesystems`. `/run` and `/run/lock` come from Docker for the same
+  reason, so systemd performs one mount rather than three. Note that AppArmor's container
+  profile is already largely redundant once `CAP_SYS_ADMIN` is granted — its principal
+  container-relevant restrictions are mount and a handful of `/proc` writes — so this pairs
+  a capability with the profile that would otherwise block that same capability's use.
 
   This is the minimum proven necessary, established by testing in increasing order of
   authority against Docker 29.7.2 / cgroup v2 / `cgroupfs` driver:
@@ -152,16 +162,20 @@ expose to whichever trust level you choose.
   | `--cgroupns=private` | same failure — the namespace is already the default; the mount is still `ro` |
   | `+ tmpfs /run,/run/lock` | same failure — `/run` was never the blocker |
   | `+ cap_add SYS_ADMIN` alone | same failure — systemd does not remount an already-mounted `ro` `/sys/fs/cgroup` |
+  | `+ tmpfs /sys/fs`, AppArmor enforced | boots on hosts without AppArmor; on a native Linux runner PID 1 dies at `mount … /run: Permission denied` |
   | `--security-opt systempaths=unconfined` | same failure — it does not reach the cgroup mount |
   | `-v /sys/fs/cgroup:/sys/fs/cgroup:rw` | boots, **rejected**: the container gets the host cgroup **root** read-write — it can create cgroups at the host root and write other containers' `cgroup.procs`. Also leaves journald failed and the system `degraded`. |
   | `privileged: true` | boots, **prohibited** by policy and strictly broader than the alternative |
-  | **`cap_add SYS_ADMIN` + `tmpfs /sys/fs`** | **boots `running` with zero failed units, and `/sys/fs/cgroup` is the container's own private subtree** |
+  | **`cap_add SYS_ADMIN` + `apparmor=unconfined` + `tmpfs /run,/run/lock,/sys/fs`** | **boots `running` with zero failed units on both Docker Desktop and a native Linux runner, and `/sys/fs/cgroup` is the container's own private subtree** |
 
-  The residual risk is honest: `CAP_SYS_ADMIN` is a broad capability — it permits mount
-  operations inside the container's mount namespace and is a well-known lateral-movement
-  primitive. It is strictly less authority than `privileged: true` (no extra devices, no
-  unmasked `/proc`, no host cgroup access) and, unlike the widely-copied host-cgroup-bind
-  recipe, it exposes **nothing belonging to the host**. It is also far narrower than the
+  The residual risk is honest: `CAP_SYS_ADMIN` plus `apparmor=unconfined` is a real
+  reduction in confinement — it permits mount operations inside the container's mount
+  namespace and is a well-known lateral-movement primitive. It is still less authority than
+  `privileged: true` (no extra devices, no unmasked `/proc`, no full capability set, no host
+  cgroup access) and, unlike the widely-copied host-cgroup-bind recipe, it exposes **nothing
+  belonging to the host** — the trade chosen deliberately, because a sandbox that can write
+  the host's cgroup tree and its neighbours' `cgroup.procs` breaks the first non-negotiable
+  in `AGENTS.md` (agent work stays inside the sandbox) in a way a mount capability does not. It is also far narrower than the
   Docker socket in Caveat 1, which remains the dominant risk when enabled.
   [`.oh/evals/probes/systemd-sandbox-init.sh`](../.oh/evals/probes/systemd-sandbox-init.sh)
   pins this shape and fails on `privileged: true` or a host cgroup bind;

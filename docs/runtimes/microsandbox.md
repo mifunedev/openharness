@@ -214,7 +214,8 @@ Container paths are the same on both sides.
 | *(implicit)* | `network.policy: public` | first boot needs broad egress |
 | *(image `CMD ["/sbin/init"]`)* | `cmd:` | systemd must be PID 1; set explicitly because msb may not inherit the image `CMD` |
 | `cap_add: [SYS_ADMIN]` | *(no confirmed equivalent)* | systemd needs it to mount its own cgroup2 hierarchy — see risk 5 |
-| `tmpfs: [/sys/fs]` | *(no confirmed equivalent)* | leaves `/sys/fs/cgroup` unmounted so systemd mounts it writable and container-private — see risk 5 |
+| `tmpfs: [/run, /run/lock, /sys/fs]` | *(no confirmed equivalent)* | leaves `/sys/fs/cgroup` unmounted so systemd mounts it writable and container-private — see risk 5 |
+| `security_opt: [apparmor=unconfined]` | *(no confirmed equivalent)* | the docker-default AppArmor profile denies systemd's mounts even with `CAP_SYS_ADMIN` |
 | `cgroup: private` | *(no confirmed equivalent)* | pins the private cgroup namespace the isolation depends on |
 | `restart: unless-stopped` | *(no confirmed equivalent)* | no auto-recovery after a host reboot; confirm msb's restart policy before relying on this for anything long-lived |
 | `extra_hosts: host.docker.internal` | *(no equivalent)* | only self-hosted Langfuse uses it |

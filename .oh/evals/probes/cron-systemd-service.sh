@@ -25,6 +25,8 @@ grep -qE '^WorkingDirectory=/home/sandbox/harness$' "$UNIT" \
   || missing+=("openharness-cron.service must set WorkingDirectory=/home/sandbox/harness — CRONS_DIR is cwd-relative")
 grep -qE '^Restart=on-failure$' "$UNIT" || missing+=("openharness-cron.service must set Restart=on-failure")
 grep -qE '^RestartSec=' "$UNIT" || missing+=("openharness-cron.service must set RestartSec=")
+grep -qE '^StartLimitIntervalSec=' "$UNIT" && grep -qE '^StartLimitBurst=' "$UNIT" \
+  || missing+=("openharness-cron.service must bound its restart loop with StartLimitIntervalSec/StartLimitBurst — at RestartSec=5 the systemd defaults never trip, so a permanent failure such as 'another instance is running' would retry forever instead of surfacing as a failed unit")
 grep -qF 'ExecReload=/bin/kill -HUP $MAINPID' "$UNIT" \
   || missing+=("openharness-cron.service ExecReload must send SIGHUP to the main PID")
 grep -qE '^Requires=openharness-bootstrap.service$' "$UNIT" \

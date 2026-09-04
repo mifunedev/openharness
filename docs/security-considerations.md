@@ -153,6 +153,15 @@ expose to whichever trust level you choose.
   container-relevant restrictions are mount and a handful of `/proc` writes — so this pairs
   a capability with the profile that would otherwise block that same capability's use.
 
+  **Untested: SELinux hosts.** This shape is verified on Docker Desktop/WSL2 and on a Debian
+  Linux runner with AppArmor. On a host running `container-selinux` (Fedora, RHEL, CentOS
+  Stream) systemd's mounts may be denied by SELinux instead, which `apparmor=unconfined`
+  does not affect. The failure is loud rather than silent — PID 1 exits and the container
+  restart-loops — so an affected operator sees it immediately in `oh logs`. Tracked as
+  [#960](https://github.com/mifunedev/openharness/issues/960); the supported host baseline
+  remains Debian/Ubuntu per
+  [Runtimes → Docker](runtimes/docker.md).
+
   This is the minimum proven necessary, established by testing in increasing order of
   authority against Docker 29.7.2 / cgroup v2 / `cgroupfs` driver:
 

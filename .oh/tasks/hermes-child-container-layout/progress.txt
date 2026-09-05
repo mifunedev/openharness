@@ -1,0 +1,3 @@
+# progress
+
+2026-09-05 plan: base 372581cd96ba2931b8328cff59cbdeeae9a9043f equals fetched origin/development. Recalled hermes/provider/container entity and pattern queries: five entity matches, three read; one pattern read. Slugs: compose-env-boundary, fresh-machine-setup, oh-cli-portable-lifecycle, pattern-cli-bundled-asset-relative-import. Re-grounded installer, linker, boot, lifecycle guard and project resolver. Operator approved direct docker run with no host binds; no live sandbox mutation. Issue #969; eight stories. Latest baseline container oh-hermes-layout-20260905032825 uses fresh named home volume and no socket/ports/binds; actual installer running. Latest reports 0.7.0 and native sleep-PID-1 boot, distinct from current-source systemd.

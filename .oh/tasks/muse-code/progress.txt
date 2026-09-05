@@ -1,3 +1,4 @@
 # progress
 
 2026-09-04 Plan grounded at 372581cd. Three explorers completed. Operator superseded obsolete install intent and oh init criteria. Current installable catalog and canonical linker selected.
+2026-09-04 Implemented catalog, standard skills, secret support and documentation at f62e4128. Real CLI install, idempotence, version, 34 project skills and echo provider passed. Full suite: 916 tests. Default local skills-vendored red predates this task; host-mode clean-clone probe passes. No authenticated or Docker recreation claim.

@@ -25,7 +25,7 @@ upstream documentation below for canonical facts about Hermes.
   Telegram, Discord, Slack, WhatsApp, Signal, Email, and other
   surfaces — though Open Harness recommends running Hermes in CLI mode
   unless you have a specific reason to enable a bridge.
-- MIT-licensed; current upstream release is v0.14.0.
+- MIT-licensed. Run `hermes --version` to identify the installed upstream revision.
 
 ## Install
 
@@ -53,6 +53,7 @@ Open Harness runs the official installer as the `sandbox` user with setup and
 browser installation disabled, directing it into the home mount:
 
 ```bash
+export HERMES_HOME="${HERMES_HOME:-/home/sandbox/harness/.hermes}"
 curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
   | HERMES_INSTALL_DIR="$HOME/.local/lib/hermes-agent" bash -s -- --skip-setup --skip-browser
 ```
@@ -61,8 +62,7 @@ Review-first equivalent for manual inspection:
 
 ```bash
 curl -fsSL -o hermes-install.sh https://hermes-agent.nousresearch.com/install.sh
-# Review hermes-install.sh in your editor or pager before running it.
-bash hermes-install.sh --skip-setup --skip-browser
+less hermes-install.sh
 ```
 
 If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
@@ -80,16 +80,25 @@ hermes setup --portal   # Nous Portal OAuth integration
 hermes doctor           # health check
 ```
 
-Config, memory, runtime skills, and sessions write to `~/harness/.hermes/`,
-which the entrypoint sets as `HERMES_HOME`. On every boot where the `hermes`
-binary is present — the wiring keys off the binary, so it runs identically in
-both sandbox flavors — the entrypoint links
-`.hermes/skills/openharness` to the tracked shared skills directory
-(`.oh/skills/`), making the same harness skills used by Claude, Codex, and Pi
-visible to Hermes by default.
+The image sets `HERMES_HOME=/home/sandbox/harness/.hermes` for config, memory,
+runtime skills, and sessions. The managed installer sets that home before running
+upstream code. Installation reconciles `.hermes/skills/openharness` with `.oh/skills`
+immediately, without a restart. Repeated installation repairs missing integration
+without reinstalling an existing executable. Boot uses the same provider linker.
+
+The `openharness` child link preserves Hermes-native skills beside it. A foreign
+symlink, occupied file or directory, linked runtime parent, or unset/conflicting
+`HERMES_HOME` stops managed installation without replacing that path. Resolve the
+conflict explicitly; do not merge populated homes automatically. Standalone Hermes
+launches and `HERMES_GATEWAY_HOME` retain their explicit override behavior.
+
+Hermes can warn that linked shared content resolves outside its trusted skills
+directory. The tested upstream loader still lists and reads that content. The link
+is not a trust bypass or a security boundary. Duplicate skill names follow upstream
+resolution rules; use a qualified path when Hermes reports ambiguity.
 
 Auth lives directly inside `HERMES_HOME` (`~/harness/.hermes/auth.json`).
-No symlink or named volume is involved: an earlier design symlinked
+The current design uses no separate auth symlink or auth volume. An earlier design symlinked
 `auth.json` into a home-scoped Docker volume of its own, but that
 volume sits on a different filesystem from the bind-mounted checkout and
 caused Hermes' atomic-replace writes to fail with `EXDEV`. Keeping auth
@@ -102,21 +111,30 @@ authentication.
 
 ## State persistence
 
-`~/harness/.hermes/` is part of the bind-mounted checkout, so Hermes
-configuration, credentials, generated skills, memory, and sessions
-survive container rebuilds and follow the project directory. The
-project-local runtime contents are ignored by git; do not commit
-secrets from this directory.
+In an image-only sandbox, `~/harness/.hermes/` resides in the home volume.
+With a checkout bind, the same path resides in the checkout. State survives restart
+and container recreation only while its backing storage remains. Git ignores runtime
+contents; never commit credentials.
 
-`oh destroy` stops containers and removes volumes but does not delete
-the bind-mounted `.hermes/` directory from the checkout. Remove that
-directory manually if you want a full Hermes project-state reset.
+`oh destroy` removes the home volume, including image-only Hermes state. The command
+does not delete a host checkout's `.hermes/` directory. Teardown requires explicit
+confirmation.
 
 `oh harness install hermes` installs the binary into the home volume, at
 `~/.local/lib/hermes-agent` with a `~/.local/bin/hermes` launcher. Nothing about
 it lives in the image, and nothing reinstalls it at boot. `oh destroy` removes
-the home volume and the binary with it; project-local state remains in
-`.hermes/` until removed.
+the home volume and the binary with it. Only checkout-backed state remains outside
+that volume.
+
+### Existing images
+
+Updating the CLI does not change an existing container's image environment. Recreate
+it from the corrected image while retaining its storage. A restart alone cannot add
+an image-level `HERMES_HOME`. Managed installation refuses an unset launch home
+rather than reporting success that the next ordinary launch cannot reproduce.
+Before changing homes, stop Hermes and back up existing
+state. If both `~/.hermes` and `~/harness/.hermes` contain data, choose the intended
+home explicitly. This correction does not migrate credentials or sessions.
 
 ## Common usage
 
@@ -126,13 +144,9 @@ the home volume and the binary with it; project-local state remains in
 hermes
 ```
 
-For long-running interactive sessions, wrap in a tmux session per
-[`.oh/skills/t3/references/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/.oh/skills/t3/references/sandbox-processes.md):
-
-```bash
-tmux new-session -d -s agent-hermes 'hermes'
-tmux attach -t agent-hermes
-```
+Run long-lived interactive sessions in Herdr. Install Herdr with `oh tool install herdr`,
+run `herdr`, and start `hermes` in a pane. Named tmux sessions remain the convention
+for headless gateways and dashboards.
 
 ### Model and gateway
 
@@ -141,8 +155,8 @@ hermes model            # pick LLM provider
 hermes gateway setup    # configure the messaging gateway (Slack app, trust) — optional
 ```
 
-Hermes' Slack/messaging gateway is managed by the **same** harness lifecycle script as
-Pi's — `.oh/scripts/gateway.sh` — in a sibling tmux session. Pi and Hermes each hold their
+The **same** harness lifecycle script, `.oh/scripts/gateway.sh`, manages both
+Hermes' Slack/messaging gateway and Pi's bridge in separate tmux sessions. Pi and Hermes each hold their
 **own** Slack app and config, so the two never compete for one socket: Pi's `client-slack-pi`
 runs the pi-messenger-bridge, while Hermes' `client-slack-hermes` runs Hermes' native
 `hermes gateway run`. `gateway.sh` owns only the session *lifecycle*; configuration is
@@ -156,7 +170,7 @@ Run the Hermes gateway **from inside the sandbox** — both `gateway hermes` and
 (`gateway.sh` errors otherwise). The launcher pins `HERMES_HOME` to
 `~/harness/.hermes`, persists Hermes `terminal.cwd` to `~/harness` (override with
 `HERMES_GATEWAY_HOME` / `HERMES_GATEWAY_CWD`), and self-installs Teams webhook deps
-when Teams credentials are configured:
+when Teams credentials exist:
 
 ```bash
 gateway hermes            # start the client-slack-hermes session (wraps `hermes gateway run`)
@@ -177,7 +191,7 @@ tail -f /tmp/client-slack-hermes.log     # or just tail the log (no attach neede
 
 Hermes ships a local web UI (`hermes dashboard`) that provides config and
 `.env` editing, session browsing, cron job management, and an embedded TUI.
-It is **disabled by default** and opt-in per sandbox.
+Open Harness **disables the dashboard by default**. Enable the dashboard explicitly per sandbox.
 
 ### Enabling
 
@@ -191,7 +205,7 @@ oh config set hermesDashboard.port 9119   # optional; 9119 is the default
 Then restart:
 
 ```bash
-oh stop && oh sandbox
+oh restart <name>
 ```
 
 The dashboard needs the `hermes` binary; without it there is nothing to serve and
@@ -199,7 +213,7 @@ the entrypoint skips the launch.
 
 ### What auto-launches
 
-When `hermesDashboard.enabled` is true and `hermes` is installed, the entrypoint
+When `hermesDashboard.enabled` is true and the `hermes` executable exists, the entrypoint
 starts the dashboard in a named tmux session:
 
 - **tmux session**: `app-hermes-dashboard`
@@ -224,16 +238,14 @@ tmux new-session -d -s app-hermes-dashboard \
 
 ### Security
 
-The dashboard reads and writes `.env` secrets and `config.yaml`, and it binds to
-**container loopback** only. Nothing publishes it to the host, so it is reachable
-from inside the sandbox and from an explicit tunnel — never from the LAN, and not
-from the host browser without one.
+The dashboard reads and writes `.env` secrets and `config.yaml`. The listener binds
+to **container loopback** only. Open Harness publishes no host port. Use an explicit
+tunnel for remote access; a host browser cannot connect directly.
 
-Because only processes inside the container can reach `127.0.0.1:9119`,
-**no additional authentication is required** by default.
+The default loopback mode requires no additional authentication. Treat the dashboard
+as sensitive because processes inside the container can reach it.
 
-Do **not** change the bind to `0.0.0.0` — that would expose the dashboard (and
-the `.env` secrets it reads) to anything that can route to the container.
+Do **not** change the bind to `0.0.0.0`. Network clients could then access dashboard secrets.
 
 ### Remote access
 
@@ -263,8 +275,8 @@ The sandbox onboarding banner reports Hermes as:
 
 - `❌ not installed` — run `oh harness install hermes` — when the binary is absent from PATH.
 - `✅ installed — run: hermes setup` — when the binary is on PATH but
-  `~/.hermes/auth.json` is absent or empty.
-- `✅ authenticated` — when `~/.hermes/auth.json` exists and is
+  `~/harness/.hermes/auth.json` is absent or empty.
+- `✅ authenticated` — when `~/harness/.hermes/auth.json` exists and is
   non-empty.
 
 Set `OH_BANNER_STATUS_STYLE=legacy` to force the old `[✗]` / `[✓]` markers when emoji rendering is unavailable.

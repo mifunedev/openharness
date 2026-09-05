@@ -207,23 +207,6 @@ if command -v hermes >/dev/null 2>&1; then
     fi
   fi
 
-  HERMES_SHARED_SKILLS_DIR="$HARNESS/.oh/skills"
-  HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
-  mkdir -p "$HERMES_RUNTIME/skills"
-  if [ -d "$HERMES_SHARED_SKILLS_DIR" ]; then
-    if [ -L "$HERMES_SHARED_SKILLS_LINK" ]; then
-      current_target="$(readlink "$HERMES_SHARED_SKILLS_LINK" || true)"
-      if [ "$current_target" != "../../.oh/skills" ] && [ "$current_target" != "$HERMES_SHARED_SKILLS_DIR" ]; then
-        rm -f "$HERMES_SHARED_SKILLS_LINK"
-        ln -s ../../.oh/skills "$HERMES_SHARED_SKILLS_LINK"
-      fi
-    elif [ ! -e "$HERMES_SHARED_SKILLS_LINK" ]; then
-      ln -s ../../.oh/skills "$HERMES_SHARED_SKILLS_LINK"
-    else
-      echo "[entrypoint] $HERMES_SHARED_SKILLS_LINK exists and is not a symlink — leaving it untouched"
-    fi
-  fi
-
   chown -hR "$(sandbox_ownership)" "$HERMES_RUNTIME" 2>/dev/null || true
 
   for d in /usr/local/lib/hermes-agent /opt/uv; do

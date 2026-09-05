@@ -14,16 +14,24 @@ on:
       - main
     paths:
       - ".devcontainer/Dockerfile"
+      - ".devcontainer/entrypoint.sh"
       - ".dockerignore"
       - ".oh/scripts/verify-sandbox-image.sh"
       - ".oh/scripts/node-pnpm-parity.sh"
+      - ".oh/scripts/hermes-install-smoke.sh"
+      - ".oh/scripts/link-providers.sh"
+      - ".oh/cli/src/commands/harness.ts"
       - ".github/workflows/sandbox-compatibility.yml"
   pull_request:
     paths:
       - ".devcontainer/Dockerfile"
+      - ".devcontainer/entrypoint.sh"
       - ".dockerignore"
       - ".oh/scripts/verify-sandbox-image.sh"
       - ".oh/scripts/node-pnpm-parity.sh"
+      - ".oh/scripts/hermes-install-smoke.sh"
+      - ".oh/scripts/link-providers.sh"
+      - ".oh/cli/src/commands/harness.ts"
       - ".github/workflows/sandbox-compatibility.yml"
 
 concurrency:
@@ -83,14 +91,16 @@ jobs:
         run: |
           set -euo pipefail
           cid=$(docker run -d --rm \
-            -e SANDBOX_NAME=openharness-optional-${{ github.run_id }} \
-            --entrypoint sleep \
-            openharness-sandbox-optional:${{ github.sha }} infinity)
+            -e SANDBOX_NAME=oh-hermes-optional-${{ github.run_id }} \
+            --cgroupns=private --cap-add=SYS_ADMIN --security-opt apparmor=unconfined \
+            --tmpfs /run --tmpfs /run/lock --tmpfs /sys/fs \
+            openharness-sandbox-optional:${{ github.sha }})
           trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
 
-          # The image ships an empty /home/sandbox; seed it the way the
-          # entrypoint would so ~/.local exists and is sandbox-owned.
-          docker exec "$cid" bash -lc 'cp -a -n /opt/home-seed/. /home/sandbox/ 2>/dev/null || true; chown -R sandbox:sandbox /home/sandbox'
+          timeout 600 docker exec "$cid" systemctl is-system-running --wait || {
+            docker exec "$cid" systemctl is-active openharness-bootstrap.service openharness-cron.service
+          }
+          docker exec "$cid" bash /home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh
 
           ids=$(docker exec -u sandbox "$cid" bash -lc \
             'cd /opt/oh-seed && OH_EXECUTION_TARGET=local oh harness list --json' \
@@ -122,6 +132,12 @@ jobs:
               sleep 15
             done
           done
+
+          docker exec -u sandbox -w /tmp -e OH_HERMES_SMOKE=1 "$cid" \
+            bash /home/sandbox/harness/.oh/scripts/hermes-install-smoke.sh
+          docker exec -u sandbox -w /home/sandbox/harness "$cid" oh harness install hermes
+          docker exec -u sandbox -w /tmp -e OH_HERMES_SMOKE=1 "$cid" \
+            bash /home/sandbox/harness/.oh/scripts/hermes-install-smoke.sh
 
           for id in $ids; do
             binary=$(docker exec -u sandbox "$cid" bash -lc \

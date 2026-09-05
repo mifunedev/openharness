@@ -1,14 +1,11 @@
 ---
 name: wiki
 description: |
-  Dispatcher for the harness knowledge base — routes the first token of
-  $ARGUMENTS to one of four subcommands: ingest, query, lint, or compile. The
-  knowledge lives at .oh/knowledge/ (source/ entity pages with kind: repo or
-  external, patterns/ pages with kind: pattern, raw/ immutable external
-  snapshots — all tracked; local/ is gitignored per-machine scratch that no
-  query reads). This skill owns the procedure; .oh/knowledge/ owns the data.
-  Canonical schema: .oh/skills/wiki/references/schema.md. Full per-subcommand
-  procedures live in references/{ingest,query,lint,compile}.md.
+  Dispatch four subcommands: ingest, query, lint, or compile.
+  This skill owns procedures; .oh/knowledge/ owns tracked source pages, patterns,
+  and raw snapshots. Queries exclude local scratch. Canonical schema:
+  .oh/skills/wiki/references/schema.md. Procedures:
+  references/{ingest,query,lint,compile}.md.
   TRIGGER when: "add to wiki", "capture this page", "snapshot this source",
   "ingest <url|path>", or promoting a sub-agent draft -> ingest; "what does the
   wiki say about X", "find knowledge entries for X", "look up X in the wiki",

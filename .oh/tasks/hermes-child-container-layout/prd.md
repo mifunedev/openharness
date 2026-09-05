@@ -111,6 +111,10 @@ After the implementation stories pass, run the canonical implementation audit, e
 delta, knowledge gate, benchmark, and exact-head PR audit. Undraft only after every
 required gate passes. Never merge or perform unapproved teardown.
 
+Operator clarification: the capability benchmark is N/A for this Hermes correction
+because it does not assess the changed runtime-home and skill-discovery behavior.
+No benchmark waiver is required. The other verification requirements remain intact.
+
 The original story graph put these gates inside US-008, although the audit requires
 all stories to pass first. Moving the gates here removes that self-dependency without
 dropping a requirement or authorizing earlier promotion.

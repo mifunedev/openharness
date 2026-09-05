@@ -1,7 +1,9 @@
 # Hermes layout implementation evidence
 
-Status: DRAFT-BLOCKED(benchmark). Runtime, implementation audit, regression floor,
-and implementation-head CI pass. The capability instrument does not establish benefit.
+Status: benchmark N/A (not applicable), per operator direction. The benchmark
+assesses no applicable Hermes correction outcome and does not block this PR.
+Runtime, implementation audit, regression floor, and implementation-head CI pass.
+This classification correction does not change the PR's draft status.
 
 Audited implementation head: `465075d642c35834d26a1e745ec4ab58deaf405f`.
 PR: https://github.com/mifunedev/openharness/pull/970
@@ -25,9 +27,9 @@ recreation preserved configuration and native/synthetic sentinels byte-for-byte.
 
 The cost is one image environment default, Hermes-specific install reconciliation,
 a scoped additive-link mode, tests, and a reusable opt-in smoke scenario. The change
-removes the duplicate bootstrap linker. The capability verdict is NOT-BENEFICIAL (unproven): its scoreboard stayed at 1.44
-and contains no credit for this correction. These measurements establish functional
-benefit, not a comparable capability-suite gain.
+removes the duplicate bootstrap linker. The capability benchmark is N/A for this
+correction. The runtime measurements establish the functional benefit; the unchanged
+1.44 capability score neither measures nor disproves that benefit.
 
 ## What the plan asked for
 
@@ -61,8 +63,8 @@ provisioning prerequisite for this experiment, not the product lifecycle rules.
 
 ## What remains unverified
 
-- The capability benchmark cannot establish a comparable gain or credited hold. Its historical unattended baseline is explicitly incomparable, and its ready-PR task cannot yet count this draft as success. Operator direction is required before promotion.
-- Final handoff-head CI and PR classification follow the evidence commit; their observed outcome belongs in the PR body. Neither can waive the benchmark decision.
+- The capability benchmark is N/A for this correction, not a failed requirement or a waived gate. No capability-suite improvement is claimed.
+- Current-head CI and PR classification remain separate verification requirements; their observed outcomes belong in the PR body.
 - Local eval retains the pre-existing `skills-vendored` red because this session lacks `cc-safety-net` on PATH. No safety bypass was set. The current-source container's provider check passes.
 - The public website has a follow-up ticket, not an implemented website change.
 - The experiment did not test live models, account authentication, gateways, dashboards, SSH login, or arbitrary profile migration. Those are outside the approved correction.
@@ -204,7 +206,7 @@ Additional checks:
 | D7 | Image-seeded and copied payload contexts pass; actual host binds remain explicitly excluded. |
 | D8 | Docker metadata shows only test volumes, no socket/bind/ports, and no live state sharing. Other-provider tests pass. |
 | D9 | New tracked smoke exits 1 against the baseline home defect and 0 against candidates. |
-| D10 | 924 final tests, typecheck/build, source-image build, six implementation-head CI checks, local eval delta, and documentation/index checks pass. Benchmark does not establish benefit. |
+| D10 | 924 final tests, typecheck/build, source-image build, six implementation-head CI checks, local eval delta, and documentation/index checks pass. Capability benchmark: N/A for this correction. |
 | D11 | Correlated implementation audit: AUDIT-PASS, no residual simplification findings. |
 
 ### Automated checks
@@ -250,23 +252,17 @@ found zero concrete residuals.
 Observed scores: current `suite score = 1.44`; base `suite score = 1.44`.
 Regression floor: `runnerExit=0`, no new regressions, one disclosed pre-existing red.
 
-Verdict: **NOT-BENEFICIAL (unproven by the capability instrument)**. The scoreboard
-records no task credit for this correction and explicitly limits comparability of
-its historical unattended baseline. The ready-PR task also requires a non-draft PR,
-so counting success before this promotion decision would be circular. The experiment
-did not groom the instrument or fabricate a passing score.
+Classification: **N/A — not applicable to this Hermes correction**.
 
-Operator options: approve a narrowly scoped benchmark waiver for this PR, or request
-a separate comparable capability assessment. No code revert or benchmark rewrite
-occurred. The advisory behavior-commit revert below excludes every knowledge path.
-The experiment has not executed this command:
+The existing capability benchmark does not assess the runtime-home and shared-skill
+discovery behavior changed by this PR. Its unchanged score does not indicate a
+failed correction. The targeted runtime checks, regression floor, CI, and audits
+remain the applicable verification evidence.
 
-```bash
-git revert --no-edit 465075d6 27568a18 7610c7c4
-```
-
-Later evidence edits may require conflict resolution. The retained runtime test
-resources are separate from this source-code rollback option.
+The operator directed this classification correction. It supersedes the earlier
+NOT-BENEFICIAL label and removes the resulting benchmark hold and waiver request.
+No waiver, passing capability score, or rollback is necessary. General benchmark
+policy and the scoreboard remain unchanged.
 
 ### Actual Knowledge Impact
 

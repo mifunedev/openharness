@@ -111,6 +111,20 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     kind: "installable",
   },
   {
+    id: "muse-code",
+    title: "Muse Code",
+    binary: "muse",
+    installArgv: [
+      "bash",
+      "-lc",
+      "set -o pipefail; curl -fsSL https://dev.meta.ai/install.sh | MUSE_INSTALL_DIR=\"$HOME/.local/bin\" MUSE_NO_MODIFY_PATH=1 MUSE_LOGIN=0 bash",
+    ],
+    installUser: "sandbox",
+    verifyArgv: ["muse", "--version"],
+    docsPath: "docs/harnesses/muse-code.md",
+    kind: "installable",
+  },
+  {
     id: "t3code",
     title: "T3 Code",
     binary: "t3",

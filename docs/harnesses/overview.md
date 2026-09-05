@@ -52,6 +52,7 @@ volume, and the install with it.
 | [Pi](./pi.md) | Lightweight, customizable agent | `pi` | `oh harness install pi` |
 | [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | `oh harness install hermes` |
 | [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | `oh harness install grok-build` |
+| [Muse Code](./muse-code.md) | Meta's terminal coding agent | `muse` | `oh harness install muse-code` |
 | [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `/t3` or `npx t3` | on demand, no install |
 
 ## Verifying installation
@@ -64,6 +65,7 @@ pi --version
 opencode --version
 hermes --version
 grok --version
+muse --version
 
 npx t3 --version        # T3 Code — on demand, fetched by npx
 ```
@@ -77,6 +79,7 @@ Install a harness with `oh harness install <id>`, then authenticate it. Authenti
 - **OpenCode**: run `opencode auth login` (see [OpenCode](./opencode.md)).
 - **Pi**: configure provider keys via environment variables (see [Pi](./pi.md)).
 - **Hermes**: run `hermes setup` (see [Hermes](./hermes.md)).
+- **Muse Code**: run `muse login` inside the sandbox, or provide `META_API_KEY` to the launching process (see [Muse Code](./muse-code.md)).
 - **Grok Build**: run `grok login --device-auth` for headless/remote auth, `grok login` for interactive OAuth, or set `XAI_API_KEY` as a fallback (see [Grok Build](./grok-build.md)). Cached `~/.grok/auth.json` takes precedence over `XAI_API_KEY`.
 - **T3 Code**: authenticate one of Claude / Codex / OpenCode first, then run `/t3` (or `npx t3`) and open the printed pairing URL (see [T3 Code](./t3code.md)).
 

@@ -158,7 +158,7 @@ No agent CLI and no tool is baked into the image, and nothing installs one at
 boot. Install what you need through the one door:
 
 ```bash
-oh harness install claude-code   # or codex, pi, opencode, hermes, grok-build
+oh harness install claude-code   # or codex, pi, opencode, hermes, grok-build, muse-code
 oh tool install cloudflared      # or herdr, agent-browser, tailscale
 ```
 
@@ -182,6 +182,7 @@ harness before use.
 - **[OpenCode](./harnesses/opencode.md)**: `oh harness install opencode`, then run `opencode auth login`
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
 - **[Hermes](./harnesses/hermes.md)**: `oh harness install hermes`, then run `hermes setup`
+- **[Muse Code](./harnesses/muse-code.md)**: `oh harness install muse-code`, verify `muse --version`, then run `muse login`
 - **[Grok Build](./harnesses/grok-build.md)**: `oh harness install grok-build`, verify `grok --version`, then run `grok login --device-auth` (headless/remote) or `grok login`
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `/t3` or `npx t3` (browser UI on port 3773)
 

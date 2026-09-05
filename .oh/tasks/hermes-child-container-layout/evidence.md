@@ -5,7 +5,8 @@ Status: implementation verified; final canonical audit/eval/benchmark gates rema
 Implementation head: `27568a185eed75fe568a8fe3e0260f3b7e148bcb`.
 PR: https://github.com/mifunedev/openharness/pull/970
 Issue: https://github.com/mifunedev/openharness/issues/969
-Audit correlation: pending canonical audit. Independent source review: `4682d22b-7939-440`.
+Audit run: `audit-20260905T044647Z-1375379` — `AUDIT-FAIL` (one redundant test).
+The owner removed that test; re-audit remains pending. Independent source review: `4682d22b-7939-440`.
 
 ## Why this is better than not doing it
 
@@ -46,6 +47,26 @@ provisioning prerequisite for this experiment, not the product lifecycle rules.
 - Ordinary provider linking in another worktree does not claim ownership of the image-global Hermes home.
 - CI uses normal image-only Compose boot and built-in health waiting. It runs real discovery before and after repeat installation, then checks a login shell after restart.
 
+## Where the implementation diverged, and why
+
+1. The operator approved direct Docker test provisioning without host binds. Copy-in and Docker-managed volumes replaced the original host-only test prerequisite.
+2. Published latest and the checkout use different boot topologies. The experiment tested both rather than treating latest as current-source systemd evidence.
+3. CI initially raced D-Bus startup. The final workflow uses existing Compose health waiting, not a new polling framework.
+4. The graph originally placed final audit gates inside a story that the audit required to be complete. The gates moved to the PRD's finalization section; the change retained every promotion requirement.
+5. The explicit no-host-bind instruction excludes real checkout bind coverage. Copied checkout/payload coverage does not prove host UID remapping or cross-device behavior.
+
+## What remains unverified
+
+- Implementation re-audit, benefit benchmark, and final-head PR audit remain pending at this document revision.
+- Local eval retains the pre-existing `skills-vendored` red because this session lacks `cc-safety-net` on PATH. No safety bypass was set. The current-source container's provider check passes.
+- The public website has a follow-up ticket, not an implemented website change.
+- The experiment did not test live models, account authentication, gateways, dashboards, SSH login, or arbitrary profile migration. Those are outside the approved correction.
+- The initial run did not capture original streamed installer bytes. The post-run served script matches the installed revision's script.
+- The experiment did not exercise host binds, host UID remapping, or cross-device auth migration. The synthetic atomic test checks only same-filesystem replacement, not live authentication.
+- The experiment retained every test resource. Teardown still requires operator consent.
+
+## Proof by gate
+
 ### Artifacts and provenance
 
 | Artifact | Observed identity |
@@ -81,7 +102,7 @@ shared_view.success=false
 ```
 
 The observation invoked installed Hermes `get_hermes_home`, `skills_list`, and
-`skill_view` through its own virtual environment. It did not substitute a filesystem
+`skill_view` through its own virtual environment. The observation did not substitute a filesystem
 listing or a fake executable for discovery.
 
 The new tracked oracle also rejects the baseline's still-unset home:
@@ -172,6 +193,8 @@ Additional checks:
 - `pnpm test`: 59 files, 925 tests passed.
 - Bash syntax, `git diff --check`, and affected Hermes prose checks: exit 0.
 - Wiki index regeneration and `wiki-readme-index.sh`: PASS.
+- Canonical eval: exit 0 across 138 probes after exposing the already-installed Python interpreter on the invocation's PATH. The initial attempt failed two interpreter-dependent probes; both passed on retry. One pre-existing `skills-vendored` red remains, with unchanged delta.
+- The image-only container cannot satisfy the Git-tracking assertion inside `skills-vendored.sh`; it has no `.git` directory. Its actual canonical provider `--check` returned exit 0. That result does not claim Git tracking inside the image.
 - Exact correction-head CI: all six checks passed after the startup-race correction.
 
 CI evidence for `27568a18`:
@@ -180,7 +203,7 @@ CI evidence for `27568a18`:
 - Harness checks and eval: https://github.com/mifunedev/openharness/actions/runs/33944352792
 - Full image build/boot validation: https://github.com/mifunedev/openharness/actions/runs/33944352754
 
-An earlier CI attempt failed because `systemctl` ran before the system bus existed.
+An earlier CI attempt failed because `systemctl` ran before the D-Bus socket existed.
 The correction reuses `docker compose up --wait` with the existing image-only
 Compose file. The subsequent optional-harness installation job passed in 2m35s.
 
@@ -190,8 +213,8 @@ Compose file. The subsequent optional-harness installation job passed in 2m35s.
 |---|---|---|
 | `compose-env-boundary` | UPDATED | Added the sandbox-internal Hermes default and install/link postconditions; no Compose setting added. |
 | `fresh-machine-setup` | UPDATED | Added home separation, immediate integration, legacy-container requirements, and persistence distinctions. |
-| `oh-cli-portable-lifecycle` | NOT-AFFECTED | Registry, bundled asset staging, lifecycle routing, and update ownership described by the page remain unchanged. |
-| `sandbox-dependency-installs` | NOT-AFFECTED | The changed entrypoint region removes only duplicate Hermes linking; the pnpm fingerprint/install mechanism is unchanged. |
+| `oh-cli-portable-lifecycle` | NOT-AFFECTED | Registry, bundled asset staging, lifecycle routing, and update ownership remain unchanged. |
+| `sandbox-dependency-installs` | NOT-AFFECTED | The changed entrypoint region removes only duplicate Hermes linking; the pnpm fingerprint/install paths retain their behavior. |
 
 The two updated pages retain source-backed structure and advance `verified_at` to
 the checked correction commit. The generated index matches their frontmatter.
@@ -204,23 +227,6 @@ The first review found host/container path confusion, worktree home conflicts, a
 false success on old unset-home environments. Each finding received a code correction
 and regression coverage. A second read-only review found no concrete remaining bug
 in the reviewed implementation. That review did not claim CI or pipeline completion.
-
-## Where the implementation diverged, and why
-
-1. The operator approved direct Docker test provisioning without host binds. Copy-in and Docker-managed volumes replaced the original host-only test prerequisite.
-2. Published latest and the checkout use different boot topologies. Both were tested instead of treating latest as current-source systemd evidence.
-3. CI initially raced the system bus. The final workflow uses existing Compose health waiting, not a new polling framework.
-4. The graph originally placed final audit gates inside a story that the audit required to be complete. The gates moved to the PRD's finalization section; no promotion requirement was removed.
-5. Real checkout bind coverage remains excluded by the explicit no-host-bind instruction. Copied checkout/payload coverage does not claim to prove host UID remapping or cross-device behavior.
-
-## What remains unverified
-
-- Canonical local eval, correlated implementation audit, benefit benchmark, and final-head PR audit remain pending at this document revision.
-- The public website has a follow-up ticket, not an implemented website change.
-- No live model, account authentication, gateway, dashboard, SSH login, or arbitrary profile migration was tested; those are outside the approved correction.
-- Original streamed installer bytes were not captured. The post-run served script matches the installed revision's script, as recorded above.
-- No host bind, host UID remapping, or cross-device auth migration was exercised. The synthetic atomic test is a same-filesystem check, not a live-auth test.
-- No test resource was deleted. Teardown still requires operator consent.
 
 ### Retained resources
 
@@ -238,6 +244,7 @@ Volumes:
 - `oh-hermes-current-969-home`
 
 Candidate image tags: `oh-hermes-candidate:969`, `oh-hermes-current:969`.
-The existing `oh-sbx-local` runtime configuration, installed harnesses, and credentials
-were not changed. Source edits and test dependencies remain in the isolated worktree
-inside that sandbox. No live runtime state was copied into the test containers.
+The experiment did not change the existing `oh-sbx-local` runtime configuration,
+installed harnesses, or credentials. Source edits and test dependencies remain in the
+isolated worktree inside that sandbox. The experiment copied no live runtime state
+into the test containers.

@@ -127,11 +127,6 @@ describe("Hermes-only additive linking", () => {
     expect(existsSync(join(root, ".hermes"))).toBe(false);
   });
 
-  it("accepts the explicit project home", () => {
-    const root = fixture();
-    expect(run(root, "--init", { HERMES_HOME: join(root, ".hermes") }).status).toBe(0);
-  });
-
   it.each([
     { OH_HERMES_SMOKE: "", SANDBOX_NAME: "oh-hermes-test" },
     { OH_HERMES_SMOKE: "1", SANDBOX_NAME: "oh-sbx-live" },

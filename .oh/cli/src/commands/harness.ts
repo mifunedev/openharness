@@ -3,6 +3,7 @@ import {
   resolveExecutionTarget,
 } from "../lib/execution/index.js";
 import { sourceDocsUrl } from "../lib/docs.js";
+import { runningInsideSandbox } from "../lib/execution/detect.js";
 import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
 import { resolveProjectRoot } from "../lib/project.js";
@@ -59,6 +60,7 @@ function targetFor(
 async function probeInstalled(
   target: ExecutionTarget,
   entry: HarnessEntry,
+  env?: Record<string, string>,
 ): Promise<boolean | null> {
   try {
     const r = await target.exec({
@@ -66,6 +68,7 @@ async function probeInstalled(
       user: "sandbox",
       stdio: "capture",
       timeoutMs: PROBE_TIMEOUT_MS,
+      ...(env ? { env } : {}),
     });
     return r.exitCode === 0;
   } catch (err) {
@@ -165,13 +168,36 @@ export async function runHarnessStatus(
   return 0;
 }
 
+function hermesTargetRoot(target: ExecutionTarget): string {
+  return target.kind === "docker-compose" ? "/home/sandbox/harness" : target.workspace.targetRoot;
+}
+
+async function reconcileHermes(target: ExecutionTarget, io: HarnessIO): Promise<number> {
+  const root = hermesTargetRoot(target);
+  const result = await target.exec({
+    argv: ["bash", `${root}/.oh/scripts/link-providers.sh`, "--init", "--hermes-only"],
+    env: { OH_PROJECT_ROOT: root },
+    user: "sandbox",
+    stdio: "inherit",
+  });
+  if (result.exitCode !== 0) {
+    io.stderr(`oh harness: Hermes integration failed (exit ${result.exitCode}); no installation success reported.\n`);
+  }
+  return result.exitCode;
+}
+
 export async function runHarnessInstall(
   name: string,
   opts: HarnessOptions,
   io: HarnessIO,
 ): Promise<number> {
   const run = opts.run ?? spawnRunner;
-  const root = resolveProjectRoot(opts.cwd);
+  const env = opts.env ?? process.env;
+  const root = resolveProjectRoot(
+    name === "hermes" && runningInsideSandbox(env) && env.OH_PROJECT_ROOT
+      ? env.OH_PROJECT_ROOT
+      : opts.cwd,
+  );
 
   const entry = findHarness(name);
   if (!entry) return unknownHarness(name, io);
@@ -196,7 +222,17 @@ export async function runHarnessInstall(
     return 1;
   }
 
-  const already = await probeInstalled(target, entry);
+  const hermes = entry.id === "hermes";
+  const installEnv = hermes ? {
+    OH_PROJECT_ROOT: hermesTargetRoot(target),
+    HERMES_HOME: `${hermesTargetRoot(target)}/.hermes`,
+  } : undefined;
+  if (hermes) {
+    const code = await reconcileHermes(target, io);
+    if (code !== 0) return code;
+  }
+
+  const already = await probeInstalled(target, entry, installEnv);
   if (already === true) {
     io.stdout(`${entry.id}: already installed (${entry.binary})\n`);
     return 0;
@@ -211,10 +247,20 @@ export async function runHarnessInstall(
     argv: [...entry.installArgv],
     user: entry.installUser,
     stdio: "inherit",
+    ...(installEnv ? { env: installEnv } : {}),
   });
   if (r.exitCode !== 0) {
     io.stderr(`oh harness: installing ${entry.id} failed (exit ${r.exitCode}).\n`);
     return r.exitCode;
+  }
+
+  if (hermes) {
+    if (await probeInstalled(target, entry, installEnv) !== true) {
+      io.stderr("oh harness: Hermes installation finished but executable verification failed.\n");
+      return 1;
+    }
+    const code = await reconcileHermes(target, io);
+    if (code !== 0) return code;
   }
 
   io.stdout(`${entry.id}: installed — see ${sourceDocsUrl(entry.docsPath)} for authentication\n`);

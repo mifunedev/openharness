@@ -176,12 +176,14 @@ describe("help", () => {
 
 
 describe("runHarnessInstall never touches oh.json", () => {
-  const live = (): { calls: RecordedCall[]; run: LifecycleRunner } =>
-    makeRunner((c, a) => {
+  const live = (): { calls: RecordedCall[]; run: LifecycleRunner } => {
+    let probes = 0;
+    return makeRunner((c, a) => {
       if (isInspect(c, a)) return running;
-      if (isExecOf(c, a, "--version")) return { status: 1, stdout: "", stderr: "" };
+      if (isExecOf(c, a, "--version")) return { status: probes++ === 0 ? 1 : 0, stdout: "", stderr: "" };
       return undefined;
     });
+  };
 
   it.each(["opencode", "grok-build", "hermes", "claude-code"])(
     "%s: leaves the config byte-identical",

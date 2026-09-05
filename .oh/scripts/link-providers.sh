@@ -36,10 +36,11 @@ HERMES_TARGET="../../.oh/skills"
 
 usage() {
   cat <<'EOF'
-usage: bash .oh/scripts/link-providers.sh [--init|--check]
+usage: bash .oh/scripts/link-providers.sh [--init|--check] [--hermes-only]
 
---init   create/repair the provider symlinks into .oh/, then verify
---check  verify the provider symlinks + vendored .oh/ pack without mutating
+--init         create/repair the provider symlinks into .oh/, then verify
+--check        verify the provider symlinks + vendored .oh/ pack without mutating
+--hermes-only  require Hermes integration only; use OH_PROJECT_ROOT when set
 EOF
 }
 
@@ -50,7 +51,21 @@ case "$mode" in
   *) usage >&2; exit 64 ;;
 esac
 
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+hermes_only=false
+case "${2:-}" in
+  --hermes-only) hermes_only=true ;;
+  "") ;;
+  *) usage >&2; exit 64 ;;
+esac
+[ "$#" -le 2 ] || { usage >&2; exit 64; }
+
+repo_root=""
+if [ "$hermes_only" = true ]; then
+  repo_root="${OH_PROJECT_ROOT:-}"
+fi
+if [ -z "$repo_root" ]; then
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+fi
 if [ -z "$repo_root" ]; then
   repo_root="${OH_PROJECT_ROOT:-$PWD}"
 fi
@@ -59,6 +74,7 @@ if [ ! -d "$repo_root/.oh/skills" ]; then
   exit 1
 fi
 cd "$repo_root"
+repo_root="$PWD"
 
 failures=0
 fail() {
@@ -87,6 +103,52 @@ link_provider() {
   ln -s "$target" "$path"
 }
 
+hermes_managed_here() {
+  case "${HERMES_HOME:-}" in ""|/*) ;; *) return 1 ;; esac
+  [ -z "${HERMES_HOME:-}" ] || [ "$(realpath -m "$HERMES_HOME")" = "$(realpath -m "$repo_root/.hermes")" ]
+}
+
+hermes_paths_safe() {
+  local expected="$repo_root/.hermes" parent
+  if [ "$hermes_only" = true ] && [ -z "${HERMES_HOME:-}" ]; then
+    fail "HERMES_HOME is unset; recreate from the corrected image or export HERMES_HOME=$expected in the launch environment before installing"
+    return 1
+  fi
+  case "${HERMES_HOME:-}" in
+    ""|/*) ;;
+    *) fail "HERMES_HOME must be absolute so launches do not depend on cwd"; return 1 ;;
+  esac
+  if [ -n "${HERMES_HOME:-}" ] && [ "$(realpath -m "$HERMES_HOME")" != "$(realpath -m "$expected")" ]; then
+    fail "HERMES_HOME conflicts with $expected; preserve that home and select the intended project before installing"
+    return 1
+  fi
+  for parent in .hermes .hermes/skills; do
+    if [ -L "$parent" ]; then
+      fail "$parent is a symlink; preserve it and resolve the runtime-home conflict before linking"
+      return 1
+    fi
+    if [ -e "$parent" ] && [ ! -d "$parent" ]; then
+      fail "$parent is not a directory; preserve it and resolve the conflict before linking"
+      return 1
+    fi
+  done
+}
+
+init_hermes_link() {
+  hermes_paths_safe || return 1
+  if [ -L "$HERMES_LINK" ]; then
+    [ "$(readlink "$HERMES_LINK")" = "$HERMES_TARGET" ] && return 0
+    if [ "$(realpath -m "$HERMES_LINK")" != "$(realpath -m .oh/skills)" ]; then
+      fail "$HERMES_LINK is a foreign symlink; preserve it and resolve the conflict before linking"
+      return 1
+    fi
+  elif [ -e "$HERMES_LINK" ]; then
+    fail "$HERMES_LINK exists and is not a symlink; preserve it and resolve the conflict before linking"
+    return 1
+  fi
+  link_provider "$HERMES_LINK" "$HERMES_TARGET"
+}
+
 init_links() {
   if [ ! -d .oh/skills ]; then
     fail ".oh/skills is missing — the vendored skill pack is not present"
@@ -105,8 +167,8 @@ init_links() {
     [ -f "$f" ] && chmod +x "$f"
   done
 
-  if command -v hermes >/dev/null 2>&1; then
-    link_provider "$HERMES_LINK" "$HERMES_TARGET" || true
+  if command -v hermes >/dev/null 2>&1 && hermes_managed_here; then
+    init_hermes_link || true
   fi
 }
 
@@ -126,9 +188,14 @@ check_symlink() {
 }
 
 check_hermes_link() {
-  if [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ]; then
+  if [ "$hermes_only" = false ] && ! hermes_managed_here; then
+    echo "note: Hermes uses another runtime home; checking only this checkout's other providers" >&2
     return 0
   fi
+  if [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ] && [ "$hermes_only" = false ] && ! command -v hermes >/dev/null 2>&1; then
+    return 0
+  fi
+  hermes_paths_safe || return 1
   check_symlink "$HERMES_LINK" "$HERMES_TARGET"
   if [ ! -f "$HERMES_LINK/git/SKILL.md" ]; then
     fail "$HERMES_LINK/git/SKILL.md is missing"
@@ -207,15 +274,25 @@ check_links() {
   check_protected_paths
 }
 
-if [ "$mode" = "--init" ]; then
-  init_links
+if [ "$hermes_only" = true ]; then
+  if [ "$mode" = "--init" ]; then
+    init_hermes_link || true
+  fi
+  check_hermes_link || true
+else
+  if [ "$mode" = "--init" ]; then
+    init_links
+  fi
+  check_links
 fi
-
-check_links
 
 if [ "$failures" -ne 0 ]; then
   print_state
   exit 1
 fi
 
-printf 'Providers OK: .agents/.pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'
+if [ "$hermes_only" = true ]; then
+  printf 'Hermes OK: .hermes/skills/openharness -> .oh/skills\n'
+else
+  printf 'Providers OK: .agents/.pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'
+fi

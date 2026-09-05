@@ -4,12 +4,15 @@ slug: pattern-evals-unexercised-oracle
 kind: pattern
 tags: [evals, probes, oracles, skipped, fault-injection, continual-learning]
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-05
 sources:
   - .oh/evals/probes/wiki-skill-impact-append-only.sh@bfe22487
   - .oh/evals/probes/wiki-skill-impact-append-only.sh@af1c14ec
   - .oh/skills/eval/run.sh@5b426f97
   - .oh/evals/README.md@9a4c2a8c
+  - .devcontainer/Dockerfile@372581cd
+  - .oh/scripts/hermes-install-smoke.sh@7610c7c4
+  - .oh/tasks/hermes-child-container-layout/evidence.md@465075d6
 confidence: provisional
 ---
 
@@ -20,14 +23,14 @@ confidence: provisional
 - `.oh/evals/probes/wiki-skill-impact-append-only.sh@bfe22487` — a probe that reported PASS while three parser defects made its comparison meaningless.
 - `.oh/evals/probes/wiki-skill-impact-append-only.sh@af1c14ec` — the same probe after fault injection, carrying an override that makes the failing branch reachable.
 - `.oh/evals/README.md` — the standing note that a degraded probe does not fail the gate.
+- `.oh/scripts/hermes-install-smoke.sh@7610c7c4` — the real-consumer smoke with a retained runtime-home assertion.
+- `.oh/tasks/hermes-child-container-layout/evidence.md@465075d6` — the observed bad-home rejection and corrected-home success.
 
 ## Summary
-A probe's status is evidence about the probe only if the probe has been run against
-an input that should make it fail. A green result obtained solely from an
-already-passing repository proves the PASS branch exists, and nothing about whether
-the oracle can detect the condition it was written for. In the evals subsystem both
-a defective probe and a self-disabling one present the same non-red status as a
-correct one.
+A passing probe establishes sensitivity only after it rejects an input that violates
+its invariant. A run against an already-correct repository proves the PASS branch
+exists, not that the oracle detects regressions. A skipped oracle remains unverified
+in an environment where its subject should be available.
 
 ## Detail
 **Symptom.** A newly added probe reports PASS in a full suite run and is treated as
@@ -49,7 +52,9 @@ REGRESSION|TIMEOUT|ERROR` transition fails the gate, which is what keeps the sui
 hermetic across cold runners; `.oh/evals/README.md:143-152` states the consequence
 plainly and assigns the residual risk to the operator rather than to a mechanism.
 The result is that "not red" is the default state of every path the suite has never
-driven, and probe authors read it as confirmation.
+driven, and probe authors read it as confirmation. The Hermes experiment supplies
+another checked contrast: the same runtime-home assertion rejected the baseline and
+accepted the corrected candidate (`evidence.md@465075d6`, cited above).
 
 **Workaround.** Before a probe counts as green, drive its REGRESSION branch against
 a deliberately broken input, and leave that capability in the probe rather than
@@ -59,6 +64,11 @@ be pointed at a real mutation instead of only asserted; the parser defects surfa
 within minutes of that override existing. Treat a probe whose SKIPPED guard can fire
 in the environment that normally runs it as unverified for the same reason, and
 prefer a guard whose absence is itself a REGRESSION over one that exits 2.
+
+For a provider-discovery smoke, exercise the real resolver and reader in disposable
+bad-home and corrected-home contexts. The Hermes smoke retains that assertion; its
+baseline exits 1 and its corrected candidate exits 0. A separate pack-tracking probe
+still proves only its own narrower contract.
 
 ## See Also
 - [[pattern-wiki-ungated-check-drift]]

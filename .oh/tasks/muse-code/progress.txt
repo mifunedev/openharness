@@ -2,3 +2,4 @@
 
 2026-09-04 Plan grounded at 372581cd. Three explorers completed. Operator superseded obsolete install intent and oh init criteria. Current installable catalog and canonical linker selected.
 2026-09-04 Implemented catalog, standard skills, secret support and documentation at f62e4128. Real CLI install, idempotence, version, 34 project skills and echo provider passed. Full suite: 916 tests. Default local skills-vendored red predates this task; host-mode clean-clone probe passes. No authenticated or Docker recreation claim.
+2026-09-05 AUDIT-PASS audit-20260905T052446Z-1518592; eval exit 0 over 138 probes with pre-existing skills-vendored strict-PATH red disclosed. Four core CI checks green. Website PR 42 build/CI green. Fault-injection probes reject missing standard link and retired project-agent catalog.

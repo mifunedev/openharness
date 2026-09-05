@@ -3,6 +3,7 @@
 Core PR: https://github.com/mifunedev/openharness/pull/971
 Website mirror: https://github.com/mifunedev/openharness-web/pull/42
 Plan: `.oh/tasks/muse-code/prd.md`
+Implementation audit: `audit-20260905T052446Z-1518592` — `AUDIT-PASS`, evaluated head `2dba30de921a5d06b78f366577eee267a8cfc07b`.
 
 ## Why this is better
 
@@ -107,6 +108,10 @@ PASS: skills/hooks are vendored under .oh/ (no submodule) and provider symlinks 
 
 bash .oh/evals/probes/wiki-readme-index.sh
 PASS: .oh/knowledge/README.md Index matches the tracked source/ and patterns/ frontmatter
+
+Fault injection in a disposable clone:
+RETIRED_CATALOG_INJECTION_EXIT 1 REGRESSION: link-providers.sh still wires a project-agent provider symlink
+MISSING_STANDARD_LINK_EXIT 1 REGRESSION: .agents/skills is not a symlink
 ```
 
 The host-mode probe clears strict mode only in the child test process. It does not change installed agent hooks or sandbox configuration.
@@ -140,4 +145,35 @@ No Docker socket was available for a child-sandbox recreation experiment. Separa
 The existing Compose home mount supports recreation persistence by construction; this change does not alter that mount.
 Instruction discovery is supported by official documentation; the echo provider cannot prove model obedience to `AGENTS.md`.
 The website PR remains draft until the matching CLI is released, so published documentation does not advertise an unavailable release command.
-Final implementation and PR audit results are pending.
+
+## Review and benefit verdict
+
+The correlated implementation audit observed:
+
+```text
+task-graph: 4/4 stories pass
+eval runner exit: 0
+ci: PASS
+evidenceComplete: true
+mergeStateStatus: CLEAN
+mergeable: MERGEABLE
+promotable: true
+UI gate: not applicable
+netAdded: 561
+netRemoved: 23
+shBranchPoints: 1
+tsOverCcn: []
+tool: lizard 1.24.0
+AUDIT-PASS
+```
+
+The line counts include the required task plan and reviewer evidence. No new function exceeds cyclomatic complexity 10.
+The final review found no redundant lifecycle subsystem or unresolved acceptance gap under the operator's revised scope.
+All four core CI checks passed: boot lint; eval regression gate; lint/typecheck/build/tests; sandbox compose/image validation.
+The website mirror's build and CI also passed; deployment was skipped.
+
+Benchmark verdict: BENEFICIAL, justified hold. The historical capability suite score remains 1.44; no numerical improvement is claimed.
+CB-001 credits the reviewable harness change and green regression floor. The demonstrated additional capability is one more installable harness with real skill discovery.
+The benchmark instrument was not groomed during this feature task.
+The session retrospective found no eligible new pattern; wiki compile promoted zero pages.
+The final PR audit must bind to the final pushed commit before undrafting; this implementation audit describes the tested code head above.

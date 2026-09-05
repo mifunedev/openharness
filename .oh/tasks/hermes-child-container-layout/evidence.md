@@ -1,12 +1,15 @@
 # Hermes layout implementation evidence
 
-Status: implementation verified; final canonical audit/eval/benchmark gates remain pending. Keep PR #970 draft.
+Status: DRAFT-BLOCKED(benchmark). Runtime, implementation audit, regression floor,
+and implementation-head CI pass. The capability instrument does not establish benefit.
 
-Implementation head: `27568a185eed75fe568a8fe3e0260f3b7e148bcb`.
+Audited implementation head: `465075d642c35834d26a1e745ec4ab58deaf405f`.
 PR: https://github.com/mifunedev/openharness/pull/970
 Issue: https://github.com/mifunedev/openharness/issues/969
-Audit run: `audit-20260905T044647Z-1375379` — `AUDIT-FAIL` (one redundant test).
-The owner removed that test; re-audit remains pending. Independent source review: `4682d22b-7939-440`.
+Audit run: `audit-20260905T045951Z-1417917` — `AUDIT-PASS`.
+The earlier `audit-20260905T044647Z-1375379` returned `AUDIT-FAIL` for one redundant
+test. The owner removed it; the second audit found no remaining simplification.
+Independent source review: `4682d22b-7939-440`.
 
 ## Why this is better than not doing it
 
@@ -22,8 +25,9 @@ recreation preserved configuration and native/synthetic sentinels byte-for-byte.
 
 The cost is one image environment default, Hermes-specific install reconciliation,
 a scoped additive-link mode, tests, and a reusable opt-in smoke scenario. The change
-removes the duplicate bootstrap linker. The capability scoreboard verdict remains
-pending; these measurements are functional evidence, not an invented benchmark score.
+removes the duplicate bootstrap linker. The capability verdict is NOT-BENEFICIAL (unproven): its scoreboard stayed at 1.44
+and contains no credit for this correction. These measurements establish functional
+benefit, not a comparable capability-suite gain.
 
 ## What the plan asked for
 
@@ -57,7 +61,8 @@ provisioning prerequisite for this experiment, not the product lifecycle rules.
 
 ## What remains unverified
 
-- Implementation re-audit, benefit benchmark, and final-head PR audit remain pending at this document revision.
+- The capability benchmark cannot establish a comparable gain or credited hold. Its historical unattended baseline is explicitly incomparable, and its ready-PR task cannot yet count this draft as success. Operator direction is required before promotion.
+- Final handoff-head CI and PR classification follow the evidence commit; their observed outcome belongs in the PR body. Neither can waive the benchmark decision.
 - Local eval retains the pre-existing `skills-vendored` red because this session lacks `cc-safety-net` on PATH. No safety bypass was set. The current-source container's provider check passes.
 - The public website has a follow-up ticket, not an implemented website change.
 - The experiment did not test live models, account authentication, gateways, dashboards, SSH login, or arbitrary profile migration. Those are outside the approved correction.
@@ -89,16 +94,30 @@ claim otherwise. Both candidate installations resolved the same Hermes revision.
 
 Baseline:
 
+The supported installation command completed with exit 0:
+`docker exec -u sandbox -w /home/sandbox/harness oh-hermes-layout-20260905032825 bash -lc 'oh harness install hermes'`.
+
+The separate path observation printed:
+
 ```text
-docker exec -u sandbox -w /home/sandbox/harness oh-hermes-layout-20260905032825 bash -lc 'oh harness install hermes'
-exit: 0
 UID=1000 HOME=/home/sandbox HERMES_HOME= OH_PROJECT_ROOT=/home/sandbox/harness
-Hermes Agent v0.21.0
-home=/home/sandbox/.hermes
-config_exists=true
-shared_listed=false
-native_listed=true
-shared_view.success=false
+/home/sandbox/.local/bin/hermes
+Hermes Agent v0.21.0 (2026.8.31) · upstream 79445a49
+Install directory: /home/sandbox/.local/lib/hermes-agent
+```
+
+Trimmed real-loader output:
+
+```text
+  "home": "/home/sandbox/.hermes",
+  "config_exists": true,
+  "listing_success": true,
+  "count": 54,
+  "shared_listed": false,
+  "native_listed": true,
+  "shared_view": {
+    "success": false,
+    "error": "Skill 'oh-layout-shared' not found.",
 ```
 
 The observation invoked installed Hermes `get_hermes_home`, `skills_list`, and
@@ -135,16 +154,22 @@ after restart.
 
 Full current-source image:
 
+The build used `git archive 7610c7c4c33c2f3daa8eb84c81bb7916cd6d5963` as its
+context, `.devcontainer/Dockerfile`, and tag `oh-hermes-current:969`. The build exited 0.
+
+Selected observed commands and output:
+
 ```text
-git archive 7610c7c4c33c2f3daa8eb84c81bb7916cd6d5963 | docker build --file .devcontainer/Dockerfile --tag oh-hermes-current:969 -
-exit: 0
-PID 1: systemd
-openharness-bootstrap.service: active
-openharness-cron.service: active
-sandbox healthcheck ok
-systemd-run --quiet --pipe --wait --collect --uid=sandbox /usr/bin/printenv HERMES_HOME
+$ docker exec oh-hermes-current-969 ps -p 1 -o comm=
+systemd
+$ docker exec oh-hermes-current-969 systemctl is-active openharness-bootstrap.service openharness-cron.service
+active
+active
+$ docker exec oh-hermes-current-969 systemd-run --quiet --pipe --wait --collect --uid=sandbox /usr/bin/printenv HERMES_HOME
 /home/sandbox/harness/.hermes
 ```
+
+The boot monitor also printed `sandbox healthcheck ok`.
 
 Fresh supported installation, real discovery, repeat installation, login-shell
 smoke, and restart also passed in that systemd container. Root metadata checks
@@ -154,12 +179,8 @@ Recreation reused only the test's named home volume. The previous container rema
 stopped; the new container became active with identical preserved state hashes:
 
 ```text
-old ID: 6d5afb8678f03587237fba02ceff31c9b7d322f97f5ad09eb1bf4cd83b405485 (exited)
-new ID: 6b729c2c0e26d1f9ec993e87c0436ea99ac9709a162b6480583e0dd2812814db (running)
-bootstrap: active
-cron: active
-smoke: PASS
-state-hash diff: empty, exit 0
+/oh-hermes-current-969 ID=6b729c2c0e26d1f9ec993e87c0436ea99ac9709a162b6480583e0dd2812814db State=running
+/oh-hermes-current-969-retained ID=6d5afb8678f03587237fba02ceff31c9b7d322f97f5ad09eb1bf4cd83b405485 State=exited
 ```
 
 Additional checks:
@@ -183,14 +204,14 @@ Additional checks:
 | D7 | Image-seeded and copied payload contexts pass; actual host binds remain explicitly excluded. |
 | D8 | Docker metadata shows only test volumes, no socket/bind/ports, and no live state sharing. Other-provider tests pass. |
 | D9 | New tracked smoke exits 1 against the baseline home defect and 0 against candidates. |
-| D10 | 925 tests, typecheck/build, source-image build, six CI checks, and documentation/index checks pass; canonical tail pending. |
-| D11 | Independent source review is clean; correlated canonical audit remains a finalization gate. |
+| D10 | 924 final tests, typecheck/build, source-image build, six implementation-head CI checks, local eval delta, and documentation/index checks pass. Benchmark does not establish benefit. |
+| D11 | Correlated implementation audit: AUDIT-PASS, no residual simplification findings. |
 
 ### Automated checks
 
 - `pnpm run build:harness`: exit 0.
 - `pnpm run typecheck`: exit 0.
-- `pnpm test`: 59 files, 925 tests passed.
+- `pnpm test`: 59 files, 924 tests passed after removing one redundant test; the prior 925-test run also passed.
 - Bash syntax, `git diff --check`, and affected Hermes prose checks: exit 0.
 - Wiki index regeneration and `wiki-readme-index.sh`: PASS.
 - Canonical eval: exit 0 across 138 probes after exposing the already-installed Python interpreter on the invocation's PATH. The initial attempt failed two interpreter-dependent probes; both passed on retry. One pre-existing `skills-vendored` red remains, with unchanged delta.
@@ -207,6 +228,46 @@ An earlier CI attempt failed because `systemctl` ran before the D-Bus socket exi
 The correction reuses `docker compose up --wait` with the existing image-only
 Compose file. The subsequent optional-harness installation job passed in 2m35s.
 
+### Correlated implementation audit
+
+Observed terminal lines:
+
+```text
+- **Verdict**: AUDIT-PASS
+- **Gates**: graph 8/8, artifact contract satisfied · eval 0 · promotable true, evidenceComplete true · ui n/a · slop +1088/-171 (residual 0)
+SIMPLICITY-RESIDUAL: 0
+AUDIT-EVIDENCE: AUDIT-PASS
+audit -- run-id=audit-20260905T045951Z-1417917 target=implementation state=complete verdict=AUDIT-PASS exit=0 started=2026-09-05T04:59:51Z finished=2026-09-05T05:01:09Z
+```
+
+The audit reused the commit-keyed eval record at `465075d6`. It reported no TypeScript
+function newly over CCN 10. Shell branch points were a proxy, not a CCN measurement.
+The simplify counter did not decrease after evidence additions; the auditor still
+found zero concrete residuals.
+
+### Benchmark decision
+
+Observed scores: current `suite score = 1.44`; base `suite score = 1.44`.
+Regression floor: `runnerExit=0`, no new regressions, one disclosed pre-existing red.
+
+Verdict: **NOT-BENEFICIAL (unproven by the capability instrument)**. The scoreboard
+records no task credit for this correction and explicitly limits comparability of
+its historical unattended baseline. The ready-PR task also requires a non-draft PR,
+so counting success before this promotion decision would be circular. The experiment
+did not groom the instrument or fabricate a passing score.
+
+Operator options: approve a narrowly scoped benchmark waiver for this PR, or request
+a separate comparable capability assessment. No code revert or benchmark rewrite
+occurred. The advisory behavior-commit revert below excludes every knowledge path.
+The experiment has not executed this command:
+
+```bash
+git revert --no-edit 465075d6 27568a18 7610c7c4
+```
+
+Later evidence edits may require conflict resolution. The retained runtime test
+resources are separate from this source-code rollback option.
+
 ### Actual Knowledge Impact
 
 | Page | State | Reason |
@@ -220,6 +281,12 @@ The two updated pages retain source-backed structure and advance `verified_at` t
 the checked correction commit. The generated index matches their frontmatter.
 The public-site follow-up is https://github.com/mifunedev/openharness-web/issues/41;
 the ticket is not a claim that the website already changed.
+
+`/spec retro` reported five hypotheses and nominated no new probe. `/wiki compile`
+patched the existing `pattern-evals-unexercised-oracle` with pinned baseline/candidate
+corroboration. Existing workaround text and provenance remain intact. The index,
+schema, related links, source resolution, and pattern-persistence checks passed.
+The source-resolution check disclosed 27 older pins unverifiable in this clone depth.
 
 ### Independent source review
 

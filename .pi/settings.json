@@ -1,8 +1,9 @@
 {
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
-  "defaultThinkingLevel": "medium",
+  "defaultModel": "gpt-6-astra",
+  "defaultThinkingLevel": "high",
   "enabledModels": [
+    "openai-codex/gpt-6-astra",
     "openai-codex/gpt-5.6-sol",
     "openai-codex/gpt-5.6-terra",
     "openai-codex/gpt-5.6-luna"

@@ -209,6 +209,19 @@ Additional checks:
 | D10 | 924 final tests, typecheck/build, source-image build, six implementation-head CI checks, local eval delta, and documentation/index checks pass. Capability benchmark: N/A for this correction. |
 | D11 | Correlated implementation audit: AUDIT-PASS, no residual simplification findings. |
 
+### Development reconciliation before merge
+
+The operator authorized merging the completed PR, then updating the main checkout
+and removing its clean worktree. `development` advanced to `a6615756` during review.
+The only textual conflict was the provider success message in `link-providers.sh`.
+The resolution retains upstream `.agents/skills` support and Hermes-only reporting.
+Regression assertions now cover `.agents` linking in ordinary mode and its absence
+in Hermes-only mode.
+
+The reconciled tree passed 937 tests across 60 files, typecheck, the harness build,
+Bash syntax validation, and `git diff --check`. Fresh CI and PR classification must
+also pass before the authorized merge. Benchmark applicability remains N/A.
+
 ### Automated checks
 
 - `pnpm run build:harness`: exit 0.

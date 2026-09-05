@@ -34,6 +34,7 @@ describe("Hermes-only additive linking", () => {
     expect(readFileSync(join(slot(root), "git/SKILL.md"), "utf8")).toBe("canonical");
     expect(run(root, "--check").status).toBe(0);
     expect(existsSync(join(root, ".claude"))).toBe(false);
+    expect(existsSync(join(root, ".agents"))).toBe(false);
   });
 
   it("leaves correct links and native content unchanged on repetition", () => {
@@ -124,6 +125,7 @@ describe("Hermes-only additive linking", () => {
     });
     expect(result.status, result.stderr).toBe(0);
     expect(readlinkSync(join(root, ".pi/skills"))).toBe("../.oh/skills");
+    expect(readlinkSync(join(root, ".agents/skills"))).toBe("../.oh/skills");
     expect(existsSync(join(root, ".hermes"))).toBe(false);
   });
 

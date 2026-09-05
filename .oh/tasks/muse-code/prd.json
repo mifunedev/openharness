@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/952-muse-code",
+  "description": "First-class Muse Code installation under the current lifecycle",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install Muse through the catalog",
+      "description": "Install as sandbox and preserve existing command behavior",
+      "acceptanceCriteria": [
+        "Catalog metadata and command lifecycle tests pass",
+        "Real installer produces a home-local executable without profile changes",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Verified by runtime installation, 916 tests, build/typecheck and scoped probes; practical limits recorded in evidence.md."
+    },
+    {
+      "id": "US-002",
+      "title": "Expose canonical skills",
+      "description": "Use the standard .agents/skills surface",
+      "acceptanceCriteria": [
+        "Creation, repair, collision and clean-clone checks pass",
+        "No retired project-agent catalogs return",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Verified by runtime installation, 916 tests, build/typecheck and scoped probes; practical limits recorded in evidence.md."
+    },
+    {
+      "id": "US-003",
+      "title": "Document and support authentication",
+      "description": "Use existing secrets and home persistence",
+      "acceptanceCriteria": [
+        "META_API_KEY secret behavior passes",
+        "Muse and overview docs describe verified behavior",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Verified by runtime installation, 916 tests, build/typecheck and scoped probes; practical limits recorded in evidence.md."
+    },
+    {
+      "id": "US-004",
+      "title": "Verify integration and knowledge",
+      "description": "Provide observed runtime and regression evidence",
+      "acceptanceCriteria": [
+        "Relevant tests and eval gates pass",
+        "Knowledge impact entries are updated or reverified with reasons",
+        "Evidence states deviations and remaining practical limitations",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Verified by runtime installation, 916 tests, build/typecheck and scoped probes; practical limits recorded in evidence.md."
+    }
+  ]
+}

@@ -66,6 +66,7 @@ describe("harness catalog", () => {
         "codex",
         "grok-build",
         "hermes",
+        "muse-code",
         "opencode",
         "pi",
       ]);
@@ -198,5 +199,18 @@ describe("harness catalog", () => {
     expect(findHarness("opencode")?.id).toBe("opencode");
     expect(findHarness("grok-build")?.title).toBe("Grok Build");
     expect(findHarness("nope")).toBeUndefined();
+  });
+
+  it("registers Muse with a home-local native installer and version verification", () => {
+    const muse = findHarness("muse-code")!;
+    expect(muse).toMatchObject({
+      title: "Muse Code", binary: "muse", kind: "installable",
+      installUser: "sandbox", verifyArgv: ["muse", "--version"],
+      docsPath: "docs/harnesses/muse-code.md",
+    });
+    expect(muse.installArgv[2]).toContain('MUSE_INSTALL_DIR="$HOME/.local/bin"');
+    expect(muse.installArgv[2]).toContain("MUSE_NO_MODIFY_PATH=1");
+    expect(muse.installArgv[2]).toContain("MUSE_LOGIN=0");
+    expect(muse.installArgv[2]).toContain("set -o pipefail");
   });
 });

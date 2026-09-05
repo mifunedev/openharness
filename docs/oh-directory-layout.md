@@ -28,7 +28,7 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `install/` | dir | Container-install inputs (currently `banner.sh`) consumed while building/booting the sandbox. | `.devcontainer/Dockerfile` + `entrypoint.sh`. |
 | `knowledge/` | dir | Durable repository knowledge — tracked `source/` and `patterns/` entity pages, tracked `raw/` immutable external snapshots, gitignored `local/` per-machine scratch, and the generated `README.md` index. | `/wiki query`, `/wiki lint`, `/wiki compile`, and `/spec`. |
 | `scripts/` | dir | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `locked-append.sh`, `migrate-harness-yaml.sh`, `link-providers.sh`, `git-maintenance.sh` — the file-invoked destructive-git shim the cc-safety-net guard permits by design, …). | The `oh` CLI, CI, `cron-runtime`, and the provider link step. |
-| `skills/` | dir | The vendored provider-portable skill pack (one dir per skill). | Agent providers via symlinks (`.claude/skills`, `.codex/skills`, `.pi/skills` → `.oh/skills`); the Skill tool. |
+| `skills/` | dir | The vendored provider-portable skill pack (one dir per skill). | Agent providers via symlinks (`.agents/skills`, `.claude/skills`, `.codex/skills`, `.pi/skills` → `.oh/skills`); the Skill tool. |
 | `tasks/` | dir | Spec task workdirs — ephemeral build scratch (`<slug>/prd.md`, `prd.json`, `progress.txt`). | `/spec execute`, the `cleanup-tasks` cron, and `/spec`. |
 
 The root `docs/` directory is project-owned documentation, outside the `.oh/`

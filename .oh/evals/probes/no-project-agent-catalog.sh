@@ -23,7 +23,7 @@ LINKER=".oh/scripts/link-providers.sh"
 [ -x "$LINKER" ] || fail "$LINKER is missing or not executable"
 wiring="$(awk '/^provider_links=\(/{f=1; next} f && /^\)/{exit} f{print}' "$LINKER")"
 [ -n "$wiring" ] || fail "could not read provider_links from $LINKER"
-grep -qF 'agents' <<<"$wiring" && fail "link-providers.sh still wires a project-agent provider symlink"
+grep -qE '(^|["/|])agents([/|"[:space:]]|$)' <<<"$wiring" && fail "link-providers.sh still wires a project-agent provider symlink"
 
 created=()
 bash "$LINKER" --init >/dev/null 2>&1 || true

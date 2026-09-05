@@ -4,11 +4,13 @@ slug: compose-env-boundary
 kind: repo
 tags: [compose, devcontainer, oh-json, cli, entrypoint, boundary, installs, sandbox, registry]
 created: 2026-08-31
-updated: 2026-09-03
+updated: 2026-09-05
 sources:
   - .devcontainer/docker-compose.yml
   - .devcontainer/docker-compose.image-only.yml
+  - .devcontainer/Dockerfile
   - .devcontainer/entrypoint.sh
+  - .oh/scripts/link-providers.sh
   - .oh/cli/src/lib/config-render.ts
   - .oh/cli/src/lib/registry.ts
   - .oh/cli/src/commands/harness.ts
@@ -16,7 +18,7 @@ sources:
   - .oh/evals/probes/compose-env-boundary.sh
   - .oh/evals/probes/harness-one-door.sh
   - .oh/evals/probes/sandbox-registry.sh
-verified_at: 55a0ba14cf78e0245dbfc262b2d2adad77236866
+verified_at: 27568a185eed75fe568a8fe3e0260f3b7e148bcb
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: confirmed
 ---
@@ -30,6 +32,7 @@ confidence: confirmed
 - `.oh/cli/src/lib/config-render.ts` — renders the host-side subset into a temporary `compose.env`; refuses `RETIRED_KEYS`.
 - `.oh/cli/src/lib/registry.ts` — materialises both compose files, the overlays, and the wrapper into a registry entry, which is the root the wrapper runs from.
 - `.oh/cli/src/commands/harness.ts`, `.oh/cli/src/commands/tool.ts` — the only install door.
+- `.devcontainer/Dockerfile`, `.oh/scripts/link-providers.sh` — the Hermes image default and additive integration validation.
 - `.oh/evals/probes/compose-env-boundary.sh`, `.oh/evals/probes/harness-one-door.sh`, `.oh/evals/probes/sandbox-registry.sh` — the tier-A probes that enforce the rules, and pin the bundled compose texts to the tracked files.
 
 ## Summary
@@ -45,6 +48,16 @@ Four compose `environment:` literals survive that no config read can supply: `SA
 Four guards keep the boundary closed. `RETIRED_KEYS` throws if a `put()` for a retired variable is ever re-added (`.oh/cli/src/lib/config-render.ts`); the compose probe fails on any `INSTALL_*` key, on `OH_IMAGE_ONLY`, or on any `environment:` key outside the rendered set — across every `docker-compose*.yml` including overlays; and `harness-one-door.sh` fails on a `default` kind, a `harnessKey` / `toolKey`, a provisioner script, an `install` key in `oh-config.ts`, a boot-time provisioning gate, or an installable binary in the Dockerfile. `sandbox-registry.sh` compares the texts a materialised entry contains against the tracked compose files and scripts byte for byte and fails if a lifecycle verb spawns `docker` outside the wrapper. Overlay `ports:` and `volumes:` blocks are unrestricted; that payload is the part only Docker can act on.
 
 Non-goals: the image-only base is the default for a registry sandbox, because `/opt/oh-seed` ships regardless; `INSTALL_PYTHON_KERNEL` and `provision-python.sh` remain, a Dockerfile↔entrypoint duplication rather than a compose one; `start_period: 600s` was sized for the retired provisioning window and is tracked for retuning on #948.
+
+Hermes adds a sandbox-internal default, not a Compose setting. The image sets
+`HERMES_HOME=/home/sandbox/harness/.hermes` (`.devcontainer/Dockerfile:4`). Managed
+installation validates the launch home and reconciles additive shared skills before
+installation, verifies the executable, and reconciles again afterward
+(`.oh/cli/src/commands/harness.ts:175`, `.oh/cli/src/commands/harness.ts:226`).
+The canonical linker refuses unset or relative managed launch homes and conflicting
+occupied paths (`.oh/scripts/link-providers.sh:110`). Ordinary provider linking in another
+worktree does not redirect the image-global Hermes runtime
+(`.oh/scripts/link-providers.sh:189`). No Compose variable or install setting changed.
 
 ## System Relationships
 ```mermaid

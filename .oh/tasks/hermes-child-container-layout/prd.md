@@ -95,15 +95,25 @@ As an operator, I want onboarding to match measured behavior.
 - Record the matching public-doc artifact in `mifunedev/openharness-web` when needed; do not claim unverified publication.
 - Tests pass. Typecheck passes.
 
-### US-008: Review evidence and finalize
+### US-008: Prepare reviewer evidence
 
-As an operator, I want a PR whose readiness describes measured results.
+As an operator, I want measured results and explicit limits for the final review.
 
 - Map D1–D11 to commands, exit codes, artifact identities, and observations.
 - Evidence answers benefit, requested behavior, built behavior, divergence, and unverified gates.
-- Pass independent read-only implementation review, eval delta, knowledge gate, benchmark, and exact-head PR audit before undrafting.
-- Keep the PR draft when any required gate remains unresolved. Never merge or perform unapproved teardown.
+- Record independent read-only source review and the disposition of each finding.
+- Keep unverified finalization gates explicit in the evidence and retain the draft.
 - Tests pass. Typecheck passes.
+
+## Finalization gates
+
+After the implementation stories pass, run the canonical implementation audit, eval
+delta, knowledge gate, benchmark, and exact-head PR audit. Undraft only after every
+required gate passes. Never merge or perform unapproved teardown.
+
+The original story graph put these gates inside US-008, although the audit requires
+all stories to pass first. Moving the gates here removes that self-dependency without
+dropping a requirement or authorizing earlier promotion.
 
 ## Functional Requirements
 

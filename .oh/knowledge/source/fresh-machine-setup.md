@@ -4,7 +4,7 @@ slug: fresh-machine-setup
 kind: repo
 tags: [setup, onboarding, installation, registry, gateway, ssh, github, slack]
 created: 2026-07-02
-updated: 2026-09-03
+updated: 2026-09-05
 sources:
   - docs/quickstart.md
   - docs/installation.md
@@ -14,8 +14,12 @@ sources:
   - docs/integrations/slack.md
   - docs/harnesses/hermes.md
   - .devcontainer/entrypoint.sh
+  - .devcontainer/Dockerfile
+  - .oh/cli/src/commands/harness.ts
+  - .oh/scripts/link-providers.sh
+  - .oh/scripts/hermes-install-smoke.sh
   - .oh/scripts/gateway.sh
-verified_at: 1b13bb1da5ce286f662accf2c501c6307e09e329
+verified_at: 27568a185eed75fe568a8fe3e0260f3b7e148bcb
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: provisional
 ---
@@ -30,6 +34,7 @@ confidence: provisional
 - `docs/integrations/debugmcp.md` — DebugMCP extension runbook.
 - `docs/integrations/slack.md`, `docs/harnesses/hermes.md` — Slack config + gateway run/verify.
 - `.devcontainer/entrypoint.sh` — auto SSH keygen + pubkey upload when `GH_TOKEN` carries `admin:public_key`.
+- `.devcontainer/Dockerfile`, `.oh/cli/src/commands/harness.ts`, `.oh/scripts/link-providers.sh` — Hermes runtime home and immediate shared-skill integration.
 - `.oh/scripts/gateway.sh` — sandbox-only lifecycle for the sibling `client-slack-pi` / `client-slack-hermes` sessions.
 
 ## Summary
@@ -84,6 +89,22 @@ live-verified against a registry child booted from the #950 head (`.oh/tasks/san
 the Claude auth command and the `gateway status` / `tmux -r` mechanics are live-verified in the
 running sandbox; Pi/Hermes/Slack auth were not re-run live for this entry. Commands themselves
 live in `quickstart.md`, not here.
+
+Hermes onboarding now separates the program home from runtime state. The program
+remains in `~/.local/lib/hermes-agent`; the image defaults runtime state to
+`~/harness/.hermes` (`.devcontainer/Dockerfile:4`). The installer reconciles shared
+skills immediately and checks the executable before reporting success
+(`.oh/cli/src/commands/harness.ts:226`). Native skills remain beside the additive
+shared link. Conflicting, unset, or relative managed homes fail before installation
+(`.oh/scripts/link-providers.sh:110`).
+
+An old container needs image recreation, not only a CLI update, to acquire the
+image environment. The installer does not migrate populated legacy homes. Image-only
+state resides in the home volume; checkout-backed state resides in the checkout.
+The opt-in smoke scenario checks the upstream home resolver, real skill discovery,
+native creation, and synthetic atomic replacement (`.oh/scripts/hermes-install-smoke.sh:1`).
+The scenario neither authenticates nor invokes a model; it does not extend this page's
+previous live-auth claims.
 
 ## System Relationships
 ```mermaid

@@ -40,6 +40,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Removed
 
+- Remove `@narumitw/pi-plan-mode` from the default Pi packages and its bundled `/plan` mode. ([#972](https://github.com/mifunedev/openharness/issues/972))
+
 - **BREAKING:** Remove the `cron-watchdog` tmux supervisor, its generated `/tmp/cron-watchdog.sh`, and `CRON_WATCHDOG_INTERVAL`; systemd `Restart=` replaces the polling loop. ([#956](https://github.com/mifunedev/openharness/issues/956))
 - **BREAKING:** Remove the scheduler-level `cron-system` tmux session and the legacy `system-cron` reaping; per-fire `tmux: true` sessions are unchanged. ([#956](https://github.com/mifunedev/openharness/issues/956))
 - Remove `.oh/scripts/maintenance/restart-openharness-tmux.sh` and its date-expired heartbeat step, which recreated the retired scheduler sessions. ([#956](https://github.com/mifunedev/openharness/issues/956))

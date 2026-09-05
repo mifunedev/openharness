@@ -208,14 +208,14 @@ describe("runHarnessInstall never touches oh.json", () => {
 });
 
 
-describe("runHarnessInstall against the container", () => {
+describe.each(["opencode", "muse-code"])("runHarnessInstall %s against the container", (harness) => {
   it("on a stopped sandbox: fails, points at `oh sandbox`, and runs zero docker exec", async () => {
     const root = makeRepo();
     const before = readFileSync(ohConfigPath(root), "utf8");
     const { calls, run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     const { err, io } = makeIo();
 
-    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(1);
+    expect(await runHarnessInstall(harness, { cwd: root, run }, io)).toBe(1);
     expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
     expect(text(err)).toContain("oh sandbox");
     expect(text(err)).not.toMatch(/next|later|picks it up/);
@@ -243,25 +243,21 @@ describe("runHarnessInstall against the container", () => {
     });
     const { out, io } = makeIo();
 
-    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
+    const before = readFileSync(ohConfigPath(root), "utf8");
+    expect(await runHarnessInstall(harness, { cwd: root, run }, io)).toBe(0);
+    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
 
-    const install = execCalls(calls).find((c) => c.args.includes("opencode-ai"));
+    const entry = HARNESS_CATALOG.find((h) => h.id === harness)!;
+    const install = execCalls(calls).find((c) => c.args.includes(entry.installArgv.at(-1)!));
     expect(install).toBeDefined();
     expect(install!.args).toContain("-u");
     // #908: every harness installs as the sandbox user into the home mount.
     expect(install!.args).toContain("sandbox");
     expect(install!.args).not.toContain("root");
-    expect(install!.args.slice(-6)).toEqual([
-      "npm",
-      "--prefix",
-      "/home/sandbox/.local",
-      "install",
-      "-g",
-      "opencode-ai",
-    ]);
+    expect(install!.args.slice(-entry.installArgv.length)).toEqual(entry.installArgv);
     expect(text(out)).toContain("installed");
     expect(text(out)).toContain(
-      "https://github.com/mifunedev/openharness/blob/main/docs/harnesses/opencode.md",
+      `https://github.com/mifunedev/openharness/blob/main/docs/harnesses/${harness}.md`,
     );
   });
 
@@ -270,8 +266,9 @@ describe("runHarnessInstall against the container", () => {
     const { calls, run } = makeRunner((c, a) => (isInspect(c, a) ? running : undefined));
     const { out, io } = makeIo();
 
-    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
-    expect(execCalls(calls).some((c) => c.args.includes("opencode-ai"))).toBe(false);
+    expect(await runHarnessInstall(harness, { cwd: root, run }, io)).toBe(0);
+    expect(execCalls(calls)).toHaveLength(1);
+    expect(execCalls(calls)[0].args.slice(-2)).toEqual(HARNESS_CATALOG.find((h) => h.id === harness)!.verifyArgv);
     expect(text(out)).toContain("already installed");
   });
 
@@ -285,7 +282,7 @@ describe("runHarnessInstall against the container", () => {
     });
     const { err, io } = makeIo();
 
-    expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(7);
+    expect(await runHarnessInstall(harness, { cwd: root, run }, io)).toBe(7);
     expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
     expect(text(err)).toContain("failed (exit 7)");
     expect(text(err)).not.toMatch(/oh\.json|will install it|will retry it/);

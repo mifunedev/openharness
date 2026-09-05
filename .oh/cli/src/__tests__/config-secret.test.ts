@@ -272,6 +272,16 @@ describe("oh config set", () => {
 });
 
 describe("oh secret set", () => {
+  it("stores a Muse API key through the hidden prompt and redacts its listing", async () => {
+    const root = makeRepo();
+    const { io, out } = makeIo();
+    io.askSecret = async () => "meta_test_credential_not_real";
+    expect(await runSecretSet("META_API_KEY", { cwd: root }, io)).toBe(0);
+    expect(readFileSync(join(root, ".env"), "utf8")).toContain("META_API_KEY=meta_test_credential_not_real");
+    expect(await runSecretList({ cwd: root }, io)).toBe(0);
+    expect(out.join("")).toContain("META_API_KEY");
+    expect(out.join("")).not.toContain("meta_test_credential_not_real");
+  });
   it("takes the value from a masked prompt, never from an argument", async () => {
     const root = makeRepo();
     const { io, out } = makeIo();

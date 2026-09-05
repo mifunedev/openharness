@@ -168,11 +168,14 @@ The allow-list in `.oh/cli/src/lib/secrets.ts` is the complete set of keys the
 root `.env` may hold. Each is documented, commented out, in the tracked
 `.env.example`:
 
-`GH_TOKEN`, `SANDBOX_PASSWORD`, `XAI_API_KEY`, `PI_SLACK_APP_TOKEN`,
+`GH_TOKEN`, `SANDBOX_PASSWORD`, `XAI_API_KEY`, `META_API_KEY`, `PI_SLACK_APP_TOKEN`,
 `PI_SLACK_BOT_TOKEN`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`,
 `OH_CLOUD_PROVISION_KEY`.
 
 Any other key is rejected by `oh secret set`.
+
+For Muse Code, `oh secret set META_API_KEY` stores the key but does not export it into a running shell.
+See [Muse authentication](harnesses/muse-code.md#authentication) for process injection and credential precedence.
 
 ## Settings that are neither
 

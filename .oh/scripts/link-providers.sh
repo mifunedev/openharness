@@ -24,6 +24,7 @@ required_execs=(
 )
 
 provider_links=(
+  ".agents/skills|../.oh/skills"
   ".pi/skills|../.oh/skills"
   ".claude/skills|../.oh/skills"
   ".codex/skills|../.oh/skills"
@@ -68,7 +69,7 @@ fail() {
 print_state() {
   cat >&2 <<EOF
 Vendored skill pack: .oh/skills (expected to exist as tracked files)
-Provider surfaces:   .pi/skills .claude/skills .codex/skills -> ../.oh/skills
+Provider surfaces:   .agents/skills .pi/skills .claude/skills .codex/skills -> ../.oh/skills
 Remediation: bash .oh/scripts/link-providers.sh --init
 EOF
 }
@@ -217,4 +218,4 @@ if [ "$failures" -ne 0 ]; then
   exit 1
 fi
 
-printf 'Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'
+printf 'Providers OK: .agents/.pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'

@@ -14,6 +14,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 
+- Add `oh harness install muse-code`, standard `.agents/skills` discovery, and `META_API_KEY` secret storage for Muse Code in the persistent sandbox home. ([#952](https://github.com/mifunedev/openharness/issues/952))
+
 - Boot the sandbox with `systemd` as PID 1 via `cap_add: SYS_ADMIN`, `apparmor=unconfined`, `tmpfs: /run,/run/lock,/sys/fs` and `cgroup: private` — no host cgroup bind. ([#956](https://github.com/mifunedev/openharness/issues/956))
 - Run the existing `entrypoint.sh` as `openharness-bootstrap.service`, a `Type=oneshot` unit whose environment is derived from PID 1 by a systemd environment generator. ([#956](https://github.com/mifunedev/openharness/issues/956))
 - Supervise `.oh/scripts/cron-runtime.ts` directly with `openharness-cron.service` as `sandbox`, with a rate-limited `Restart=on-failure` and an `ExecReload` that sends `SIGHUP`. ([#956](https://github.com/mifunedev/openharness/issues/956))

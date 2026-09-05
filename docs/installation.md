@@ -310,6 +310,7 @@ system path is unwritable from a running sandbox. Consequences worth knowing:
 | Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) | `oh harness install pi` |
 | OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | `oh harness install opencode` |
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | `oh harness install hermes` |
+| [Muse Code](harnesses/muse-code.md) | `muse` | Meta's native terminal coding agent | `oh harness install muse-code` |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | `oh harness install grok-build` |
 | T3 Code | `npx t3` | Browser UI over Claude/Codex/OpenCode | on demand, no install |
 

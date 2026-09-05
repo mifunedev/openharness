@@ -29,6 +29,7 @@ describe("allow-list", () => {
     expect([...SECRET_KEYS]).toEqual([
       "GH_TOKEN",
       "XAI_API_KEY",
+      "META_API_KEY",
       "SANDBOX_PASSWORD",
       "PI_SLACK_APP_TOKEN",
       "PI_SLACK_BOT_TOKEN",

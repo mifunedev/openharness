@@ -95,6 +95,14 @@ describe("Hermes-only additive linking", () => {
     expect(existsSync(join(root, ".hermes"))).toBe(false);
   });
 
+  it("rejects relative homes whose destination changes with cwd", () => {
+    const root = fixture();
+    const result = run(root, "--init", { HERMES_HOME: ".hermes" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("must be absolute");
+    expect(existsSync(join(root, ".hermes"))).toBe(false);
+  });
+
   it("does not impose the image-global Hermes home on other worktrees", () => {
     const root = fixture();
     const files = [

@@ -90,16 +90,13 @@ jobs:
       - name: Install each installable harness through the CLI and verify its version
         run: |
           set -euo pipefail
-          cid=$(docker run -d --rm \
-            -e SANDBOX_NAME=oh-hermes-optional-${{ github.run_id }} \
-            --cgroupns=private --cap-add=SYS_ADMIN --security-opt apparmor=unconfined \
-            --tmpfs /run --tmpfs /run/lock --tmpfs /sys/fs \
-            openharness-sandbox-optional:${{ github.sha }})
-          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
-
-          timeout 600 docker exec "$cid" systemctl is-system-running --wait || {
-            docker exec "$cid" systemctl is-active openharness-bootstrap.service openharness-cron.service
-          }
+          export SANDBOX_NAME=oh-hermes-optional-${{ github.run_id }}
+          export OH_SANDBOX_IMAGE=openharness-sandbox-optional:${{ github.sha }}
+          export OH_PULL_POLICY=never
+          compose=(docker compose --file .devcontainer/docker-compose.image-only.yml)
+          trap '"${compose[@]}" down -v >/dev/null 2>&1 || true' EXIT
+          "${compose[@]}" up -d --wait --wait-timeout 600
+          cid=$("${compose[@]}" ps -q sandbox)
           docker exec "$cid" bash /home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh
 
           ids=$(docker exec -u sandbox "$cid" bash -lc \
@@ -138,6 +135,11 @@ jobs:
           docker exec -u sandbox -w /home/sandbox/harness "$cid" oh harness install hermes
           docker exec -u sandbox -w /tmp -e OH_HERMES_SMOKE=1 "$cid" \
             bash /home/sandbox/harness/.oh/scripts/hermes-install-smoke.sh
+
+          "${compose[@]}" restart sandbox
+          "${compose[@]}" up -d --wait --wait-timeout 600
+          docker exec -u sandbox -w /tmp -e OH_HERMES_SMOKE=1 "$cid" zsh -lic \
+            'bash /home/sandbox/harness/.oh/scripts/hermes-install-smoke.sh'
 
           for id in $ids; do
             binary=$(docker exec -u sandbox "$cid" bash -lc \

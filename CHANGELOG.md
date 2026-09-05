@@ -10,7 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Fixed
 
-- Keep Hermes runtime state in the workspace and reconcile shared skills on fresh and repeated installation without replacing user paths. ([#969](https://github.com/mifunedev/openharness/issues/969))
+- Keep Hermes runtime state in the workspace, reject ambiguous homes, and reconcile shared skills without replacing user paths. ([#969](https://github.com/mifunedev/openharness/issues/969))
 - Shorten spec and wiki skill descriptions to remove Pi skill-conflict warnings. ([#967](https://github.com/mifunedev/openharness/issues/967))
 
 ### Added

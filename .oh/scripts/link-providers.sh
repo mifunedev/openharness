@@ -103,6 +103,7 @@ link_provider() {
 }
 
 hermes_managed_here() {
+  case "${HERMES_HOME:-}" in ""|/*) ;; *) return 1 ;; esac
   [ -z "${HERMES_HOME:-}" ] || [ "$(realpath -m "$HERMES_HOME")" = "$(realpath -m "$repo_root/.hermes")" ]
 }
 
@@ -112,6 +113,10 @@ hermes_paths_safe() {
     fail "HERMES_HOME is unset; recreate from the corrected image or export HERMES_HOME=$expected in the launch environment before installing"
     return 1
   fi
+  case "${HERMES_HOME:-}" in
+    ""|/*) ;;
+    *) fail "HERMES_HOME must be absolute so launches do not depend on cwd"; return 1 ;;
+  esac
   if [ -n "${HERMES_HOME:-}" ] && [ "$(realpath -m "$HERMES_HOME")" != "$(realpath -m "$expected")" ]; then
     fail "HERMES_HOME conflicts with $expected; preserve that home and select the intended project before installing"
     return 1

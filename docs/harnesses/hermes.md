@@ -87,7 +87,7 @@ immediately, without a restart. Repeated installation repairs missing integratio
 without reinstalling an existing executable. Boot uses the same provider linker.
 
 The `openharness` child link preserves Hermes-native skills beside it. A foreign
-symlink, occupied file or directory, linked runtime parent, or unset/conflicting
+symlink, occupied file or directory, linked runtime parent, or unset, relative, or conflicting
 `HERMES_HOME` stops managed installation without replacing that path. Resolve the
 conflict explicitly; do not merge populated homes automatically. Standalone Hermes
 launches and `HERMES_GATEWAY_HOME` retain their explicit override behavior.
